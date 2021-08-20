@@ -1,0 +1,11 @@
+AutoBoost/.idea
+AutoBoost/.tmp
+AutoBoost/target
+JunitRunner/.idea
+JunitRunner/.testResult
+JunitRunner/target
+JunitRunner/tmp
+JunitRunner/index_check.json
+JunitRunner/indexFile.json
+AutoBoost/RestlerLogs
+.DS_Store
