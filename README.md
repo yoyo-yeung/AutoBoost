@@ -9,21 +9,27 @@ As this is initial commit, things are a bit messy. They will be re-organized and
 
 ## Folders 
 
-### AutoBoost 
+### [ppt](ppt)
+
+The folder stores PowerPoints with details regarding the project. 
+
+<span style="color:red">Current version: <span style="font-weight:600"> 1.0.2 </span></span>
+
+### [AutoBoost](AutoBoost) 
 
 It stores the main project that is responsible for calculating the rank for each test and ranking the tests at the end. 
 
-## JUnitRunner 
+## [JUnitRunner](JUnitRunner) 
 
 It stores the project for instrumenting the plausible patches, executing tests on them, and generate results regarding: 1. test outcome, 2. test coverage  
 
 Scripts for execution will be added later. 
 
-## resources 
+## [resources](resources) 
 
 It contains two sub-folder. 
 
-#### 1. pre-AutoBoost 
+#### 1. [pre-AutoBoost ](resources/pre-AutoBoost )
 
 It contains patches and fault localisation ranking for defect4j projects **BEFORE** AutoBoost is used. (i.e. using original test suites)
 
