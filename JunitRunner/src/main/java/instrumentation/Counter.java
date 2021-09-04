@@ -39,7 +39,7 @@ public class Counter {
 
     public static int getNewIndex() {
         total+= 1;
-        System.out.println(total);
+//        System.out.println(total);
         indexList.add(total);
         return total;
     }

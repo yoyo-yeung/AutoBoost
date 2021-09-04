@@ -50,7 +50,7 @@ public class JunitRunner {
                 failure.getDescription().addChild(FAILED);
             }
             public void testFinished(Description description){
-                System.out.println(description.getMethodName());
+//                System.out.println(description.getMethodName());
                 coverageReport.addPathCoverageInfo(description.getDisplayName(), Counter.getPathTravelled());
                 coverageReport.addSetCoverageInfo(description.getDisplayName(), Counter.getOccuranceCounter());
                 report.addTestResult(description.getDisplayName(), !description.getChildren().contains(FAILED));

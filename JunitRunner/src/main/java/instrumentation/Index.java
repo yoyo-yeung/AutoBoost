@@ -27,7 +27,7 @@ public class Index {
         if (! file.exists() )
             throw new IllegalArgumentException("File for indexing does not exist");
         indexObj = (JSONObject) parser.parse(new FileReader(file));
-        storeIndexFile("./index_check.json");
+//        storeIndexFile("./index_check.json");
 //        logger.debug(indexObj.toJSONString());
     }
 
@@ -50,8 +50,8 @@ public class Index {
     }
 
     public void setStatementIndex(String statement, int index) {
-        System.out.println("setting "+ index);
+//        System.out.println("setting "+ index);
         indexObj.put(statement, index);
-        System.out.println(indexObj);
+//        System.out.println(indexObj);
     }
 }
