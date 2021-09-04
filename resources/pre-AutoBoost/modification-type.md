@@ -1,18 +1,16 @@
 # Details of stored bugs 
 
 This markdown aims to store details on the ator-executed project bugs, such that the package and class modified can be compared for better evaluation. 
-
+FL rankings calculated by GZoltar v1.7.2 (latest release).
 
 ## Project : Math 
-|bug id | modified class | Plausible fixes generated?| seed| 
-|--------|----------------|--------------- |---| 
-| 85| org.apache.commons.math.analysis.solvers.UnivariateRealSolverUtils |Y| 10|
-|94|org.apache.commons.math.util.MathUtils|N|10|
-| 95| org.apache.commons.math.distribution.FDistributionImpl | Y|10|
+|bug id | modified class | Plausible fixes generated?| seed| Correct fix?  | Remarks | 
+|--------|----------------|--------------- |---| ---|---|
+| 85| org.apache.commons.math.analysis.solvers.UnivariateRealSolverUtils |Y| 10| | |
+|94|org.apache.commons.math.util.MathUtils|N|10| | |
+| 95| org.apache.commons.math.distribution.FDistributionImpl | Y|10|N|One patch contains part of correct fix, but not full|
 
-> Reason for using different seed: 
-> The project is claimed to be fixed in the paper, so multiple seed is tested to retrieve at least one plausible fixes 
-
+> Note: Tested Math 81, only generate 1 fix -> cannot be used 
 #### Commands used 
 ```
 PROJECT_LOC = ... # location of the project under repair 
