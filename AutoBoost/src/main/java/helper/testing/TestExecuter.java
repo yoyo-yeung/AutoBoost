@@ -23,7 +23,7 @@ public class TestExecuter {
     }
 
 
-    public String composeTestCommand(String currentClassPath, String fileName) {
+    public String composeTestCommand(String currentClassPath, String fileName, boolean createIndex) {
         StringBuilder commandLine = new StringBuilder();
         commandLine.append("java -cp ");
         commandLine.append(Properties.getInstance().getTestRunnerJarPath())
@@ -37,8 +37,13 @@ public class TestExecuter {
         commandLine.append(Properties.getInstance().getTestRunnerClass()).append(" ");
         commandLine.append("-testClasses ");
         commandLine.append(Properties.getInstance().getTestClassNames()).append(" ");
-        commandLine.append("-fileName ").append(fileName).append(" ");
-        commandLine.append("-resultDir ").append(Properties.getInstance().getResultDir());
+        commandLine.append("-testResultPrefix ").append(fileName).append(" ");
+        commandLine.append("-resultDir ").append(Properties.getInstance().getResultDir()).append(" ");
+        commandLine.append("-instrumentedBinDir ").append(currentClassPath).append(" ");
+        commandLine.append("-indexingMode ").append(createIndex? "CREATE":"USE").append(" ");
+        commandLine.append("-indexFile ").append(Properties.getInstance().getResultDir()+File.separator+Properties.getInstance().getIndexFile()).append(" ");
+        commandLine.append("-instrumentClasses ").append(Properties.getInstance().getInstrumentClasses());
+
         return commandLine.toString();
     }
     public Process executeCommands(String command) throws IOException {
