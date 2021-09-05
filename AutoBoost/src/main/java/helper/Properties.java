@@ -11,7 +11,9 @@ public class Properties {
 //    private static final Logger logger = LoggerFactory.getLogger(Properties.class);
 
     private static final Properties singleton = new Properties();
-
+    public static final String TEMP_BIN=".tmpbin";
+    public static String DEFAULT_TEST_RUNNER_CLASS="application.JunitRunner";
+    public static String DEFAULT_RESULT_DIR=".testResult";
     private String fixedClassPath;
     private String[] unacceptedClassPaths;
     private String[] testClassPaths;
@@ -20,6 +22,8 @@ public class Properties {
     private String testRunnerClass;
     private String[] dependencyPaths;
     private String resultDir;
+    private String instrumentClasses;
+    private final String indexFile = "index.json";
 
     private Properties(){
 
@@ -36,6 +40,7 @@ public class Properties {
         getInstance().testRunnerJarPath = null;
         getInstance().testRunnerClass = null;
         getInstance().dependencyPaths = null;
+        getInstance().instrumentClasses = null;
     }
 
     public void setFixedClassPath(String fixedClassPath) {
@@ -111,4 +116,18 @@ public class Properties {
     public void setResultDir(String resultDir) {
         this.resultDir = resultDir;
     }
+
+    public String getInstrumentClasses() {
+        return instrumentClasses;
+    }
+
+    public void setInstrumentClasses(String instrumentClasses) {
+        this.instrumentClasses = instrumentClasses;
+    }
+
+    public String getIndexFile() {
+        return indexFile;
+    }
+
+
 }
