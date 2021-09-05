@@ -1,7 +1,6 @@
 package application;
 
 
-import org.json.simple.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,29 +19,28 @@ import org.apache.commons.cli.ParseException;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class AutoBoost {
-    private static final Logger logger = LoggerFactory.getLogger(AutoBoost.class);;
-    public static final String FIXED_CODE_FILENAME = "fixed";
-    public static final String PATCH_FILE_PREFIX = "patch-";
+    private static final Logger logger = LoggerFactory.getLogger(AutoBoost.class);
     public static final String FILE_FORMAT = ".json";
     public Results testResults = new Results();
     public List<TestDetails> allTests;
     public static void main(String[] args) throws IOException, InterruptedException, org.json.simple.parser.ParseException {
         AutoBoost autoBoost = new AutoBoost();
         autoBoost.processCommand(args);
-//        autoBoost.executeTests();
-        autoBoost.processResults();
-        autoBoost.calculateScores();
-        JSONObject obj = new JSONObject();
-        for(TestDetails testDetails : autoBoost.allTests){
-            obj.put(testDetails.getTestName(), testDetails.getScore());
-        }
-        System.out.println(obj);
+        autoBoost.executeTests();
+//        autoBoost.processResults();
+//        autoBoost.calculateScores();
+//        JSONObject obj = new JSONObject();
+//        for(TestDetails testDetails : autoBoost.allTests){
+//            obj.put(testDetails.getTestName(), testDetails.getScore());
+//        }
+//        System.out.println(obj);
 
     }
 
@@ -57,13 +55,14 @@ public class AutoBoost {
             }
             CommandLineParameters.handleFixedPath(line);
             CommandLineParameters.handlePlausibleFixesPaths(line);
+            CommandLineParameters.handleInstrumentClasses(line);
             CommandLineParameters.handleTestClassPaths(line);
             CommandLineParameters.handleTestClassNames(line);
             CommandLineParameters.handleTestRunnerJarPath(line);
             CommandLineParameters.handleTestRunnerClass(line);
             CommandLineParameters.handleDependencyPaths(line);
             CommandLineParameters.handleResultDir(line);
-        } catch (ParseException e) {
+        } catch (ParseException | IOException e) {
             logger.error(e.getMessage());
             logger.debug("Error: "+ Arrays.toString(e.getStackTrace()));
             System.exit(-1);
@@ -71,27 +70,37 @@ public class AutoBoost {
     }
 
     public void executeTests() throws IOException, InterruptedException {
-        List<String> commandList = IntStream.range(0, Properties.getInstance().getUnacceptedClassPaths().length).mapToObj(i -> TestExecuter.getInstance().composeTestCommand(Properties.getInstance().getUnacceptedClassPaths()[i], PATCH_FILE_PREFIX+i + FILE_FORMAT)).collect(Collectors.toList());
-        commandList.add(TestExecuter.getInstance().composeTestCommand(Properties.getInstance().getFixedClassPath(), FIXED_CODE_FILENAME+FILE_FORMAT));
+        List<String> commandList = new ArrayList<>();
+        commandList.add(TestExecuter.getInstance().composeTestCommand(Properties.getInstance().getFixedClassPath(), Properties.FIXED_FILE_PREFIX, true));
+        commandList.addAll(IntStream.range(0, Properties.getInstance().getUnacceptedClassPaths().length).mapToObj(i -> TestExecuter.getInstance().composeTestCommand(Properties.getInstance().getUnacceptedClassPaths()[i], Properties.PATCH_FILE_PREFIX+i , false)).collect(Collectors.toList()));
+
         Process proc;
         for(int i =0 ; i < commandList.size() ; i++){
             logger.info("Executing test on patch no. " + i);
+            System.out.println(commandList.get(i));
             proc = TestExecuter.getInstance().executeCommands(commandList.get(i));
             proc.waitFor();
         }
     }
     public void processResults() throws IOException, org.json.simple.parser.ParseException {
         logger.info("Processing Results in folder " + Properties.getInstance().getResultDir());
-        testResults.setFixedReports(new ResultReport(new File(Properties.getInstance().getResultDir()+"/"+FIXED_CODE_FILENAME+FILE_FORMAT)));
-        testResults.setPlausibleReports(IntStream.range(0, Properties.getInstance().getUnacceptedClassPaths().length).mapToObj(i-> {
-            try {
-                return new ResultReport(new File(Properties.getInstance().getResultDir()+"/"+ PATCH_FILE_PREFIX+i+FILE_FORMAT));
-            } catch (Exception e) {
-                e.printStackTrace();
-                return null;
-            }
-        }).filter(rep -> rep!=null).collect(Collectors.toList()));
+//        testResults.setFixedReports(new ResultReport(new File(Properties.getInstance().getResultDir()+"/"+Properties.FIXED_FILE_PREFIX +FILE_FORMAT)));
+//        testResults.setPlausibleReports(IntStream.range(0, Properties.getInstance().getUnacceptedClassPaths().length).mapToObj(i-> {
+//            try {
+//                return new ResultReport(new File(Properties.getInstance().getResultDir()+"/"+Properties.PATCH_FILE_PREFIX+i+FILE_FORMAT));
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//                return null;
+//            }
+//        }).filter(rep -> rep!=null).collect(Collectors.toList()));
+//        logger.debug("fixed reports:");
+//        logger.debug(testResults.getFixedReports().toString());
+
         allTests = testResults.getFixedReports().getKeys().stream().map(key -> new TestDetails(key)).collect(Collectors.toList());
+
+        logger.debug("test names:");
+        logger.debug(allTests.toString());
+
     }
 
     public void calculateScores() {
