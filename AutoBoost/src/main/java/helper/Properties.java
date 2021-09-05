@@ -14,6 +14,8 @@ public class Properties {
     public static final String TEMP_BIN=".tmpbin";
     public static String DEFAULT_TEST_RUNNER_CLASS="application.JunitRunner";
     public static String DEFAULT_RESULT_DIR=".testResult";
+    public static final String FIXED_FILE_PREFIX = "fixed";
+    public static final String PATCH_FILE_PREFIX = "patch-";
     private String fixedClassPath;
     private String[] unacceptedClassPaths;
     private String[] testClassPaths;

@@ -45,7 +45,7 @@ public class CommandLineParameters {
         if(!dir.exists())
             throw new IllegalArgumentException("FixedPath input does not exist");
         // store the files to tempbin for manipulation
-        File destDir = new File(Properties.TEMP_BIN, "fixed");
+        File destDir = new File(Properties.TEMP_BIN, Properties.FIXED_FILE_PREFIX);
         if(!destDir.exists())
             destDir.mkdirs();
             FileUtils.copyDirectory(dir, destDir);
@@ -63,7 +63,7 @@ public class CommandLineParameters {
             dir = new File(dirPath);
             if(!dir.exists())
                 throw new IllegalArgumentException("plausibleFixesPaths "+dirPath+" does not exist");
-            destDir = new File(Properties.TEMP_BIN, "patch-"+(destDirs.size()+1));
+            destDir = new File(Properties.TEMP_BIN, Properties.PATCH_FILE_PREFIX+(destDirs.size()+1));
             if(!destDir.exists())
                 destDir.mkdirs();
             FileUtils.copyDirectory(dir, destDir);
