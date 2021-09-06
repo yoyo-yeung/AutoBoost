@@ -1,13 +1,9 @@
 package application;
 
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import helper.CommandLineParameters;
 import helper.Help;
 import helper.Properties;
-import helper.analyzer.ResultReport;
 import helper.analyzer.Results;
 import helper.analyzer.ScoreCalculator;
 import helper.analyzer.TestDetails;
@@ -16,8 +12,9 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.ParseException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,10 +23,11 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class AutoBoost {
-    private static final Logger logger = LoggerFactory.getLogger(AutoBoost.class);
     public static final String FILE_FORMAT = ".json";
+    private static final Logger logger = LoggerFactory.getLogger(AutoBoost.class);
     public Results testResults = new Results();
     public List<TestDetails> allTests;
+
     public static void main(String[] args) throws IOException, InterruptedException, org.json.simple.parser.ParseException {
         AutoBoost autoBoost = new AutoBoost();
         autoBoost.processCommand(args);
@@ -44,12 +42,12 @@ public class AutoBoost {
 
     }
 
-    public void processCommand(String[] args){
+    public void processCommand(String[] args) {
         logger.debug("Processing arguments");
         CommandLineParser parser = new GnuParser();
-        try{
+        try {
             CommandLine line = parser.parse(CommandLineParameters.getCommandLineOptions(), args);
-            if(line.hasOption(Help.NAME)) {
+            if (line.hasOption(Help.NAME)) {
                 Help.execute(CommandLineParameters.getCommandLineOptions());
                 System.exit(0);
             }
@@ -64,24 +62,29 @@ public class AutoBoost {
             CommandLineParameters.handleResultDir(line);
         } catch (ParseException | IOException e) {
             logger.error(e.getMessage());
-            logger.debug("Error: "+ Arrays.toString(e.getStackTrace()));
+            logger.debug("Error: " + Arrays.toString(e.getStackTrace()));
             System.exit(-1);
         }
     }
 
     public void executeTests() throws IOException, InterruptedException {
-        List<String> commandList = new ArrayList<>();
-        commandList.add(TestExecuter.getInstance().composeTestCommand(Properties.getInstance().getFixedClassPath(), Properties.FIXED_FILE_PREFIX, true));
-        commandList.addAll(IntStream.range(0, Properties.getInstance().getUnacceptedClassPaths().length).mapToObj(i -> TestExecuter.getInstance().composeTestCommand(Properties.getInstance().getUnacceptedClassPaths()[i], Properties.PATCH_FILE_PREFIX+i , false)).collect(Collectors.toList()));
-
         Process proc;
-        for(int i =0 ; i < commandList.size() ; i++){
+        String commandForFixed = TestExecuter.getInstance().composeTestCommand(Properties.getInstance().getFixedClassPath(), Properties.FIXED_FILE_PREFIX, true);
+        int exitVal = 0 ;
+        logger.info("Executing test on fixed version");
+        proc = TestExecuter.getInstance().executeCommands(commandForFixed);
+        exitVal = proc.waitFor();
+        logger.debug("Process exitValue: " + exitVal);
+
+        List<String> commandList = new ArrayList<>(IntStream.range(0, Properties.getInstance().getUnacceptedClassPaths().length).mapToObj(i -> TestExecuter.getInstance().composeTestCommand(Properties.getInstance().getUnacceptedClassPaths()[i], Properties.PATCH_FILE_PREFIX + i, false)).collect(Collectors.toList()));
+        for (int i = 0; i < commandList.size(); i++) {
             logger.info("Executing test on patch no. " + i);
-            System.out.println(commandList.get(i));
             proc = TestExecuter.getInstance().executeCommands(commandList.get(i));
-            proc.waitFor();
+            exitVal = proc.waitFor();
+            logger.debug("Process exitValue: " + exitVal);
         }
     }
+
     public void processResults() throws IOException, org.json.simple.parser.ParseException {
         logger.info("Processing Results in folder " + Properties.getInstance().getResultDir());
 //        testResults.setFixedReports(new ResultReport(new File(Properties.getInstance().getResultDir()+"/"+Properties.FIXED_FILE_PREFIX +FILE_FORMAT)));
@@ -106,7 +109,7 @@ public class AutoBoost {
     public void calculateScores() {
         logger.info("Calculating score for each test");
 //        logger.debug(testResults.getFixedReports().toString());
-        allTests.stream().forEach(test-> test.setScore(ScoreCalculator.getInstance().calculate(test.getTestName(), testResults)));
+        allTests.stream().forEach(test -> test.setScore(ScoreCalculator.getInstance().calculate(test.getTestName(), testResults)));
         logger.debug(allTests.toString());
     }
 }
