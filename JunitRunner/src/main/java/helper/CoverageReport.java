@@ -46,7 +46,8 @@ public class CoverageReport {
     }
 
     public void addSetCoverageInfo(String testMethod, HashMap<Integer, Integer> travelledSet) {
-        List coveredSet =  travelledSet.entrySet().stream().filter(map -> map.getValue()> 0).map(Map.Entry::getKey).collect(Collectors.toList());
+        Map coveredSet =  travelledSet.entrySet().stream().filter(map -> map.getValue()> 0)
+                .collect(Collectors.toMap(x -> x.getKey(), x -> x.getValue()));
 
         this.setCoverage.put(testMethod, coveredSet);
     }
