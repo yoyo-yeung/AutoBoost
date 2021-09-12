@@ -5,9 +5,8 @@ import org.json.simple.parser.ParseException;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Objects;
 
-public class ResultReport extends Report<Boolean>{
+public class ResultReport extends Report<Boolean> {
     public ResultReport() {
     }
 
@@ -23,4 +22,10 @@ public class ResultReport extends Report<Boolean>{
         return (boolean) testResults.getOrDefault(test, false);
     }
 
+    @Override
+    public String toString() {
+        return "ResultReport{" +
+                "testResults=" + testResults.toJSONString() +
+                '}';
+    }
 }

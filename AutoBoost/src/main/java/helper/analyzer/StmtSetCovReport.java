@@ -1,15 +1,12 @@
 package helper.analyzer;
 
-import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 
-public class StmtSetCovReport extends Report<JSONObject>{
+public class StmtSetCovReport extends Report<JSONObject> {
     public StmtSetCovReport() {
     }
 
@@ -23,6 +20,13 @@ public class StmtSetCovReport extends Report<JSONObject>{
 
     @Override
     public JSONObject getTestResult(String key) {
-        return  (JSONObject)testResults.getOrDefault(key, new JSONObject());
+        return (JSONObject) testResults.getOrDefault(key, new JSONObject());
+    }
+
+    @Override
+    public String toString() {
+        return "StmtSetCovReport{" +
+                "testResults=" + testResults.toJSONString() +
+                '}';
     }
 }

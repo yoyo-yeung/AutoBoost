@@ -5,7 +5,6 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.List;
@@ -21,12 +20,14 @@ public abstract class Report<T> {
     public Report(JSONObject testResults) {
         this.testResults = testResults;
     }
+
     public Report(File file) throws IOException, ParseException {
         JSONParser parser = new JSONParser();
-        if(!file.exists())
-            throw new IllegalArgumentException("File input "+file.getAbsolutePath()+"does not exist");
+        if (!file.exists())
+            throw new IllegalArgumentException("File input " + file.getAbsolutePath() + "does not exist");
         testResults = (JSONObject) parser.parse(new FileReader(file));
     }
+
     public abstract T getTestResult(String key);
 
     public JSONObject getTestResults() {
@@ -36,6 +37,7 @@ public abstract class Report<T> {
     public void setTestResults(JSONObject testResults) {
         this.testResults = testResults;
     }
+
     public List<String> getKeys() {
         return (List<String>) testResults.keySet().stream().collect(Collectors.toList());
     }
@@ -56,7 +58,7 @@ public abstract class Report<T> {
     @Override
     public String toString() {
         return "Report{" +
-                "testResults=" + testResults +
+                "testResults=" + testResults.toJSONString() +
                 '}';
     }
 }

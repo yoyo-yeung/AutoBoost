@@ -2,18 +2,12 @@ package helper.analyzer;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
 
-public class PathCovReport extends Report<JSONArray>{
+public class PathCovReport extends Report<JSONArray> {
     public PathCovReport() {
     }
 
@@ -29,4 +23,10 @@ public class PathCovReport extends Report<JSONArray>{
         return (JSONArray) testResults.getOrDefault(test, new JSONArray());
     }
 
+    @Override
+    public String toString() {
+        return "PathCovReport{" +
+                "testResults=" + testResults.toJSONString() +
+                '}';
+    }
 }
