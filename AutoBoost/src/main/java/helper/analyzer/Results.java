@@ -4,32 +4,32 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class Results {
-    List<ResultReport> plausibleReports = new ArrayList<ResultReport>();
-    ResultReport fixedReports ;
+public class Results<T> {
+    List<T> plausibleReports = new ArrayList<>();
+    T fixedReports ;
 
     public Results() {
     }
 
-    public Results(List<ResultReport> plausibleReports, ResultReport fixedReports) {
+    public Results(List<T> plausibleReports, T fixedReports) {
         this.plausibleReports = plausibleReports;
         this.fixedReports = fixedReports;
     }
 
 
-    public List<ResultReport> getPlausibleReports() {
+    public List<T> getPlausibleReports() {
         return plausibleReports;
     }
 
-    public void setPlausibleReports(List<ResultReport> plausibleReports) {
+    public void setPlausibleReports(List<T> plausibleReports) {
         this.plausibleReports = plausibleReports;
     }
 
-    public ResultReport getFixedReports() {
+    public T getFixedReports() {
         return fixedReports;
     }
 
-    public void setFixedReports(ResultReport fixedReports) {
+    public void setFixedReports(T fixedReports) {
         this.fixedReports = fixedReports;
     }
 
