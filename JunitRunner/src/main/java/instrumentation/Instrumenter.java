@@ -35,6 +35,8 @@ public class Instrumenter extends BodyTransformer{
         Stmt incStmt;
         while(stmtIt.hasNext()) {
             stmt = (Stmt) stmtIt.next();
+            if(stmt instanceof  soot.jimple.internal.JIdentityStmt)
+                continue;
             key = belongedClass + "::" + method.getSubSignature()+":::" + stmt.toString();
             switch (Properties.getInstance().getIndexingMode()) {
                 case USE:
