@@ -32,7 +32,7 @@ public class ScoreCalculator {
             return -1;
         }
         double failedCount = plausibleReports.stream().filter(report-> !report.getTestResult(testName)).count();
-        return failedCount/(double)(plausibleReports.size());
+        return failedCount/(double)(plausibleReports.size()); // failed count larger -> ability to 'kill' plausible fix mutants -> better
     }
 
     /*
@@ -45,6 +45,7 @@ public class ScoreCalculator {
         List<JSONArray> allPathCov = pathCovRes.getPlausibleReports().stream().map(rep -> rep.getTestResult(testName)).collect(Collectors.toList());
         allPathCov.add(pathCovRes.getFixedReports().getTestResult(testName));
         return allPathCov.stream().distinct().count()/(double)allPathCov.size(); // use all instead of plausible only, as we also consider the path travelled by fixed version
+        // no. of distinct path travelled larger -> would spawn different parts of program when given different code same input -> better
     }
 
     public double calPathDiffWithFixed(String testName, Results<ResultReport> results, Results<PathCovReport> pathCovRes, int thr) {
@@ -63,7 +64,7 @@ public class ScoreCalculator {
             return deviationPoint;
         }).average().getAsDouble();
 
-        return ((double)plausiblePaths.size())/avgDev; // the earlier deviation occurs, the better
+        return ((double)plausiblePaths.size())/avgDev; // the earlier deviation occurs (smaller index) ->  better?
     }
 
     /*
@@ -76,6 +77,7 @@ public class ScoreCalculator {
         allStmtSet.add(stmtCovRes.getFixedReports().getTestResult(testName).keySet());
 
         return allStmtSet.stream().distinct().count()/(double)allStmtSet.size();
+        // more unique set of statements -> spawn different statements (may be good for FL) -> better
     }
 
     public double calSetDiffWithFixed(String testName, Results<ResultReport> results, Results<StmtSetCovReport> stmtCovRes) {
@@ -90,5 +92,6 @@ public class ScoreCalculator {
             return symmetricDiff.size();
         }).average().getAsDouble();
         return avgDiff/(double)plauStmtSet.size();
+        // the avg no. of different elements in plausible fix sets and fixed set -> FL better?
     }
 }
