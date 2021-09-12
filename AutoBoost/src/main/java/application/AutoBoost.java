@@ -24,10 +24,10 @@ import java.util.stream.IntStream;
 public class AutoBoost {
     //    public static final String FILE_FORMAT = ".json";
     private static final Logger logger = LoggerFactory.getLogger(AutoBoost.class);
-    private Results<ResultReport> testResults = new Results<ResultReport>();
-    private Results<PathCovReport> pathCovRes = new Results<PathCovReport>();
-    private Results<StmtSetCovReport> stmtSetCovRes = new Results<StmtSetCovReport>();
-    private List<TestDetails> allTests = new ArrayList<TestDetails>();
+    private final Results<ResultReport> testResults = new Results<ResultReport>();
+    private final Results<PathCovReport> pathCovRes = new Results<PathCovReport>();
+    private final Results<StmtSetCovReport> stmtSetCovRes = new Results<StmtSetCovReport>();
+    private final List<TestDetails> allTests = new ArrayList<TestDetails>();
 
     public static void main(String[] args) throws IOException, InterruptedException, org.json.simple.parser.ParseException {
         AutoBoost autoBoost = new AutoBoost();
@@ -63,8 +63,9 @@ public class AutoBoost {
     }
 
     public void executeTests() throws IOException, InterruptedException {
+        Properties properties = Properties.getInstance();
         Process proc;
-        String commandForFixed = TestExecuter.getInstance().composeTestCommand(Properties.getInstance().getFixedClassPath(), Properties.FIXED_FILE_PREFIX, true);
+        String commandForFixed = TestExecuter.getInstance().composeTestCommand(properties.getFixedClassPath(), Properties.FIXED_FILE_PREFIX, true);
         int exitVal = 0;
 
         logger.debug(commandForFixed);
@@ -73,7 +74,7 @@ public class AutoBoost {
         exitVal = proc.waitFor();
         logger.debug("Process exitValue: " + exitVal);
 
-        List<String> commandList = new ArrayList<>(IntStream.range(0, Properties.getInstance().getUnacceptedClassPaths().length).mapToObj(i -> TestExecuter.getInstance().composeTestCommand(Properties.getInstance().getUnacceptedClassPaths()[i], Properties.PATCH_FILE_PREFIX + i, false)).collect(Collectors.toList()));
+        List<String> commandList = new ArrayList<>(IntStream.range(0, properties.getUnacceptedClassPaths().length).mapToObj(i -> TestExecuter.getInstance().composeTestCommand(properties.getUnacceptedClassPaths()[i], Properties.PATCH_FILE_PREFIX + i, false)).collect(Collectors.toList()));
         for (int i = 0; i < commandList.size(); i++) {
             logger.info("Executing test on patch no. " + i);
             proc = TestExecuter.getInstance().executeCommands(commandList.get(i));
@@ -83,29 +84,30 @@ public class AutoBoost {
     }
 
     public void processResults() throws IOException, org.json.simple.parser.ParseException {
-        logger.info("Processing Results in folder " + Properties.getInstance().getResultDir());
-        testResults.setFixedReports(new ResultReport(new File(Properties.getInstance().getResultDir() + "/" + Properties.FIXED_FILE_PREFIX + Properties.RESULT_FILE_SUFFIX)));
-        testResults.setPlausibleReports(IntStream.range(0, Properties.getInstance().getUnacceptedClassPaths().length).mapToObj(i -> {
+        Properties properties = Properties.getInstance();
+        logger.info("Processing Results in folder " + properties.getResultDir());
+        testResults.setFixedReports(new ResultReport(new File(properties.getResultDir() + "/" + Properties.FIXED_FILE_PREFIX + Properties.RESULT_FILE_SUFFIX)));
+        testResults.setPlausibleReports(IntStream.range(0, properties.getUnacceptedClassPaths().length).mapToObj(i -> {
             try {
-                return new ResultReport(new File(Properties.getInstance().getResultDir() + "/" + Properties.PATCH_FILE_PREFIX + i + Properties.RESULT_FILE_SUFFIX));
+                return new ResultReport(new File(properties.getResultDir() + "/" + Properties.PATCH_FILE_PREFIX + i + Properties.RESULT_FILE_SUFFIX));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
             }
         }).filter(rep -> rep != null).collect(Collectors.toList()));
-        pathCovRes.setFixedReports(new PathCovReport(new File(Properties.getInstance().getResultDir() + "/" + Properties.FIXED_FILE_PREFIX + Properties.PATH_COV_FILE_SUFFIX)));
-        pathCovRes.setPlausibleReports(IntStream.range(0, Properties.getInstance().getUnacceptedClassPaths().length).mapToObj(i -> {
+        pathCovRes.setFixedReports(new PathCovReport(new File(properties.getResultDir() + "/" + Properties.FIXED_FILE_PREFIX + Properties.PATH_COV_FILE_SUFFIX)));
+        pathCovRes.setPlausibleReports(IntStream.range(0, properties.getUnacceptedClassPaths().length).mapToObj(i -> {
             try {
-                return new PathCovReport(new File(Properties.getInstance().getResultDir() + "/" + Properties.PATCH_FILE_PREFIX + i + Properties.PATH_COV_FILE_SUFFIX));
+                return new PathCovReport(new File(properties.getResultDir() + "/" + Properties.PATCH_FILE_PREFIX + i + Properties.PATH_COV_FILE_SUFFIX));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
             }
         }).filter(rep -> rep != null).collect(Collectors.toList()));
-        stmtSetCovRes.setFixedReports(new StmtSetCovReport(new File(Properties.getInstance().getResultDir() + "/" + Properties.FIXED_FILE_PREFIX + Properties.STMT_SET_COV_FILE_SUFFIX)));
-        stmtSetCovRes.setPlausibleReports(IntStream.range(0, Properties.getInstance().getUnacceptedClassPaths().length).mapToObj(i -> {
+        stmtSetCovRes.setFixedReports(new StmtSetCovReport(new File(properties.getResultDir() + "/" + Properties.FIXED_FILE_PREFIX + Properties.STMT_SET_COV_FILE_SUFFIX)));
+        stmtSetCovRes.setPlausibleReports(IntStream.range(0, properties.getUnacceptedClassPaths().length).mapToObj(i -> {
             try {
-                return new StmtSetCovReport(new File(Properties.getInstance().getResultDir() + "/" + Properties.PATCH_FILE_PREFIX + i + Properties.STMT_SET_COV_FILE_SUFFIX));
+                return new StmtSetCovReport(new File(properties.getResultDir() + "/" + Properties.PATCH_FILE_PREFIX + i + Properties.STMT_SET_COV_FILE_SUFFIX));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;

@@ -4,54 +4,51 @@ import helper.Properties;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 // storing list of parameters needed to run JUnitRunner
 // conduct execution
 public class TestExecuter {
-    private static TestExecuter singleton = new TestExecuter();
-    private TestExecuter(){
+    private static final TestExecuter singleton = new TestExecuter();
+
+    private TestExecuter() {
 
     }
 
-    public static TestExecuter getInstance(){
+    public static TestExecuter getInstance() {
         return singleton;
     }
 
 
     public String composeTestCommand(String currentClassPath, String fileName, boolean createIndex) {
+        Properties properties = Properties.getInstance();
         StringBuilder commandLine = new StringBuilder();
-        commandLine.append("java -cp ");
-        commandLine.append(Properties.getInstance().getTestRunnerJarPath())
+        commandLine.append("java -Xmx600m -cp ");
+        commandLine.append(properties.getTestRunnerJarPath())
                 .append(File.pathSeparator)
                 .append(currentClassPath)
                 .append(File.pathSeparator)
-                .append(Properties.getInstance().getLinkedTestClassPaths(File.pathSeparator))
-                .append(Properties.getInstance().getDependencyPaths().length==0? "": File.pathSeparator)
-                .append(Properties.getInstance().getDependencyPaths().length==0? "": Properties.getInstance().getLinkedDependencyPaths(File.pathSeparator))
+                .append(properties.getLinkedTestClassPaths(File.pathSeparator))
+                .append(properties.getDependencyPaths().length == 0 ? "" : File.pathSeparator)
+                .append(properties.getDependencyPaths().length == 0 ? "" : properties.getLinkedDependencyPaths(File.pathSeparator))
                 .append(" ");
-        commandLine.append(Properties.getInstance().getTestRunnerClass()).append(" ");
+        commandLine.append(properties.getTestRunnerClass()).append(" ");
         commandLine.append("-testClasses ");
-        commandLine.append(Properties.getInstance().getTestClassNames()).append(" ");
+        commandLine.append(properties.getTestClassNames()).append(" ");
         commandLine.append("-testResultPrefix ").append(fileName).append(" ");
-        commandLine.append("-resultDir ").append(Properties.getInstance().getResultDir()).append(" ");
+        commandLine.append("-resultDir ").append(properties.getResultDir()).append(" ");
         commandLine.append("-instrumentedBinDir ").append(currentClassPath).append(" ");
-        commandLine.append("-indexingMode ").append(createIndex? "CREATE":"USE").append(" ");
-        commandLine.append("-indexFile ").append(Properties.getInstance().getResultDir()+File.separator+Properties.getInstance().getIndexFile()).append(" ");
-        commandLine.append("-instrumentClasses ").append(Properties.getInstance().getInstrumentClasses());
+        commandLine.append("-indexingMode ").append(createIndex ? "CREATE" : "USE").append(" ");
+        commandLine.append("-indexFile ").append(properties.getResultDir() + File.separator + properties.getIndexFile()).append(" ");
+        commandLine.append("-instrumentClasses ").append(properties.getInstrumentClasses());
 
         return commandLine.toString();
     }
+
     public Process executeCommands(String command) throws IOException {
-        System.out.println("executing "+command);
+        System.out.println("executing " + command);
         return Runtime.getRuntime().exec(command);
 
     }
-
 
 
 }

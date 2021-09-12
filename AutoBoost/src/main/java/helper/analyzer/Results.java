@@ -6,7 +6,7 @@ import java.util.Objects;
 
 public class Results<T> {
     List<T> plausibleReports = new ArrayList<>();
-    T fixedReports ;
+    T fixedReports;
 
     public Results() {
     }

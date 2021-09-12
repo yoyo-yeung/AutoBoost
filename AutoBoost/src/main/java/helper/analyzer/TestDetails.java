@@ -36,7 +36,7 @@ public class TestDetails {
     public double getScore(String key) {
         return this.scores.getOrDefault(key, 0.0);
     }
-    
+
     public void addScore(String key, Double score) {
         this.scores.put(key, score);
     }

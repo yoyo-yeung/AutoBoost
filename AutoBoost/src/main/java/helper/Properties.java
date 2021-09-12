@@ -3,17 +3,14 @@ package helper;
 //import com.sun.org.slf4j.internal.Logger;
 //import com.sun.org.slf4j.internal.LoggerFactory;
 
-import java.util.Arrays;
-import java.util.stream.Collectors;
-
 public class Properties {
 
 //    private static final Logger logger = LoggerFactory.getLogger(Properties.class);
 
     private static final Properties singleton = new Properties();
-    public static final String TEMP_BIN=".tmpbin";
-    public static String DEFAULT_TEST_RUNNER_CLASS="application.JunitRunner";
-    public static String DEFAULT_RESULT_DIR=".testResult";
+    public static final String TEMP_BIN = ".tmpbin";
+    public static String DEFAULT_TEST_RUNNER_CLASS = "application.JunitRunner";
+    public static String DEFAULT_RESULT_DIR = ".testResult";
     public static final String FIXED_FILE_PREFIX = "fixed";
     public static final String PATCH_FILE_PREFIX = "patch-";
     // the below 3 String are temp., used for exploring ranking strat.
@@ -31,14 +28,15 @@ public class Properties {
     private String instrumentClasses;
     private final String indexFile = "index.json";
 
-    private Properties(){
+    private Properties() {
 
     }
-    public static Properties getInstance(){
+
+    public static Properties getInstance() {
         return singleton;
     }
 
-    public static void resetSingleton(){
+    public static void resetSingleton() {
         getInstance().fixedClassPath = null;
         getInstance().unacceptedClassPaths = null;
         getInstance().testClassPaths = null;

@@ -1,19 +1,16 @@
 package helper.analyzer;
 
 import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public class ScoreCalculator {
-    private static Logger logger = LoggerFactory.getLogger(ScoreCalculator.class);
+    private static final Logger logger = LoggerFactory.getLogger(ScoreCalculator.class);
     private static final ScoreCalculator singleton = new ScoreCalculator();
 
     private ScoreCalculator() {
@@ -24,15 +21,15 @@ public class ScoreCalculator {
     }
 
     public double calTestResult(String testName, Results<ResultReport> results) {
-        logger.debug("Calculating score for test "+ testName);
+        logger.debug("Calculating score for test " + testName);
         ResultReport fixedResult = results.getFixedReports();
         List<ResultReport> plausibleReports = results.getPlausibleReports();
-        if(!fixedResult.getTestResult(testName)){
-            logger.debug("test "+ testName+" failed for fixed version of code");
+        if (!fixedResult.getTestResult(testName)) {
+            logger.debug("test " + testName + " failed for fixed version of code");
             return -1;
         }
-        double failedCount = plausibleReports.stream().filter(report-> !report.getTestResult(testName)).count();
-        return failedCount/(double)(plausibleReports.size()); // failed count larger -> ability to 'kill' plausible fix mutants -> better
+        double failedCount = plausibleReports.stream().filter(report -> !report.getTestResult(testName)).count();
+        return failedCount / (double) (plausibleReports.size()); // failed count larger -> ability to 'kill' plausible fix mutants -> better
     }
 
     /*
@@ -41,22 +38,22 @@ public class ScoreCalculator {
         2. avg point of deviation from fixed path (with threshold to accommodate possible effects by def. of fixes
      */
     public double calUniquePath(String testName, Results<ResultReport> results, Results<PathCovReport> pathCovRes) {
-        logger.debug("Calculating score for test "+ testName);
+        logger.debug("Calculating score for test " + testName);
         List<JSONArray> allPathCov = pathCovRes.getPlausibleReports().stream().map(rep -> rep.getTestResult(testName)).collect(Collectors.toList());
         allPathCov.add(pathCovRes.getFixedReports().getTestResult(testName));
-        return allPathCov.stream().distinct().count()/(double)allPathCov.size(); // use all instead of plausible only, as we also consider the path travelled by fixed version
+        return allPathCov.stream().distinct().count() / (double) allPathCov.size(); // use all instead of plausible only, as we also consider the path travelled by fixed version
         // no. of distinct path travelled larger -> would spawn different parts of program when given different code same input -> better
     }
 
     public double calPathDiffWithFixed(String testName, Results<ResultReport> results, Results<PathCovReport> pathCovRes, int thr) {
         JSONArray fixedPath = pathCovRes.getFixedReports().getTestResult(testName);
         List<JSONArray> plausiblePaths = pathCovRes.getPlausibleReports().stream().map(rep -> rep.getTestResult(testName)).collect(Collectors.toList());
-        double avgDev = plausiblePaths.stream().mapToInt(path-> {
+        double avgDev = plausiblePaths.stream().mapToInt(path -> {
             int localThr = thr;
             int deviationPoint = Math.min(path.size(), fixedPath.size());
-            for(int i =0; i < Math.min(path.size(), fixedPath.size());  i ++) {
-                if (path.get(i)!=fixedPath.get(i)) {
-                    if(localThr <= 0 )
+            for (int i = 0; i < Math.min(path.size(), fixedPath.size()); i++) {
+                if (path.get(i) != fixedPath.get(i)) {
+                    if (localThr <= 0)
                         deviationPoint = i;
                     else localThr--;
                 }
@@ -64,7 +61,7 @@ public class ScoreCalculator {
             return deviationPoint;
         }).average().getAsDouble();
 
-        return ((double)plausiblePaths.size())/avgDev; // the earlier deviation occurs (smaller index) ->  better?
+        return ((double) plausiblePaths.size()) / avgDev; // the earlier deviation occurs (smaller index) ->  better?
     }
 
     /*
@@ -76,7 +73,7 @@ public class ScoreCalculator {
         List<Set> allStmtSet = stmtCovRes.getPlausibleReports().stream().map(rep -> rep.getTestResult(testName).keySet()).collect(Collectors.toList());
         allStmtSet.add(stmtCovRes.getFixedReports().getTestResult(testName).keySet());
 
-        return allStmtSet.stream().distinct().count()/(double)allStmtSet.size();
+        return allStmtSet.stream().distinct().count() / (double) allStmtSet.size();
         // more unique set of statements -> spawn different statements (may be good for FL) -> better
     }
 
@@ -91,7 +88,7 @@ public class ScoreCalculator {
             symmetricDiff.removeAll(tmp);
             return symmetricDiff.size();
         }).average().getAsDouble();
-        return avgDiff/(double)plauStmtSet.size();
+        return avgDiff / (double) plauStmtSet.size();
         // the avg no. of different elements in plausible fix sets and fixed set -> FL better?
     }
 }
