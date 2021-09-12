@@ -22,19 +22,19 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class AutoBoost {
-//    public static final String FILE_FORMAT = ".json";
+    //    public static final String FILE_FORMAT = ".json";
     private static final Logger logger = LoggerFactory.getLogger(AutoBoost.class);
     private Results<ResultReport> testResults = new Results<ResultReport>();
     private Results<PathCovReport> pathCovRes = new Results<PathCovReport>();
     private Results<StmtSetCovReport> stmtSetCovRes = new Results<StmtSetCovReport>();
-    private List<TestDetails> allTests;
-    private List<String> testNames;
+    private List<TestDetails> allTests = new ArrayList<TestDetails>();
 
     public static void main(String[] args) throws IOException, InterruptedException, org.json.simple.parser.ParseException {
         AutoBoost autoBoost = new AutoBoost();
         autoBoost.processCommand(args);
         autoBoost.executeTests();
         autoBoost.processResults();
+        autoBoost.calculateScores();
     }
 
     public void processCommand(String[] args) {
@@ -65,7 +65,7 @@ public class AutoBoost {
     public void executeTests() throws IOException, InterruptedException {
         Process proc;
         String commandForFixed = TestExecuter.getInstance().composeTestCommand(Properties.getInstance().getFixedClassPath(), Properties.FIXED_FILE_PREFIX, true);
-        int exitVal = 0 ;
+        int exitVal = 0;
 
         logger.debug(commandForFixed);
         logger.info("Executing test on fixed version");
@@ -84,34 +84,49 @@ public class AutoBoost {
 
     public void processResults() throws IOException, org.json.simple.parser.ParseException {
         logger.info("Processing Results in folder " + Properties.getInstance().getResultDir());
-        testResults.setFixedReports(new ResultReport(new File(Properties.getInstance().getResultDir()+"/"+Properties.FIXED_FILE_PREFIX +Properties.RESULT_FILE_SUFFIX)));
-        testResults.setPlausibleReports(IntStream.range(0, Properties.getInstance().getUnacceptedClassPaths().length).mapToObj(i-> {
+        testResults.setFixedReports(new ResultReport(new File(Properties.getInstance().getResultDir() + "/" + Properties.FIXED_FILE_PREFIX + Properties.RESULT_FILE_SUFFIX)));
+        testResults.setPlausibleReports(IntStream.range(0, Properties.getInstance().getUnacceptedClassPaths().length).mapToObj(i -> {
             try {
-                return new ResultReport(new File(Properties.getInstance().getResultDir()+"/"+Properties.PATCH_FILE_PREFIX+i+Properties.RESULT_FILE_SUFFIX));
+                return new ResultReport(new File(Properties.getInstance().getResultDir() + "/" + Properties.PATCH_FILE_PREFIX + i + Properties.RESULT_FILE_SUFFIX));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
             }
-        }).filter(rep -> rep!=null).collect(Collectors.toList()));
-        allTests = testResults.getFixedReports().getKeys().stream().map(key -> new TestDetails(key)).collect(Collectors.toList());
-        testNames = testResults.getFixedReports().getKeys();
-        pathCovRes.setFixedReports(new PathCovReport(new File(Properties.getInstance().getResultDir()+"/"+Properties.FIXED_FILE_PREFIX +Properties.PATH_COV_FILE_SUFFIX)));
-        pathCovRes.setPlausibleReports(IntStream.range(0, Properties.getInstance().getUnacceptedClassPaths().length).mapToObj(i-> {
+        }).filter(rep -> rep != null).collect(Collectors.toList()));
+        pathCovRes.setFixedReports(new PathCovReport(new File(Properties.getInstance().getResultDir() + "/" + Properties.FIXED_FILE_PREFIX + Properties.PATH_COV_FILE_SUFFIX)));
+        pathCovRes.setPlausibleReports(IntStream.range(0, Properties.getInstance().getUnacceptedClassPaths().length).mapToObj(i -> {
             try {
-                return new PathCovReport(new File(Properties.getInstance().getResultDir()+"/"+Properties.PATCH_FILE_PREFIX+i+Properties.PATH_COV_FILE_SUFFIX));
+                return new PathCovReport(new File(Properties.getInstance().getResultDir() + "/" + Properties.PATCH_FILE_PREFIX + i + Properties.PATH_COV_FILE_SUFFIX));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
             }
-        }).filter(rep-> rep!=null).collect(Collectors.toList()));
-        stmtSetCovRes.setFixedReports(new StmtSetCovReport(new File(Properties.getInstance().getResultDir()+"/"+Properties.FIXED_FILE_PREFIX+Properties.STMT_SET_COV_FILE_SUFFIX)));
-        stmtSetCovRes.setPlausibleReports(IntStream.range(0, Properties.getInstance().getUnacceptedClassPaths().length).mapToObj(i-> {
+        }).filter(rep -> rep != null).collect(Collectors.toList()));
+        stmtSetCovRes.setFixedReports(new StmtSetCovReport(new File(Properties.getInstance().getResultDir() + "/" + Properties.FIXED_FILE_PREFIX + Properties.STMT_SET_COV_FILE_SUFFIX)));
+        stmtSetCovRes.setPlausibleReports(IntStream.range(0, Properties.getInstance().getUnacceptedClassPaths().length).mapToObj(i -> {
             try {
-                return new StmtSetCovReport(new File(Properties.getInstance().getResultDir()+"/"+Properties.PATCH_FILE_PREFIX+i+Properties.STMT_SET_COV_FILE_SUFFIX));
+                return new StmtSetCovReport(new File(Properties.getInstance().getResultDir() + "/" + Properties.PATCH_FILE_PREFIX + i + Properties.STMT_SET_COV_FILE_SUFFIX));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
             }
-        }).filter(rep-> rep!=null).collect(Collectors.toList()));
+        }).filter(rep -> rep != null).collect(Collectors.toList()));
+    }
+
+    public void calculateScores() {
+        ScoreCalculator calculator = ScoreCalculator.getInstance();
+        List<String> testNames = testResults.getFixedReports().getKeys();
+        testNames.forEach(name -> {
+            TestDetails detail = new TestDetails(name);
+            detail.addScore("testResult", calculator.calTestResult(name, this.testResults));
+            detail.addScore("uniquePaths", calculator.calUniquePath(name, this.testResults, this.pathCovRes));
+            detail.addScore("pathDeviation_thr0", calculator.calPathDiffWithFixed(name, this.testResults, this.pathCovRes, 0));
+            detail.addScore("pathDeviation_thr1", calculator.calPathDiffWithFixed(name, this.testResults, this.pathCovRes, 1));//guessing the statement no. of the fixed line, change according to result
+            detail.addScore("pathDeviation_thr2", calculator.calPathDiffWithFixed(name, this.testResults, this.pathCovRes, 2));//possible values: avg. no. of statements in all fixes (may be more troublesome)
+            detail.addScore("pathDeviation_thr3", calculator.calPathDiffWithFixed(name, this.testResults, this.pathCovRes, 3));//possible values: no. of statements in modified line of correct fix
+            detail.addScore("uniqueStmtSets", calculator.calSetDiffWithFixed(name, this.testResults, this.stmtSetCovRes));
+            detail.addScore("setDeviation", calculator.calSetDiffWithFixed(name, this.testResults, this.stmtSetCovRes));
+            allTests.add(detail);
+        });
     }
 }
