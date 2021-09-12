@@ -108,16 +108,17 @@ public class CommandLineParameters {
     }
 
     public static void handleDependencyPaths(CommandLine line){
-        if(!line.hasOption("depedencyPaths"))
+        if(!line.hasOption("dependencyPaths"))
             Properties.getInstance().setDependencyPaths(new String[0]);
         else {
-            String[] dirPaths = line.getOptionValue("depedencyPaths").split(File.pathSeparator);
+            String[] dirPaths = line.getOptionValue("dependencyPaths").split(File.pathSeparator);
             File dir;
             for (String dirPath : dirPaths) {
                 dir = new File(dirPath);
                 if(!dir.exists())
-                    throw new IllegalArgumentException("depedencyPath "+dirPath + "does not exist");
+                    throw new IllegalArgumentException("dependencyPath "+dirPath + "does not exist");
             }
+            System.out.println("dependencyPaths: "+dirPaths[0]);
             Properties.getInstance().setDependencyPaths(dirPaths);
         }
     }
