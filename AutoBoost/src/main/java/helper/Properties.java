@@ -16,6 +16,10 @@ public class Properties {
     public static String DEFAULT_RESULT_DIR=".testResult";
     public static final String FIXED_FILE_PREFIX = "fixed";
     public static final String PATCH_FILE_PREFIX = "patch-";
+    // the below 3 String are temp., used for exploring ranking strat.
+    public static final String RESULT_FILE_SUFFIX = "_results.json";
+    public static final String PATH_COV_FILE_SUFFIX = "_path_coverage.json";
+    public static final String STMT_SET_COV_FILE_SUFFIX = "_set_coverage.json";
     private String fixedClassPath;
     private String[] unacceptedClassPaths;
     private String[] testClassPaths;
