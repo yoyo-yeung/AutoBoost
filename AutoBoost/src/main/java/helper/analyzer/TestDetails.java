@@ -1,15 +1,14 @@
 package helper.analyzer;
 
+
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 public class TestDetails {
     String testName;
-    double score = 0 ;
+    Map<String, Double> scores = new HashMap<String, Double>();
 
-    public TestDetails(String testName, double score) {
-        this.testName = testName;
-        this.score = score;
-    }
 
     public TestDetails() {
     }
@@ -26,12 +25,20 @@ public class TestDetails {
         this.testName = testName;
     }
 
-    public double getScore() {
-        return score;
+    public Map<String, Double> getScores() {
+        return scores;
     }
 
-    public void setScore(double score) {
-        this.score = score;
+    public void setScores(Map<String, Double> scores) {
+        this.scores = scores;
+    }
+
+    public double getScore(String key) {
+        return this.scores.getOrDefault(key, 0.0);
+    }
+    
+    public void addScore(String key, Double score) {
+        this.scores.put(key, score);
     }
 
     @Override
@@ -39,19 +46,19 @@ public class TestDetails {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         TestDetails that = (TestDetails) o;
-        return Double.compare(that.score, score) == 0 && Objects.equals(testName, that.testName);
+        return Objects.equals(testName, that.testName) && Objects.equals(scores, that.scores);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(testName, score);
+        return Objects.hash(testName, scores);
     }
 
     @Override
     public String toString() {
         return "TestDetails{" +
                 "testName='" + testName + '\'' +
-                ", score=" + score +
+                ", scores=" + scores +
                 '}';
     }
 }
