@@ -39,15 +39,20 @@ public class ScoreCalculator {
      */
     public double calUniquePath(String testName, Results<ResultReport> results, Results<PathCovReport> pathCovRes) {
         logger.debug("Calculating score for test " + testName);
-        List<JSONArray> allPathCov = pathCovRes.getPlausibleReports().stream().map(rep -> rep.getTestResult(testName)).collect(Collectors.toList());
-        allPathCov.add(pathCovRes.getFixedReports().getTestResult(testName));
-        return allPathCov.stream().distinct().count() / (double) allPathCov.size(); // use all instead of plausible only, as we also consider the path travelled by fixed version
+        return getNoOfUniquePaths(testName, pathCovRes);
+//                / (double) (pathCovRes.getPlausibleReports().size() + 1); // use all instead of plausible only, as we also consider the path travelled by fixed version
         // no. of distinct path travelled larger -> would spawn different parts of program when given different code same input -> better
     }
-
+    public long getNoOfUniquePaths(String testName, Results<PathCovReport> pathCovRes) {
+        List<JSONArray> allPathCov = pathCovRes.getPlausibleReports().stream().map(rep -> rep.getTestResult(testName)).collect(Collectors.toList());
+        allPathCov.add(pathCovRes.getFixedReports().getTestResult(testName));
+        return allPathCov.stream().distinct().count();
+    }
     public double calPathDiffWithFixed(String testName, Results<ResultReport> results, Results<PathCovReport> pathCovRes, int thr) {
         JSONArray fixedPath = pathCovRes.getFixedReports().getTestResult(testName);
         List<JSONArray> plausiblePaths = pathCovRes.getPlausibleReports().stream().map(rep -> rep.getTestResult(testName)).collect(Collectors.toList());
+        if (getNoOfUniquePaths(testName, pathCovRes) == 1 ) // same -> no deviation
+            return 0;
         double avgDev = plausiblePaths.stream().mapToInt(path -> {
             int localThr = thr;
             int deviationPoint = Math.min(path.size(), fixedPath.size());
@@ -58,10 +63,16 @@ public class ScoreCalculator {
                     else localThr--;
                 }
             }
-            return deviationPoint;
+            return deviationPoint + 1 ;
         }).average().getAsDouble();
 
-        return ((double) plausiblePaths.size()) / avgDev; // the earlier deviation occurs (smaller index) ->  better?
+        /*
+        Options:
+            1. plausiblePaths.size() / avgDev;
+            2. avg paths length / avg dev
+         */
+//        return ((double) plausiblePaths.size()) / avgDev; // the earlier deviation occurs (smaller index) ->  better?
+        return plausiblePaths.stream().mapToInt(arr -> arr.size()).average().getAsDouble() / avgDev;
     }
 
     /*
@@ -72,12 +83,14 @@ public class ScoreCalculator {
         // first option: consider only set, not values
         List<Set> allStmtSet = stmtCovRes.getPlausibleReports().stream().map(rep -> rep.getTestResult(testName).keySet()).collect(Collectors.toList());
         allStmtSet.add(stmtCovRes.getFixedReports().getTestResult(testName).keySet());
-
-        return allStmtSet.stream().distinct().count() / (double) allStmtSet.size();
+        return allStmtSet.stream().distinct().count();
+//                / (double) allStmtSet.size();
         // more unique set of statements -> spawn different statements (may be good for FL) -> better
     }
 
     public double calSetDiffWithFixed(String testName, Results<ResultReport> results, Results<StmtSetCovReport> stmtCovRes) {
+        if (getMaxStmtSetSize(testName, stmtCovRes) == 0)
+            return 0;
         Set fixedStmtSet = stmtCovRes.getFixedReports().getTestResult(testName).keySet();
         List<Set> plauStmtSet = stmtCovRes.getPlausibleReports().stream().map(rep -> rep.getTestResult(testName).keySet()).collect(Collectors.toList());
         double avgDiff = plauStmtSet.stream().mapToInt(plau -> {
@@ -88,7 +101,16 @@ public class ScoreCalculator {
             symmetricDiff.removeAll(tmp);
             return symmetricDiff.size();
         }).average().getAsDouble();
-        return avgDiff / (double) plauStmtSet.size();
+
+        return avgDiff / plauStmtSet.stream().mapToInt(plau -> plau.size()).average().getAsDouble();
+        // options: / no. of plausible elements
+        // options: / average no. of statements in paths
         // the avg no. of different elements in plausible fix sets and fixed set -> FL better?
+    }
+    public int getMaxPathLength(String testName, Results<PathCovReport> pathCovRes) {
+        return Math.max(pathCovRes.getPlausibleReports().stream().mapToInt(rep -> rep.getTestResult(testName).size()).max().getAsInt(), pathCovRes.getFixedReports().getTestResult(testName).size());
+    }
+    public int getMaxStmtSetSize(String testname, Results<StmtSetCovReport> stmtCovRes) {
+        return Math.max(stmtCovRes.getFixedReports().getTestResult(testname).keySet().size(), stmtCovRes.getPlausibleReports().stream().mapToInt(rep -> rep.getTestResult(testname).size()).max().getAsInt());
     }
 }
