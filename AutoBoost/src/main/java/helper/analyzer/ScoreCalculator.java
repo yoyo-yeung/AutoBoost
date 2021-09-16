@@ -55,15 +55,17 @@ public class ScoreCalculator {
             return 0;
         double avgDev = plausiblePaths.stream().mapToInt(path -> {
             int localThr = thr;
-            int deviationPoint = Math.min(path.size(), fixedPath.size());
+            int deviationPoint = Math.min(path.size(), fixedPath.size()) + 1;
             for (int i = 0; i < Math.min(path.size(), fixedPath.size()); i++) {
-                if (path.get(i) != fixedPath.get(i)) {
-                    if (localThr <= 0)
-                        deviationPoint = i;
-                    else localThr--;
-                }
+                if (path.get(i) == fixedPath.get(i))
+                    continue;
+                if (localThr <= 0) {
+                    deviationPoint = i + 1; // first position as 1
+                    break;
+                } else localThr--;
+
             }
-            return deviationPoint + 1 ;
+            return deviationPoint ;
         }).average().getAsDouble();
 
         /*
