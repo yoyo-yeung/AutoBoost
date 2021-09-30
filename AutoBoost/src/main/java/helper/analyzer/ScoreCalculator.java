@@ -53,7 +53,7 @@ public class ScoreCalculator {
         List<JSONArray> plausiblePaths = pathCovRes.getPlausibleReports().stream().map(rep -> rep.getTestResult(testName)).collect(Collectors.toList());
         if (getNoOfUniquePaths(testName, pathCovRes) == 1 ) // same -> no deviation
             return 0;
-        double avgDev = plausiblePaths.stream().mapToInt(path -> {
+        double avgDev = plausiblePaths.stream().mapToDouble(path -> {
             int localThr = thr;
             int deviationPoint = Math.min(path.size(), fixedPath.size()) + 1;
             for (int i = 0; i < Math.min(path.size(), fixedPath.size()); i++) {
@@ -65,7 +65,7 @@ public class ScoreCalculator {
                 } else localThr--;
 
             }
-            return deviationPoint ;
+            return ((double) deviationPoint)/ ((double)path.size()); // % where deviation starts in the path 
         }).average().getAsDouble();
 
         /*
@@ -74,7 +74,7 @@ public class ScoreCalculator {
             2. avg paths length / avg dev
          */
 //        return ((double) plausiblePaths.size()) / avgDev; // the earlier deviation occurs (smaller index) ->  better?
-        return plausiblePaths.stream().mapToInt(arr -> arr.size()).average().getAsDouble() / avgDev;
+        return ((double) 1)/avgDev;
     }
 
     /*
@@ -95,16 +95,16 @@ public class ScoreCalculator {
             return 0;
         Set fixedStmtSet = stmtCovRes.getFixedReports().getTestResult(testName).keySet();
         List<Set> plauStmtSet = stmtCovRes.getPlausibleReports().stream().map(rep -> rep.getTestResult(testName).keySet()).collect(Collectors.toList());
-        double avgDiff = plauStmtSet.stream().mapToInt(plau -> {
+        double avgDiff = plauStmtSet.stream().mapToDouble(plau -> {
             Set symmetricDiff = new HashSet(plau);
             symmetricDiff.addAll(fixedStmtSet);
             Set tmp = new HashSet(plau);
             tmp.retainAll(fixedStmtSet);  //get common ones
             symmetricDiff.removeAll(tmp);
-            return symmetricDiff.size();
+            return ((double)symmetricDiff.size()/((double) plau.size())); // % of diff. to no. of stmt
         }).average().getAsDouble();
 
-        return avgDiff / plauStmtSet.stream().mapToInt(plau -> plau.size()).average().getAsDouble();
+        return avgDiff ;
         // options: / no. of plausible elements
         // options: / average no. of statements in paths
         // the avg no. of different elements in plausible fix sets and fixed set -> FL better?

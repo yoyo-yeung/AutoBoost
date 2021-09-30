@@ -128,7 +128,6 @@ public class AutoBoost {
             detail.addScore("pathDeviation_thr1", calculator.calPathDiffWithFixed(name, this.testResults, this.pathCovRes, 1));//guessing the statement no. of the fixed line, change according to result
             detail.addScore("pathDeviation_thr2", calculator.calPathDiffWithFixed(name, this.testResults, this.pathCovRes, 2));//possible values: avg. no. of statements in all fixes (may be more troublesome)
             detail.addScore("pathDeviation_thr3", calculator.calPathDiffWithFixed(name, this.testResults, this.pathCovRes, 3));//possible values: no. of statements in modified line of correct fix
-            detail.addScore("uniqueStmtSets", calculator.calSetDiffWithFixed(name, this.testResults, this.stmtSetCovRes));
             detail.addScore("uniqueStmtSets", calculator.calUniqueStmtSet(name, this.testResults, this.stmtSetCovRes));
             detail.addScore("setDeviation", calculator.calSetDiffWithFixed(name, this.testResults, this.stmtSetCovRes));
             allTests.add(detail);
