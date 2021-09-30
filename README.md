@@ -27,11 +27,4 @@ Scripts for execution will be added later.
 
 ## [resources](resources) 
 
-It contains two sub-folder. 
-
-#### 1. [pre-AutoBoost ](resources/pre-AutoBoost )
-
-It contains patches and fault localisation ranking for defect4j projects **BEFORE** AutoBoost is used. (i.e. using original test suites)
-
-#### 2. post-AutoBoost 
-It contains fault localisation ranking for defects4j projects **AFTER** AutoBoost is used. (i.e. Top X tests ranked by AutoBoost is added to test suite)
+Details of each sub-folders are detailed in markdowns inside. 
