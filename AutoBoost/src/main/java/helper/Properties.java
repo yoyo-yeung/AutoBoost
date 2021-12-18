@@ -11,6 +11,7 @@ public class Properties {
     private String[] testCases = null;
     private static final String classMethSep = "::";
     private static final String classSep = ",";
+    private static final String NEW_LINE = "\n";
 
     public Properties() {
     }
@@ -57,5 +58,9 @@ public class Properties {
         this.testCases = testCases;
         logProperty("testCases", String.join(",", this.testCases));
 
+    }
+
+    public static String getNewLine() {
+        return NEW_LINE;
     }
 }
