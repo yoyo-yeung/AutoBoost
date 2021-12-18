@@ -1,6 +1,7 @@
 package program.execution.variable;
 
 import helper.Properties;
+import org.apache.commons.cli.MissingArgumentException;
 
 import java.lang.reflect.Field;
 public class PrimitiveVarDetails extends VarDetailImpl {
@@ -13,7 +14,8 @@ public class PrimitiveVarDetails extends VarDetailImpl {
     double doubleValue;
     char charValue;
     boolean booleanValue;
-    public PrimitiveVarDetails() {
+    public PrimitiveVarDetails() throws MissingArgumentException {
+        throw new MissingArgumentException("Type and Value expected for variable");
     }
 
     public PrimitiveVarDetails(Class<?> type) {
@@ -31,16 +33,36 @@ public class PrimitiveVarDetails extends VarDetailImpl {
     public PrimitiveVarDetails(String type, Object wrappedValue) throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException {
         this(Class.forName(type), wrappedValue);
     }
-    public String getValue() throws IllegalAccessException, NoSuchFieldException {
-        Field field = getClass().getDeclaredField(type.getName()+"Value");
-        return field.get(this).toString();
-    }
     public Class<?> getType() {
         return type;
     }
 
+    public String getTypeSimpleName() {return type.getSimpleName();}
+
+    public void setType(Class<?> type) {
+        if(!type.isPrimitive())
+            throw new IllegalArgumentException("Primitive type expected");
+        this.type = type;
+    }
+
+    public void setType(String typeName) throws ClassNotFoundException {
+        setType(Class.forName(typeName));
+    }
+
+    public void setValue(Object wrappedValue) throws NoSuchFieldException, IllegalAccessException {
+        if(this.type == null)
+            throw new IllegalArgumentException("Type should be set before assigning value");
+        Field field = getClass().getDeclaredField(type.getName()+"Value");
+        field.set(this, wrappedValue);
+    }
+
+    public String getValue() throws IllegalAccessException, NoSuchFieldException {
+        Field field = getClass().getDeclaredField(type.getName()+"Value");
+        return field.get(this).toString();
+    }
+
     @Override
     public String getStmt(String varName) throws NoSuchFieldException, IllegalAccessException {
-        return this.getType().getSimpleName() + " " + varName + " = " + getValue() + ";" + Properties.getNewLine();
+        return this.getTypeSimpleName() + " " + varName + " = " + getValue() + ";" + Properties.getNewLine();
     }
 }
