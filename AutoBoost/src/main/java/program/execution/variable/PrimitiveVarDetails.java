@@ -22,6 +22,10 @@ public class PrimitiveVarDetails extends VarDetailImpl {
         this.type = type;
     }
 
+    public PrimitiveVarDetails(String typeName) throws ClassNotFoundException {
+        this(Class.forName(typeName));
+    }
+
     public PrimitiveVarDetails(Class<?>type, Object wrappedValue) throws NoSuchFieldException, IllegalAccessException {
         if(!type.isPrimitive())
             throw new IllegalArgumentException("Non primitive type value are being stored as primitive var");
