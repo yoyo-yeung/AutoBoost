@@ -1,6 +1,5 @@
 package program.execution.variable;
 
-import helper.Properties;
 import org.apache.commons.cli.MissingArgumentException;
 
 import java.lang.reflect.Field;
