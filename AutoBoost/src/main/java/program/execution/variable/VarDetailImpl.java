@@ -6,9 +6,6 @@ public abstract class VarDetailImpl implements VarDetail{
     List<String> usedMethodIds = null;
 
     @Override
-    public abstract String getStmt(String varName) throws NoSuchFieldException, IllegalAccessException;
-
-    @Override
     public List<String> getUsedMethodIds() {
         return usedMethodIds;
     }

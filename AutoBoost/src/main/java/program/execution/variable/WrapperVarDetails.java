@@ -52,9 +52,4 @@ public class WrapperVarDetails extends VarDetailImpl{
         this.value = value;
     }
 
-    @Override
-    public String getStmt(String varName) throws NoSuchFieldException, IllegalAccessException {
-//        return this.getTypeSimpleName() + " " + varName + " = " + getValue() + ";" + Properties.getNewLine();
-        return null;
-    }
 }

@@ -65,9 +65,4 @@ public class PrimitiveVarDetails extends VarDetailImpl {
         return field.get(this).toString();
     }
 
-    @Override
-    public String getStmt(String varName) throws NoSuchFieldException, IllegalAccessException {
-//        return this.getTypeSimpleName() + " " + varName + " = " + getValue() + ";" + Properties.getNewLine();
-        return null;
-    }
 }
