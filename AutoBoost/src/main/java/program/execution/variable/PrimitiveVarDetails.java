@@ -4,7 +4,7 @@ import org.apache.commons.cli.MissingArgumentException;
 
 import java.lang.reflect.Field;
 public class PrimitiveVarDetails extends VarDetailImpl {
-    Class<?> type;
+    Class<?> type = null;
     byte byteValue;
     short shortValue;
     int intValue;
@@ -13,8 +13,7 @@ public class PrimitiveVarDetails extends VarDetailImpl {
     double doubleValue;
     char charValue;
     boolean booleanValue;
-    public PrimitiveVarDetails() throws MissingArgumentException {
-        throw new MissingArgumentException("Type and Value expected for variable");
+    public PrimitiveVarDetails(){
     }
 
     public PrimitiveVarDetails(Class<?> type) {

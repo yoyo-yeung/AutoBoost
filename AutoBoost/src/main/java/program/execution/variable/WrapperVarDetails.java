@@ -8,8 +8,7 @@ public class WrapperVarDetails extends VarDetailImpl{
     Class<?> type;
     Object value;
 
-    public WrapperVarDetails() throws MissingArgumentException {
-        throw new MissingArgumentException("Type and Value must be specified ");
+    public WrapperVarDetails() {
     }
 
     public WrapperVarDetails(Class<?> type) {
