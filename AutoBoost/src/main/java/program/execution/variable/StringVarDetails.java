@@ -6,7 +6,8 @@ import org.apache.commons.text.StringEscapeUtils;
 public class StringVarDetails extends VarDetail{
     String value;
 
-    public StringVarDetails(String value) {
+    public StringVarDetails(int ID, String value) {
+        this.setID(ID);
         this.value = value;
     }
 

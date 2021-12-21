@@ -5,12 +5,13 @@ public class WrapperVarDetails extends VarDetail{
     Class<?> type;
     Object value;
 
-    public WrapperVarDetails(Class<?> type, Object value) {
+    public WrapperVarDetails(int ID, Class<?> type, Object value) {
+        this.setID(ID);
         this.type = type;
         this.value = value;
     }
-    public WrapperVarDetails(String typeName, Object value) throws ClassNotFoundException {
-        this(Class.forName(typeName), value);
+    public WrapperVarDetails(int ID, String typeName, Object value) throws ClassNotFoundException {
+        this(ID, Class.forName(typeName), value);
     }
 
     @Override
