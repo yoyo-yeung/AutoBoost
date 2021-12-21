@@ -3,13 +3,13 @@ package program.execution.variable;
 import java.util.List;
 
 public abstract class VarDetail{
-    protected int ID;
+    private int ID;
 
     public int getID() {
         return ID;
     }
 
-    public void setID(int ID) {
+    protected void setID(int ID) {
         this.ID = ID;
     }
 
