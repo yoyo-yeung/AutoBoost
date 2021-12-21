@@ -1,5 +1,7 @@
 package program.execution.variable;
 
+import java.util.Objects;
+
 // store it separately from other object var as they can be directly assigned
 public class WrapperVarDetails extends VarDetail{
     Class<?> type;
@@ -27,5 +29,18 @@ public class WrapperVarDetails extends VarDetail{
     @Override
     public Object getValue() {
         return value.toString();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        WrapperVarDetails that = (WrapperVarDetails) o;
+        return Objects.equals(type, that.type) && Objects.equals(value, that.value);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(type, value);
     }
 }
