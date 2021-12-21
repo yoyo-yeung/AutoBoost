@@ -1,9 +1,7 @@
 package program.execution.variable;
 
-import org.apache.commons.cli.MissingArgumentException;
-
 import java.lang.reflect.Field;
-public class PrimitiveVarDetails extends VarDetailImpl {
+public class PrimitiveVarDetails extends VarDetail {
     Class<?> type = null;
     byte byteValue;
     short shortValue;
@@ -35,11 +33,6 @@ public class PrimitiveVarDetails extends VarDetailImpl {
     public PrimitiveVarDetails(String type, Object wrappedValue) throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException {
         this(Class.forName(type), wrappedValue);
     }
-    public Class<?> getType() {
-        return type;
-    }
-
-    public String getTypeSimpleName() {return type.getSimpleName();}
 
     public void setType(Class<?> type) {
         if(!type.isPrimitive())
@@ -58,9 +51,23 @@ public class PrimitiveVarDetails extends VarDetailImpl {
         field.set(this, wrappedValue);
     }
 
-    public String getValue() throws IllegalAccessException, NoSuchFieldException {
-        Field field = getClass().getDeclaredField(type.getName()+"Value");
-        return field.get(this).toString();
+    @Override
+    public Class<?> getType() {
+        return type;
+    }
+
+    @Override
+    public String getTypeSimpleName() {return type.getSimpleName();}
+
+    @Override
+    public Object getValue() {
+        try {
+            Field field = getClass().getDeclaredField(type.getName() + "Value");
+            return field.get(this).toString();
+        }
+        catch (Exception e) {
+            return null;
+        }
     }
 
 }

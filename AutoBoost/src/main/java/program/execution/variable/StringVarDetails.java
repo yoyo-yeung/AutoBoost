@@ -3,7 +3,7 @@ package program.execution.variable;
 
 import org.apache.commons.text.StringEscapeUtils;
 
-public class StringVarDetails extends VarDetailImpl{
+public class StringVarDetails extends VarDetail{
     String value;
 
     public StringVarDetails() {
@@ -13,12 +13,20 @@ public class StringVarDetails extends VarDetailImpl{
         this.value = value;
     }
 
-    public String getValue() {
-        return "\""+ StringEscapeUtils.escapeJava(value) + "\""; // get escaped text WITH ""
-    }
-
     public void setValue(String value) {
         this.value = value;
+    }
+
+    @Override
+    public Class<?> getType() {
+        return String.class;
+    }
+
+    public String getTypeSimpleName() {return String.class.getSimpleName();}
+
+    @Override
+    public Object getValue() {
+        return "\""+ StringEscapeUtils.escapeJava(value) + "\""; // get escaped text WITH ""
     }
 
 }

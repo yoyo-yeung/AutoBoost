@@ -1,10 +1,7 @@
 package program.execution.variable;
 
-import helper.Properties;
-import org.apache.commons.cli.MissingArgumentException;
-
 // store it separately from other object var as they can be directly assigned
-public class WrapperVarDetails extends VarDetailImpl{
+public class WrapperVarDetails extends VarDetail{
     Class<?> type;
     Object value;
 
@@ -27,13 +24,6 @@ public class WrapperVarDetails extends VarDetailImpl{
         this(Class.forName(typeName), value);
     }
 
-    public Class<?> getType() {
-        return type;
-    }
-
-    public String getTypeSimpleName() {
-        return this.type.getSimpleName();
-    }
 
     public void setType(Class<?> type) {
         this.type = type;
@@ -43,12 +33,23 @@ public class WrapperVarDetails extends VarDetailImpl{
         this.setType(Class.forName(typeName));
     }
 
-    public Object getValue() {
-        return value;
-    }
 
     public void setValue(Object value) {
         this.value = value;
     }
 
+    @Override
+    public Class<?> getType() {
+        return type;
+    }
+
+    @Override
+    public String getTypeSimpleName() {
+        return this.type.getSimpleName();
+    }
+
+    @Override
+    public Object getValue() {
+        return value.toString();
+    }
 }
