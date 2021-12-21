@@ -6,14 +6,7 @@ import org.apache.commons.text.StringEscapeUtils;
 public class StringVarDetails extends VarDetail{
     String value;
 
-    public StringVarDetails() {
-    }
-
     public StringVarDetails(String value) {
-        this.value = value;
-    }
-
-    public void setValue(String value) {
         this.value = value;
     }
 
