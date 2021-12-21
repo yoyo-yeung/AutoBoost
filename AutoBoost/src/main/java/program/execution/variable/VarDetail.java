@@ -13,7 +13,7 @@ public abstract class VarDetail{
         this.ID = ID;
     }
 
-    public abstract Object getValue();
+    public abstract Object getValue() throws Exception;
 
     public abstract Class<?> getType();
 
