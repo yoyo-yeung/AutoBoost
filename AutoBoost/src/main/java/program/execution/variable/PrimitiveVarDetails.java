@@ -1,5 +1,7 @@
 package program.execution.variable;
 
+import org.apache.commons.lang3.ClassUtils;
+
 import java.lang.reflect.Field;
 public class PrimitiveVarDetails extends VarDetail {
     Class<?> type = null;
@@ -11,20 +13,18 @@ public class PrimitiveVarDetails extends VarDetail {
     double doubleValue;
     char charValue;
     boolean booleanValue;
-    public PrimitiveVarDetails(){
-    }
 
-    public PrimitiveVarDetails(Class<?> type) {
-        this.type = type;
+    // must provide all details when constructed, no updating allowed
+    public PrimitiveVarDetails(Object wrapperValue) throws NoSuchFieldException, IllegalAccessException {
+        this(wrapperValue.getClass(), wrapperValue);
     }
-
-    public PrimitiveVarDetails(String typeName) throws ClassNotFoundException {
-        this(Class.forName(typeName));
-    }
-
     public PrimitiveVarDetails(Class<?>type, Object wrappedValue) throws NoSuchFieldException, IllegalAccessException {
         if(!type.isPrimitive())
             throw new IllegalArgumentException("Non primitive type value are being stored as primitive var");
+        if(!ClassUtils.isPrimitiveWrapper(wrappedValue.getClass()))
+            throw new IllegalArgumentException("Non wrapper type value provided. Cannot be cast to primitive value");
+        if(!ClassUtils.wrapperToPrimitive(wrappedValue.getClass()).equals(type))
+            throw new IllegalArgumentException("Type specified and value provided do not match");
         this.type = type;
         Field field = getClass().getDeclaredField(type.getName()+"Value");
         field.set(this, wrappedValue);
@@ -32,23 +32,6 @@ public class PrimitiveVarDetails extends VarDetail {
 
     public PrimitiveVarDetails(String type, Object wrappedValue) throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException {
         this(Class.forName(type), wrappedValue);
-    }
-
-    public void setType(Class<?> type) {
-        if(!type.isPrimitive())
-            throw new IllegalArgumentException("Primitive type expected");
-        this.type = type;
-    }
-
-    public void setType(String typeName) throws ClassNotFoundException {
-        setType(Class.forName(typeName));
-    }
-
-    public void setValue(Object wrappedValue) throws NoSuchFieldException, IllegalAccessException {
-        if(this.type == null)
-            throw new IllegalArgumentException("Type should be set before assigning value");
-        Field field = getClass().getDeclaredField(type.getName()+"Value");
-        field.set(this, wrappedValue);
     }
 
     @Override
@@ -60,14 +43,10 @@ public class PrimitiveVarDetails extends VarDetail {
     public String getTypeSimpleName() {return type.getSimpleName();}
 
     @Override
-    public Object getValue() {
-        try {
-            Field field = getClass().getDeclaredField(type.getName() + "Value");
-            return field.get(this).toString();
-        }
-        catch (Exception e) {
-            return null;
-        }
+    public Object getValue() throws Exception {
+        Field field = getClass().getDeclaredField(type.getName() + "Value");
+        return field.get(this).toString();
+
     }
 
 }
