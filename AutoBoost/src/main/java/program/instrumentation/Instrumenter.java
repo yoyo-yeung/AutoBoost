@@ -15,11 +15,11 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class Instrumenter extends BodyTransformer {
-    private static Logger logger = LogManager.getLogger(Instrumenter.class);
-    private static SootClass loggerClass;
+    private static final Logger logger = LogManager.getLogger(Instrumenter.class);
+    private static final SootClass loggerClass;
     private static Map<String, SootMethod> logMethodMap = new HashMap<>();
-    private static SootMethod startLogMethod;
-    private static String[] supportedType = {Object.class.getName(), byte.class.getName(), short.class.getName(), int.class.getName(), long.class.getName(), float.class.getName(), double.class.getName(), boolean.class.getName(), char.class.getName(), String.class.getName() };
+    private static final SootMethod startLogMethod;
+    private static final String[] supportedType = {Object.class.getName(), byte.class.getName(), short.class.getName(), int.class.getName(), long.class.getName(), float.class.getName(), double.class.getName(), boolean.class.getName(), char.class.getName(), String.class.getName() };
     static {
         loggerClass = Scene.v().loadClassAndSupport("program.execution.ExecutionLogger");
         startLogMethod = loggerClass.getMethod("void start(int)");
