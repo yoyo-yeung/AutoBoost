@@ -1,0 +1,6 @@
+resources/*
+AutoBoost/target
+AutoBoost/.idea/*
+AutoBoost/logs/*
+TestInspector/*
+.DS_Store
