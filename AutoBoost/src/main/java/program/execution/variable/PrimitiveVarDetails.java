@@ -6,15 +6,15 @@ import java.lang.reflect.Field;
 import java.util.Objects;
 
 public class PrimitiveVarDetails extends VarDetail{
-    Class<?> type = null;
-    byte byteValue;
-    short shortValue;
-    int intValue;
-    long longValue;
-    float floatValue;
-    double doubleValue;
-    char charValue;
-    boolean booleanValue;
+    private final Class<?> type;
+    private byte byteValue;
+    private short shortValue;
+    private int intValue;
+    private long longValue;
+    private float floatValue;
+    private double doubleValue;
+    private char charValue;
+    private boolean booleanValue;
 
     // must provide all details when constructed, no updating allowed
     public PrimitiveVarDetails(int ID, Object wrapperValue) throws NoSuchFieldException, IllegalAccessException {
