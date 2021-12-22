@@ -46,9 +46,15 @@ public class PrimitiveVarDetails extends VarDetail{
     public String getTypeSimpleName() {return type.getSimpleName();}
 
     @Override
-    public Object getValue() throws Exception {
-        Field field = getClass().getDeclaredField(type.getName() + "Value");
-        return field.get(this).toString();
+    public Object getValue()  {
+        Field field = null;
+        try {
+            field = getClass().getDeclaredField(type.getName() + "Value");
+            return field.get(this).toString();
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     @Override

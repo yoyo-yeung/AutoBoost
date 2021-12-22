@@ -19,7 +19,7 @@ public class ObjVarDetails extends VarDetail{
     }
 
     @Override
-    public Object getValue() throws Exception {
+    public Object getValue() {
         return value;
     }
 

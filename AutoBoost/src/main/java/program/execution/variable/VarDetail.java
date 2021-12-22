@@ -13,7 +13,7 @@ public abstract class VarDetail{
         return ID;
     }
 
-    public abstract Object getValue() throws Exception;
+    public abstract Object getValue();
 
     public abstract Class<?> getType();
 
