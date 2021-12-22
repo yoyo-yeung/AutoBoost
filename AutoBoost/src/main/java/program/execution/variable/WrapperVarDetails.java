@@ -8,7 +8,7 @@ public class WrapperVarDetails extends VarDetail{
     Object value;
 
     public WrapperVarDetails(int ID, Class<?> type, Object value) {
-        this.setID(ID);
+        super(ID);
         this.type = type;
         this.value = value;
     }

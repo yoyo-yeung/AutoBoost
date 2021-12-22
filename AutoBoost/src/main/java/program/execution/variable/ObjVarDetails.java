@@ -13,7 +13,7 @@ public class ObjVarDetails extends VarDetail{
     }
 
     public ObjVarDetails(int ID, Class<?> type, Object value) {
-        this.setID(ID);
+        super(ID);
         this.type = type;
         this.value = value;
     }
@@ -44,5 +44,13 @@ public class ObjVarDetails extends VarDetail{
     @Override
     public int hashCode() {
         return Objects.hash(type, value);
+    }
+
+    @Override
+    public String toString() {
+        return "ObjVarDetails{" +
+                "type=" + type +
+                ", value=" + value +
+                '}';
     }
 }

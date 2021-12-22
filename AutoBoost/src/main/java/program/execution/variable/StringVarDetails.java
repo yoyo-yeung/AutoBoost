@@ -9,7 +9,7 @@ public class StringVarDetails extends VarDetail{
     String value;
 
     public StringVarDetails(int ID, String value) {
-        this.setID(ID);
+        super(ID);
         this.value = value;
     }
 

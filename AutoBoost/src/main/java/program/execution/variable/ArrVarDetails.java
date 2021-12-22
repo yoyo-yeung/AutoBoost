@@ -5,23 +5,28 @@ import java.util.List;
 
 public class ArrVarDetails extends VarDetail{
     Class<?> componentType;
+    Class<?> type;
     int dimension;
-    HashMap<List<Integer>, Object> componentValueMap;
+    List<VarDetail> components;
     Object value;
 
+    public ArrVarDetails(int ID, Object value) {
+        super(ID);
+        this.value = value;
+    }
 
     @Override
     public Object getValue() throws Exception {
-        return null;
+        return value;
     }
 
     @Override
     public Class<?> getType() {
-        return null;
+        return this.type;
     }
 
     @Override
     public String getTypeSimpleName() {
-        return null;
+        return this.type.getSimpleName();
     }
 }

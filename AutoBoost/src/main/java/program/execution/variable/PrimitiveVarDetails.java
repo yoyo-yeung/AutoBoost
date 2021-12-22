@@ -21,13 +21,13 @@ public class PrimitiveVarDetails extends VarDetail{
         this(ID, wrapperValue.getClass(), wrapperValue);
     }
     public PrimitiveVarDetails(int ID, Class<?>type, Object wrappedValue) throws NoSuchFieldException, IllegalAccessException {
+        super(ID);
         if(!type.isPrimitive())
             throw new IllegalArgumentException("Non primitive type value are being stored as primitive var");
         if(!ClassUtils.isPrimitiveWrapper(wrappedValue.getClass()))
             throw new IllegalArgumentException("Non wrapper type value provided. Cannot be cast to primitive value");
         if(!ClassUtils.wrapperToPrimitive(wrappedValue.getClass()).equals(type))
             throw new IllegalArgumentException("Type specified and value provided do not match");
-        this.setID(ID);
         this.type = type;
         Field field = getClass().getDeclaredField(type.getName()+"Value");
         field.set(this, wrappedValue);
