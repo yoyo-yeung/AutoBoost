@@ -4,8 +4,8 @@ import java.util.Objects;
 
 // store it separately from other object var as they can be directly assigned
 public class WrapperVarDetails extends VarDetail{
-    Class<?> type;
-    Object value;
+    private final Class<?> type;
+    private final Object value;
 
     public WrapperVarDetails(int ID, Class<?> type, Object value) {
         super(ID);
