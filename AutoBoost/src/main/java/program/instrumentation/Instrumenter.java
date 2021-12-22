@@ -20,7 +20,7 @@ public class Instrumenter extends BodyTransformer {
     private static Map<String, SootMethod> logMethodMap = new HashMap<>();
     private static String[] supportedType = {Object.class.getName(), byte.class.getName(), short.class.getName(), int.class.getName(), long.class.getName(), float.class.getName(), double.class.getName(), boolean.class.getName(), char.class.getName(), String.class.getName() };
     static {
-        loggerClass = Scene.v().loadClassAndSupport("program.execution.ExecutionTrace");
+        loggerClass = Scene.v().loadClassAndSupport("program.execution.ExecutionLogger");
         logMethodMap =  Arrays.stream(supportedType).collect(Collectors.toMap(t -> t, t -> loggerClass.getMethod("void log(int,java.lang.String,java.lang.String,"+t+")")));
     }
 
@@ -58,7 +58,6 @@ public class Instrumenter extends BodyTransformer {
             }
             if(!directAssgn && stmt instanceof AssignStmt && ((AssignStmt) stmt).getLeftOp().toString().indexOf("this")==0)
                 directAssgn = true;
-            if(!methodDetails.getName().equals("hashCode") && !methodDetails.getName().equals("toString")  && methodDetails.getAccess().equals(ACCESS.PUBLIC) &&!methodDetails.getType().equals(METHOD_TYPE.STATIC_INITIALIZER) && !(declaringClass.isAbstract() && methodDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR)) && !paramLogged ) {
                 if(methodDetails.getType().equals(METHOD_TYPE.MEMBER)){
                     invExpr = Jimple.v().newStaticInvokeExpr(logMethodMap.get(Object.class.getName()).makeRef(), IntConstant.v(methodId), StringConstant.v(LOG_ITEM.CALL_THIS.toString()), StringConstant.v(body.getThisLocal().getName()), body.getThisLocal());
                     invStmt = Jimple.v().newInvokeStmt(invExpr);
