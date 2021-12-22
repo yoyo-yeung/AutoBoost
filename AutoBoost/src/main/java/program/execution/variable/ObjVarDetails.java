@@ -5,8 +5,8 @@ import org.apache.commons.lang3.ClassUtils;
 import java.util.Objects;
 
 public class ObjVarDetails extends VarDetail{
-    Class<?> type;
-    Object value;
+    private final Class<?> type;
+    private final Object value;
 
     public ObjVarDetails(int ID, Object value) {
         this(ID, value.getClass(), value);
