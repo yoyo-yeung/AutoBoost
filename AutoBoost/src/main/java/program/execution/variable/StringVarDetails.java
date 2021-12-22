@@ -6,7 +6,7 @@ import org.apache.commons.text.StringEscapeUtils;
 import java.util.Objects;
 
 public class StringVarDetails extends VarDetail{
-    String value;
+    private final String value;
 
     public StringVarDetails(int ID, String value) {
         super(ID);
