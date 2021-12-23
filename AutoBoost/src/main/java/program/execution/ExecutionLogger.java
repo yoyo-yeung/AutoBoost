@@ -74,7 +74,7 @@ public class ExecutionLogger {
             if(ID == -1) {
                 ID = trace.getNewVarID();
                 varDetails = new ObjVarDetails(ID, obj);
-                trace.addVarDetail(varDetails);
+                trace.addNewVarDetail(varDetails, executing.peek().getID());
             }
             setVarIDforExecutions(methodId, process, ID);
         }
