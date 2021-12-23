@@ -19,7 +19,7 @@ public class ExecutionTrace {
     private final Map<Integer, MethodExecution> allMethodExecs;
     private final Map<Integer, VarDetail> allVars; // store all vardetail used, needed for lookups
     private final Map<Integer, Set<Integer>> varToUsageMap;
-    private final Map<Integer, List<Integer>> varToDefMap;
+    private final Map<Integer, Integer> varToDefMap;
     private final Map<Integer, Set<Integer>> callToVarUsageMap;
     private final Map<Integer, Set<Integer>> callToVarDefMap;
     private final DefaultDirectedGraph<Integer, DefaultEdge> callGraph;
@@ -28,7 +28,7 @@ public class ExecutionTrace {
         this.allMethodExecs = new HashMap<>();
         this.allVars = new HashMap<>();
         this.varToUsageMap = new HashMap<>();
-        this.varToDefMap = new HashMap<>();
+        this.varToDefMap = new HashMap<Integer, Integer>();
         this.callToVarUsageMap = new HashMap<>();
         this.callToVarDefMap = new HashMap<>();
         callGraph = new DefaultDirectedGraph<>(DefaultEdge.class);
@@ -50,7 +50,7 @@ public class ExecutionTrace {
         return varToUsageMap;
     }
 
-    public Map<Integer, List<Integer>> getVarToDefMap() {
+    public Map<Integer, Integer> getVarToDefMap() {
         return varToDefMap;
     }
 
