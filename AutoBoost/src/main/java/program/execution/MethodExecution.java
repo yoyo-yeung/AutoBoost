@@ -1,0 +1,117 @@
+package program.execution;
+
+
+import entity.METHOD_TYPE;
+import program.analysis.MethodDetails;
+import program.execution.variable.VarDetail;
+import program.instrumentation.InstrumentResult;
+import soot.VoidType;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class MethodExecution {
+    private final int ID;
+    private final int methodInvokedId;
+    private int calleeId; // if member function
+    private List<Integer> params;
+    private int returnValId; // if non void
+    private int resultThisId; // if member function, object after executing its member function
+
+    public MethodExecution(int ID, int methodInvokedId) {
+        this.ID = ID;
+        this.methodInvokedId = methodInvokedId;
+        this.calleeId = -1;
+        this.params = null;
+        this.returnValId = -1;
+        this.resultThisId = -1;
+    }
+
+    public MethodExecution(int ID, int methodInvokedId, Integer calleeId, List<Integer> params, Integer returnValId, Integer resultThisId) {
+        if(!relationshipCheck(methodInvokedId, calleeId, params, returnValId, resultThisId))
+            throw new IllegalArgumentException("Arguments not matched");
+        this.ID = ID;
+        this.methodInvokedId = methodInvokedId;
+        this.calleeId = calleeId;
+        this.params = params;
+        this.returnValId = returnValId;
+        this.resultThisId = resultThisId;
+    }
+
+    private boolean relationshipCheck(int methodInvokedId, Integer calleeId, List<Integer> params, Integer returnValId, Integer resultThisId) {
+        MethodDetails methodInvoked = InstrumentResult.getSingleton().getMethodDetailsMap().get(methodInvokedId);
+        ExecutionTrace trace = ExecutionTrace.getSingleton();
+        VarDetail callee = trace.getAllVars().get(calleeId);
+        VarDetail returnVal = trace.getAllVars().get(returnValId);
+        VarDetail resultThis = trace.getAllVars().get(resultThisId);
+        if(methodInvoked == null ) return false;
+        if(methodInvoked.getType() == null) return false;
+        if(methodInvoked.getType().equals(METHOD_TYPE.MEMBER)) {
+            if(callee == null || resultThis == null)
+                return false;
+            if(!callee.getType().equals(resultThis.getType()))
+                return false;
+        }
+        if(methodInvoked.getType().equals(METHOD_TYPE.STATIC) && (callee != null || resultThis != null))
+            return false;
+        if(methodInvoked.getParameterTypes() != null && methodInvoked.getParameterTypes().size() > 0 && (params == null || params.size() != methodInvoked.getParameterTypes().size()))
+            return false;
+        if(methodInvoked.getReturnType() != null && !methodInvoked.getReturnType().getClass().equals(VoidType.class) && !methodInvoked.getReturnType().getClass().equals(returnVal.getType()))
+            return false;
+        return true;
+    }
+
+    public int getID() {
+        return ID;
+    }
+
+    public int getMethodInvokedId() {
+        return methodInvokedId;
+    }
+
+    public int getCalleeId() {
+        return calleeId;
+    }
+
+    public List<Integer> getParams() {
+        return params;
+    }
+
+    public int getReturnValId() {
+        return returnValId;
+    }
+
+    public int getResultThisId() {
+        return resultThisId;
+    }
+
+    public void setCalleeId(int calleeId) {
+        if(this.calleeId != -1)
+            throw new IllegalArgumentException("Callee cannot be set twice");
+        this.calleeId = calleeId;
+    }
+
+    public void addParam(int param) {
+        if(this.params != null && this.params.size() == InstrumentResult.getSingleton().getMethodDetailsMap().get(this.methodInvokedId).getParameterTypes().size())
+            throw new IllegalArgumentException("Params cannot be set twice");
+        if(this.params == null)
+            this.params = new ArrayList<>();
+        this.params.add(param);
+    }
+
+    // must be the last item called
+    public void setReturnValId(int returnValId) {
+        if(this.returnValId != -1 )
+            throw new IllegalArgumentException("Return value cannot be set twice");
+        this.returnValId = returnValId;
+        if(!relationshipCheck(methodInvokedId, calleeId, params, this.returnValId, resultThisId))
+            throw new IllegalArgumentException("Arguments not matched");
+    }
+
+    public void setResultThisId(int resultThisId) {
+        if(this.resultThisId != -1)
+            throw new IllegalArgumentException("Resulting callee cannot be set twice");
+        this.resultThisId = resultThisId;
+    }
+
+}
