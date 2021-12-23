@@ -89,4 +89,14 @@ public class ExecutionTrace {
         this.allVars.put(detail.getID(), detail);
     }
 
+    public void addMethodExecution(MethodExecution execution) {
+        this.allMethodExecs.put(execution.getID(), execution);
+        this.callGraph.addVertex(execution.getID()); // add vertex even if it has no son/ father
+    }
+
+    public void addMethodRelationship(int father, int son) {
+        this.callGraph.addVertex(father);
+        this.callGraph.addVertex(son);
+        this.callGraph.addEdge(father, son);
+    }
 }
