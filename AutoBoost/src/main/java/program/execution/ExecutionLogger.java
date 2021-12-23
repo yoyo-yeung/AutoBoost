@@ -23,6 +23,8 @@ public class ExecutionLogger {
      * @param process LOG_ITEM value representing status of method call
      */
     public static void start(int methodId, String process) {
+        if(!LOG_ITEM.START_CALL.equals(LOG_ITEM.valueOf(process)))
+            throw new IllegalArgumentException("Unacceptable process for current operation ");
         // skip logging of method IF it is a method call enclosed
         if(returnNow(methodId, process))
             return;
@@ -146,26 +148,32 @@ public class ExecutionLogger {
             executionTrace.addMethodRelationship(executing.peek().getID(), finishedMethod.getID());
     }
 
+    /**
+     * This method is used for updating values of the method under execution.
+     * For use inside class only
+     * @param methodId ID of method being processed
+     * @param process LOG_ITEM type, enclose current status of method and the type of item to store
+     * @param ID ID of the VarDetail object to store
+     */
     private static void setVarIDforExecutions(int methodId, String process, int ID) {
+        MethodExecution execution = executing.peek();
+        if( methodId != execution.getMethodInvokedId() )
+            throw new RuntimeException("Method processing does NOT match stored method ");
         switch (LOG_ITEM.valueOf(process)) {
             case CALL_THIS:
-                executing.peek().setCalleeId(ID);
+               execution.setCalleeId(ID);
                 break;
             case CALL_PARAM:
-                executing.peek().addParam(ID);
+               execution.addParam(ID);
                 break;
             case RETURN_THIS:
-                executing.forEach(i -> {
-                    logger.debug(i.toString());
-                    logger.debug(InstrumentResult.getSingleton().getMethodDetailsMap().get(i.getMethodInvokedId()).toString());
-                });
-                executing.peek().setResultThisId(ID);
+               execution.setResultThisId(ID);
                 break;
             case RETURN_VOID:
                 ID = -1;
             case RETURN_ITEM:
-                executing.peek().setReturnValId(ID);
-//                executing.peek().relationshipCheck();
+               execution.setReturnValId(ID);
+//               execution.relationshipCheck();
                 endLogMethod(methodId);
                 break;
             default:
