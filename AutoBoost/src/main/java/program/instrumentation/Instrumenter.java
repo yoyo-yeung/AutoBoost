@@ -60,21 +60,26 @@ public class Instrumenter extends BodyTransformer {
             }
             if(!directAssgn && stmt instanceof AssignStmt && ((AssignStmt) stmt).getLeftOp().toString().indexOf("this")==0)
                 directAssgn = true;
+            // log start and param values if ths method is public, NOT static initializer and NOT abstract
             if(methodDetails.getAccess().equals(ACCESS.PUBLIC) &&!methodDetails.getType().equals(METHOD_TYPE.STATIC_INITIALIZER) && !declaringClass.isAbstract() && !paramLogged ) {
+                // log start of method
                 invExpr = Jimple.v().newStaticInvokeExpr(startLogMethod.makeRef(), IntConstant.v(methodId), StringConstant.v(LOG_ITEM.START_CALL.toString()));
                 invStmt = Jimple.v().newInvokeStmt(invExpr);
                 units.insertBefore(invStmt, stmt);
+                // log callee details if it is a member function
                 if(methodDetails.getType().equals(METHOD_TYPE.MEMBER)){
                     invExpr = Jimple.v().newStaticInvokeExpr(logMethodMap.get(Object.class.getName()).makeRef(), IntConstant.v(methodId), StringConstant.v(LOG_ITEM.CALL_THIS.toString()), StringConstant.v(body.getThisLocal().getName()), body.getThisLocal());
                     invStmt = Jimple.v().newInvokeStmt(invExpr);
                     units.insertBefore(invStmt, stmt);
                 }
+                // log params if there is one
                 if(body.getMethod().getParameterCount()>0)
                     for(Local l : body.getParameterLocals()){
                         invExpr = Jimple.v().newStaticInvokeExpr(logMethodMap.getOrDefault(l.getType().toString(), logMethodMap.get(Object.class.getName())).makeRef(), IntConstant.v(methodId), StringConstant.v(LOG_ITEM.CALL_PARAM.toString()), StringConstant.v(l.getName()), l);
                         invStmt = Jimple.v().newInvokeStmt(invExpr);
                         units.insertBefore(invStmt, stmt);
                     }
+                // set paramLogged to prevent re-logging
                 paramLogged = true;
             }
             if(stmt instanceof  ReturnStmt || stmt instanceof ReturnVoidStmt) {
