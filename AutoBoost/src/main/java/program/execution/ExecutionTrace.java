@@ -1,39 +1,92 @@
 package program.execution;
 
-import entity.LOG_ITEM;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jgrapht.graph.DefaultDirectedGraph;
+import org.jgrapht.graph.DefaultEdge;
+import program.execution.variable.ObjVarDetails;
+import program.execution.variable.VarDetail;
+
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class ExecutionTrace {
-    private static Logger logger = LogManager.getLogger(ExecutionTrace.class);
+    private static final Logger logger = LogManager.getLogger(ExecutionTrace.class);
+    private static final ExecutionTrace singleton = new ExecutionTrace();
+    private static final AtomicInteger exeIDGenerator = new AtomicInteger(0);
+    private static final AtomicInteger varIDGenerator = new AtomicInteger(0);
+    private final Map<Integer, MethodExecution> allMethodExecs;
+    private final Map<Integer, VarDetail> allVars; // store all vardetail used, needed for lookups
+    private final Map<Integer, Set<Integer>> varToUsageMap;
+    private final Map<Integer, List<Integer>> varToDefMap;
+    private final Map<Integer, Set<Integer>> callToVarUsageMap;
+    private final Map<Integer, Set<Integer>> callToVarDefMap;
+    private final DefaultDirectedGraph<Integer, DefaultEdge> callGraph;
 
-
-
-    public static void log(int methodId, String process, String name, Object obj) {
-
+    public ExecutionTrace() {
+        this.allMethodExecs = new HashMap<>();
+        this.allVars = new HashMap<>();
+        this.varToUsageMap = new HashMap<>();
+        this.varToDefMap = new HashMap<>();
+        this.callToVarUsageMap = new HashMap<>();
+        this.callToVarDefMap = new HashMap<>();
+        callGraph = new DefaultDirectedGraph<>(DefaultEdge.class);
     }
 
-    public static void log(int methodId, String process, String name, byte value) {
+    public static ExecutionTrace getSingleton() {
+        return singleton;
     }
 
-    public static void log(int methodId, String process, String name, short value) {
+    public Map<Integer, MethodExecution> getAllMethodExecs() {
+        return allMethodExecs;
     }
-    public static void log(int methodId, String process, String name, int value) {
+
+    public Map<Integer, VarDetail> getAllVars() {
+        return allVars;
     }
-    public static void log(int methodId, String process, String name, long value) {
+
+    public Map<Integer, Set<Integer>> getVarToUsageMap() {
+        return varToUsageMap;
     }
-    public static void log(int methodId, String process, String name, float value) {
+
+    public Map<Integer, List<Integer>> getVarToDefMap() {
+        return varToDefMap;
     }
-    public static void log(int methodId, String process, String name, double value) {
+
+    public Map<Integer, Set<Integer>> getCallToVarUsageMap() {
+        return callToVarUsageMap;
     }
-    public static void log(int methodId, String process, String name, boolean value) {
+
+    public Map<Integer, Set<Integer>> getCallToVarDefMap() {
+        return callToVarDefMap;
     }
-    public static void log(int methodId, String process, String name, char value) {
+
+    public DefaultDirectedGraph<Integer, DefaultEdge> getCallGraph() {
+        return callGraph;
     }
-    public static void log(int methodId, String process, String name, String value) {
+
+    public int getNewExeID() {
+        return exeIDGenerator.incrementAndGet();
     }
-    private static boolean isWrapperClass(Class c) {
-        return c.equals(Byte.class) || c.equals(Short.class) || c.equals(Integer.class) || c.equals(Long.class) || c.equals(Float.class) || c.equals(Double.class) || c.equals(Boolean.class) || c.equals(Character.class);
+
+    public int getNewVarID() {
+        return varIDGenerator.incrementAndGet();
+    }
+
+    /**
+     * If the obj was defined and stored before, return ID of the corresponding ObjVarDetails for reuse. Else return -1
+     * @param obj
+     * @return ID of ObjVarDetails if the obj was defined and stored before, -1 if not
+     */
+    public int getObjVarDetailsID(Object obj) {
+        List<VarDetail> results = this.allVars.values().stream().filter(v -> v instanceof ObjVarDetails).filter(v -> Objects.deepEquals(v.getValue(), obj)).collect(Collectors.toList());
+        if(results.size() == 0 ) return -1;
+        else return results.get(0).getID();
+    }
+
+    public void addVarDetail(VarDetail detail) {
+        this.allVars.put(detail.getID(), detail);
     }
 
 }
