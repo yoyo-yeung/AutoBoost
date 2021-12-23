@@ -2,5 +2,8 @@ resources/*
 AutoBoost/target
 AutoBoost/.idea/*
 AutoBoost/logs/*
+AutoBoost/log/*
 TestInspector/*
 .DS_Store
+*.log
+*.sh
