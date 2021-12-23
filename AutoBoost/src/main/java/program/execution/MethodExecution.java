@@ -27,7 +27,7 @@ public class MethodExecution {
         this.resultThisId = -1;
     }
 
-    public MethodExecution(int ID, int methodInvokedId, Integer calleeId, List<Integer> params, Integer returnValId, Integer resultThisId) {
+    public MethodExecution(int ID, int methodInvokedId, int calleeId, List<Integer> params, int returnValId, int resultThisId) {
         if(!relationshipCheck(methodInvokedId, calleeId, params, returnValId, resultThisId))
             throw new IllegalArgumentException("Arguments not matched");
         this.ID = ID;
@@ -38,12 +38,12 @@ public class MethodExecution {
         this.resultThisId = resultThisId;
     }
 
-    private boolean relationshipCheck(int methodInvokedId, Integer calleeId, List<Integer> params, Integer returnValId, Integer resultThisId) {
+    private boolean relationshipCheck(int methodInvokedId, int calleeId, List<Integer> params, int returnValId, int resultThisId) {
         MethodDetails methodInvoked = InstrumentResult.getSingleton().getMethodDetailsMap().get(methodInvokedId);
         ExecutionTrace trace = ExecutionTrace.getSingleton();
-        VarDetail callee = trace.getAllVars().get(calleeId);
-        VarDetail returnVal = trace.getAllVars().get(returnValId);
-        VarDetail resultThis = trace.getAllVars().get(resultThisId);
+        VarDetail callee = calleeId == -1 ? null : trace.getAllVars().get(calleeId);
+        VarDetail returnVal = returnValId == -1 ? null : trace.getAllVars().get(returnValId);
+        VarDetail resultThis = resultThisId == -1 ? null : trace.getAllVars().get(resultThisId);
         if(methodInvoked == null ) return false;
         if(methodInvoked.getType() == null) return false;
         if(methodInvoked.getType().equals(METHOD_TYPE.MEMBER)) {
@@ -56,7 +56,7 @@ public class MethodExecution {
             return false;
         if(methodInvoked.getParameterTypes() != null && methodInvoked.getParameterTypes().size() > 0 && (params == null || params.size() != methodInvoked.getParameterTypes().size()))
             return false;
-        if(methodInvoked.getReturnType() != null && !methodInvoked.getReturnType().getClass().equals(VoidType.class) && !methodInvoked.getReturnType().getClass().equals(returnVal.getType()))
+        if(methodInvoked.getReturnType() != null && !methodInvoked.getReturnType().getClass().equals(VoidType.class) && (returnVal == null || !methodInvoked.getReturnType().getClass().equals(returnVal.getType())))
             return false;
         return true;
     }
