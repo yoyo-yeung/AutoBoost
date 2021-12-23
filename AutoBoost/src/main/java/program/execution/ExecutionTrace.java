@@ -85,10 +85,48 @@ public class ExecutionTrace {
         else return results.get(0).getID();
     }
 
-    public void addVarDetail(VarDetail detail) {
-        this.allVars.put(detail.getID(), detail);
+    /**
+     * Set up all maps using VarDetail key as ID
+     * @param varID key of VarDetail
+     */
+    private void setUpVarMaps(int varID) {
+        if(!this.varToUsageMap.containsKey(varID) || this.varToUsageMap.get(varID) == null )
+            this.varToUsageMap.put(varID, new HashSet<>());
     }
 
+    /**
+     * Set up all maps using MethodExecution key as ID
+     * @param executionID key of Method Execution
+     */
+    private void setUpCallMaps(int executionID) {
+        if(!this.callToVarDefMap.containsKey(executionID) || this.callToVarDefMap.get(executionID) == null)
+            this.callToVarDefMap.put(executionID, new HashSet<>());
+        if(!this.callToVarUsageMap.containsKey(executionID) || this.callToVarUsageMap.get(executionID) == null)
+            this.callToVarUsageMap.put(executionID, new HashSet<>());
+    }
+
+    /**
+     * Add a newly created VarDetail to the collection
+     * Add def-relationship between method execution and VarDetail
+     * @param detail Newly created VarDetail to document
+     * @param executionID ID of MethodExecution that define a new VarDetail
+     */
+    public void addNewVarDetail(VarDetail detail, int executionID) {
+        this.allVars.put(detail.getID(), detail);
+        this.setUpVarMaps(detail.getID());
+        this.setUpCallMaps(executionID);
+        this.varToDefMap.put(detail.getID(), executionID);
+        this.varToUsageMap.get(detail.getID()).add(executionID);
+        this.callToVarDefMap.get(executionID).add(detail.getID());
+        this.callToVarUsageMap.get(executionID).add(detail.getID());
+    }
+
+    public void addVarDetailUsage(int detailID, int executionID) {
+        this.setUpVarMaps(detailID);
+        this.setUpCallMaps(executionID);
+        this.varToUsageMap.get(detailID).add(executionID);
+        this.callToVarUsageMap.get(executionID).add(detailID);
+    }
     public void addMethodExecution(MethodExecution execution) {
         this.allMethodExecs.put(execution.getID(), execution);
         this.callGraph.addVertex(execution.getID()); // add vertex even if it has no son/ father
