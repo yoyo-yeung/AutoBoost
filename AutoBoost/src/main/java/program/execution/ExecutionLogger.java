@@ -59,13 +59,11 @@ public class ExecutionLogger {
         ExecutionTrace trace = ExecutionTrace.getSingleton();
         if(returnNow(methodId, process))
             return;
+        if(obj == null || process.equals(LOG_ITEM.RETURN_VOID.toString())) {
+            setVarIDforExecutions(methodId, process, -1);
+            return;
+        }
         if (obj.getClass().isArray()){
-//            logger.debug(obj);
-//            logger.debug(obj.getClass());
-//            logger.debug(obj.getClass().getSimpleName());
-//            ArrayVarDetails var = new ArrayVarDetails(obj);
-//            logger.debug(Array.get(obj,0));
-//            logger.debug(var);
         }
         else if(ClassUtils.isPrimitiveWrapper(obj.getClass())){}
         else {
@@ -75,17 +73,8 @@ public class ExecutionLogger {
                 ID = trace.getNewVarID();
                 varDetails = new ObjVarDetails(ID, obj);
                 trace.addVarDetail(varDetails);
-            }else {
-                logger.debug("find old matching");
-                logger.debug(trace.getAllVars().get(ID).getType());
-                logger.debug(obj.getClass());
-                logger.debug(trace.getAllVars().get(ID).getValue().hashCode()+"\t"+trace.getAllVars().get(ID).getValue().toString());
-                logger.debug(obj.hashCode()+"\t"+obj.toString());
             }
-            if(LOG_ITEM.valueOf(process).equals(LOG_ITEM.CALL_THIS)) {
-                logger.debug(InstrumentResult.getSingleton().getMethodDetailsMap().get(ID));
-                executing.peek().setCalleeId(ID);
-            }
+            setVarIDforExecutions(methodId, process, ID);
         }
 
     }
@@ -133,9 +122,54 @@ public class ExecutionLogger {
     public static void log(int methodId, String process, String name, String value) {
         if(returnNow(methodId, process))
         return;
+        if(value == null || process.equals(LOG_ITEM.RETURN_VOID.toString())) {
+            setVarIDforExecutions(methodId, process, -1);
+            return;
+        }
     }
 
     public static Stack<MethodExecution> getExecuting() {
         return executing;
+    }
+
+    /**
+     * called when method has finished logging
+     */
+    private static void endLogMethod(int methodId) {
+        if(methodId!=executing.peek().getMethodInvokedId())
+            throw new RuntimeException("Method finishing logging does not match stored method");
+        MethodExecution finishedMethod = executing.pop();
+        ExecutionTrace executionTrace = ExecutionTrace.getSingleton();
+        executionTrace.addMethodExecution(finishedMethod);
+        // some method called the finishedMethod
+        if(executing.size()!=0)
+            executionTrace.addMethodRelationship(executing.peek().getID(), finishedMethod.getID());
+    }
+
+    private static void setVarIDforExecutions(int methodId, String process, int ID) {
+        switch (LOG_ITEM.valueOf(process)) {
+            case CALL_THIS:
+                executing.peek().setCalleeId(ID);
+                break;
+            case CALL_PARAM:
+                executing.peek().addParam(ID);
+                break;
+            case RETURN_THIS:
+                executing.forEach(i -> {
+                    logger.debug(i.toString());
+                    logger.debug(InstrumentResult.getSingleton().getMethodDetailsMap().get(i.getMethodInvokedId()).toString());
+                });
+                executing.peek().setResultThisId(ID);
+                break;
+            case RETURN_VOID:
+                ID = -1;
+            case RETURN_ITEM:
+                executing.peek().setReturnValId(ID);
+//                executing.peek().relationshipCheck();
+                endLogMethod(methodId);
+                break;
+            default:
+                throw new RuntimeException("Invalid value provided for process " + process);
+        }
     }
 }
