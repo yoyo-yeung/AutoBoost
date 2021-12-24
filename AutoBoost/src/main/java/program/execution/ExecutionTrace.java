@@ -75,11 +75,11 @@ public class ExecutionTrace {
 
     /**
      * If the obj was defined and stored before, return ID of the corresponding ObjVarDetails for reuse. Else return -1
-     * @param obj
+     * @param objValue
      * @return ID of ObjVarDetails if the obj was defined and stored before, -1 if not
      */
-    public int getObjVarDetailsID(Object obj) {
-        List<VarDetail> results = this.allVars.values().stream().filter(v -> Objects.deepEquals(v.getValue(), obj)).collect(Collectors.toList());
+    public int getObjVarDetailsID(String objValue) {
+        List<VarDetail> results = this.allVars.values().stream().filter(v ->v.getValue().equals(objValue)).collect(Collectors.toList());
         if(results.size() == 0 ) return -1;
         else return results.get(0).getID();
     }

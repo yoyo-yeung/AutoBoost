@@ -6,13 +6,9 @@ import java.util.Objects;
 
 public class ObjVarDetails extends VarDetail{
     private final Class<?> type;
-    private final Object value;
+    private final String value;
 
-    public ObjVarDetails(int ID, Object value) {
-        this(ID, value.getClass(), value);
-    }
-
-    public ObjVarDetails(int ID, Class<?> type, Object value) {
+    public ObjVarDetails(int ID, Class<?> type, String value) {
         super(ID);
         this.type = type;
         this.value = value;
@@ -49,7 +45,8 @@ public class ObjVarDetails extends VarDetail{
     @Override
     public String toString() {
         return "ObjVarDetails{" +
-                "type=" + type +
+                "ID=" + getID() +
+                ", type=" + type +
                 ", value=" + value +
                 '}';
     }

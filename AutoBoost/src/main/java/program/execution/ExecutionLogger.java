@@ -22,7 +22,7 @@ public class ExecutionLogger {
     private static Stack<MethodExecution> executing = new Stack<>();
     private static final String[] skipMethods = {"equals", "toString", "hashCode"};
     private static int sameMethodCount = 0; // this variable is used for keeping track of no. of methods, sharing same methodId with the top one in stack, not logged but processing
-    private Gson gson = new GsonBuilder().addSerializationExclusionStrategy(new ExclusionStrategy() {
+    private static Gson gson = new GsonBuilder().addSerializationExclusionStrategy(new ExclusionStrategy() {
         @Override
         public boolean shouldSkipField(FieldAttributes fieldAttributes) {
             if(Arrays.stream(fieldAttributes.getDeclaringClass().getDeclaredFields()).filter(field -> fieldAttributes.getName().equals(field.getName())).count()>1)
@@ -87,13 +87,16 @@ public class ExecutionLogger {
         }
         else if(ClassUtils.isPrimitiveWrapper(obj.getClass())){}
         else {
-            int ID = trace.getObjVarDetailsID(obj);
+            String objValue = gson.toJson(obj);
+            int ID = trace.getObjVarDetailsID(objValue);
             VarDetail varDetails;
             if(ID == -1) {
                 ID = trace.getNewVarID();
-                varDetails = new ObjVarDetails(ID, obj);
+                varDetails = new ObjVarDetails(ID, obj.getClass(), objValue);
                 trace.addNewVarDetail(varDetails, executing.peek().getID());
             }
+            else
+                trace.addVarDetailUsage(ID, executing.peek().getID());
             setVarIDforExecutions(methodId, process, ID);
         }
 
