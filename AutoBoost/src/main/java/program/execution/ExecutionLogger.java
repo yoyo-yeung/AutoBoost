@@ -1,6 +1,11 @@
 package program.execution;
 
+import com.google.gson.ExclusionStrategy;
+import com.google.gson.FieldAttributes;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import entity.LOG_ITEM;
+import entity.METHOD_TYPE;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -16,6 +21,19 @@ public class ExecutionLogger {
     private static Logger logger = LogManager.getLogger(ExecutionLogger.class);
     private static Stack<MethodExecution> executing = new Stack<>();
     private static final String[] skipMethods = {"equals", "toString", "hashCode"};
+    private static int sameMethodCount = 0; // this variable is used for keeping track of no. of methods, sharing same methodId with the top one in stack, not logged but processing
+    private Gson gson = new GsonBuilder().addSerializationExclusionStrategy(new ExclusionStrategy() {
+        @Override
+        public boolean shouldSkipField(FieldAttributes fieldAttributes) {
+            if(Arrays.stream(fieldAttributes.getDeclaringClass().getDeclaredFields()).filter(field -> fieldAttributes.getName().equals(field.getName())).count()>1)
+                return true;
+            return false;
+        }
+        @Override
+        public boolean shouldSkipClass(Class<?> aClass) {
+            return aClass.equals(java.text.DecimalFormat.class);
+        }
+    }).create();
 
     /**
      * Invoked when a method has started its execution. the method would be added to stack for further processing
