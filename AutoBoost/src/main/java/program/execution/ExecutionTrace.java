@@ -4,7 +4,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jgrapht.graph.DefaultDirectedGraph;
 import org.jgrapht.graph.DefaultEdge;
-import program.execution.variable.ObjVarDetails;
 import program.execution.variable.VarDetail;
 
 import java.util.*;
@@ -18,8 +17,8 @@ public class ExecutionTrace {
     private static final AtomicInteger varIDGenerator = new AtomicInteger(0);
     private final Map<Integer, MethodExecution> allMethodExecs;
     private final Map<Integer, VarDetail> allVars; // store all vardetail used, needed for lookups
-    private final Map<Integer, Set<Integer>> varToUsageMap;
-    private final Map<Integer, Integer> varToDefMap;
+    private final Map<Integer, List<Integer>> varToUsageMap;
+    private final Map<Integer, List<Integer>> varToDefMap;
     private final Map<Integer, Set<Integer>> callToVarUsageMap;
     private final Map<Integer, Set<Integer>> callToVarDefMap;
     private final DefaultDirectedGraph<Integer, DefaultEdge> callGraph;
@@ -28,7 +27,7 @@ public class ExecutionTrace {
         this.allMethodExecs = new HashMap<>();
         this.allVars = new HashMap<>();
         this.varToUsageMap = new HashMap<>();
-        this.varToDefMap = new HashMap<Integer, Integer>();
+        this.varToDefMap = new HashMap<Integer, List<Integer>>();
         this.callToVarUsageMap = new HashMap<>();
         this.callToVarDefMap = new HashMap<>();
         callGraph = new DefaultDirectedGraph<>(DefaultEdge.class);
@@ -46,11 +45,11 @@ public class ExecutionTrace {
         return allVars;
     }
 
-    public Map<Integer, Set<Integer>> getVarToUsageMap() {
+    public Map<Integer, List<Integer>> getVarToUsageMap() {
         return varToUsageMap;
     }
 
-    public Map<Integer, Integer> getVarToDefMap() {
+    public Map<Integer, List<Integer>> getVarToDefMap() {
         return varToDefMap;
     }
 
@@ -80,7 +79,7 @@ public class ExecutionTrace {
      * @return ID of ObjVarDetails if the obj was defined and stored before, -1 if not
      */
     public int getObjVarDetailsID(Object obj) {
-        List<VarDetail> results = this.allVars.values().stream().filter(v -> v instanceof ObjVarDetails).filter(v -> Objects.deepEquals(v.getValue(), obj)).collect(Collectors.toList());
+        List<VarDetail> results = this.allVars.values().stream().filter(v -> Objects.deepEquals(v.getValue(), obj)).collect(Collectors.toList());
         if(results.size() == 0 ) return -1;
         else return results.get(0).getID();
     }
@@ -90,8 +89,10 @@ public class ExecutionTrace {
      * @param varID key of VarDetail
      */
     private void setUpVarMaps(int varID) {
+        if(!this.varToDefMap.containsKey(varID) || this.varToDefMap.get(varID) == null)
+            this.varToDefMap.put(varID, new ArrayList<>());
         if(!this.varToUsageMap.containsKey(varID) || this.varToUsageMap.get(varID) == null )
-            this.varToUsageMap.put(varID, new HashSet<>());
+            this.varToUsageMap.put(varID, new ArrayList<>());
     }
 
     /**
@@ -115,7 +116,7 @@ public class ExecutionTrace {
         this.allVars.put(detail.getID(), detail);
         this.setUpVarMaps(detail.getID());
         this.setUpCallMaps(executionID);
-        this.varToDefMap.put(detail.getID(), executionID);
+        this.varToDefMap.get(detail.getID()).add(executionID);
         this.varToUsageMap.get(detail.getID()).add(executionID);
         this.callToVarDefMap.get(executionID).add(detail.getID());
         this.callToVarUsageMap.get(executionID).add(detail.getID());
@@ -137,4 +138,5 @@ public class ExecutionTrace {
         this.callGraph.addVertex(son);
         this.callGraph.addEdge(father, son);
     }
+
 }
