@@ -37,9 +37,11 @@ public class MethodExecution {
         this.returnValId = returnValId;
         this.resultThisId = resultThisId;
     }
+
     public boolean relationshipCheck() {
         return relationshipCheck(this.methodInvokedId, this.calleeId, this.params, this.returnValId, this.resultThisId);
     }
+
     private boolean relationshipCheck(int methodInvokedId, int calleeId, List<Integer> params, int returnValId, int resultThisId) {
         MethodDetails methodInvoked = InstrumentResult.getSingleton().getMethodDetailsMap().get(methodInvokedId);
         ExecutionTrace trace = ExecutionTrace.getSingleton();
@@ -101,7 +103,7 @@ public class MethodExecution {
 
     // must be the last item called
     public void setReturnValId(int returnValId) {
-        if(this.returnValId != -1 )
+        if(this.returnValId != -1)
             throw new IllegalArgumentException("Return value cannot be set twice");
         this.returnValId = returnValId;
     }
@@ -123,4 +125,16 @@ public class MethodExecution {
                 ", resultThisId=" + resultThisId +
                 '}';
     }
+
+    public boolean sameCalleeAndParams(MethodExecution ex) {
+        if(this.calleeId != ex.calleeId || (this.params.size() != ex.params.size()))
+            return false;
+
+        for (int i = 0; i < this.params.size(); i++) {
+            if(!this.params.get(i).equals(ex.getParams().get(i)))
+                return false;
+        }
+        return true;
+    }
+    
 }
