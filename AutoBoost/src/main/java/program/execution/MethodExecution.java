@@ -14,7 +14,7 @@ public class MethodExecution {
     private final int ID;
     private final int methodInvokedId;
     private int calleeId; // if member function
-    private List<Integer> params;
+    private final List<Integer> params;
     private int returnValId; // if non void
     private int resultThisId; // if member function, object after executing its member function
 
@@ -22,7 +22,7 @@ public class MethodExecution {
         this.ID = ID;
         this.methodInvokedId = methodInvokedId;
         this.calleeId = -1;
-        this.params = null;
+        this.params = new ArrayList<>();
         this.returnValId = -1;
         this.resultThisId = -1;
     }
@@ -33,7 +33,7 @@ public class MethodExecution {
         this.ID = ID;
         this.methodInvokedId = methodInvokedId;
         this.calleeId = calleeId;
-        this.params = params;
+        this.params = params == null ? new ArrayList<>() : params;
         this.returnValId = returnValId;
         this.resultThisId = resultThisId;
     }
@@ -94,10 +94,8 @@ public class MethodExecution {
     }
 
     public void addParam(int param) {
-        if(this.params != null && this.params.size() == InstrumentResult.getSingleton().getMethodDetailsMap().get(this.methodInvokedId).getParameterTypes().size())
+        if(this.params.size() == InstrumentResult.getSingleton().getMethodDetailsMap().get(this.methodInvokedId).getParameterTypes().size())
             throw new IllegalArgumentException("Params cannot be set twice");
-        if(this.params == null)
-            this.params = new ArrayList<>();
         this.params.add(param);
     }
 
