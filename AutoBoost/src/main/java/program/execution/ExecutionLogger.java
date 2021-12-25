@@ -62,15 +62,8 @@ public class ExecutionLogger {
         if(executing.size() == 0 || executing.peek() == null)
             return false;
         int latestID = executing.peek().getMethodInvokedId();
-        MethodDetails details = InstrumentResult.getSingleton().getMethodDetailsMap().get(latestID);
+        MethodDetails latestDetails = InstrumentResult.getSingleton().getMethodDetailByID(latestID);
         // if the method logged most recently is to be skipped
-        if(Arrays.stream(skipMethods).anyMatch(m -> m.equals(details.getName()))) {
-            // if the current method to be logged is same as the latest one, it must be stored to prevent inconsistent popping
-            if(latestID == methodId && LOG_ITEM.valueOf(process).equals(LOG_ITEM.START_CALL))
-                return false;
-            // if the current method trying to be logged is the one to be skipped + it is "return-ing", then remove it from stack and go back to logging as expected
-            if(latestID == methodId && (LOG_ITEM.valueOf(process).equals(LOG_ITEM.RETURN_ITEM) || LOG_ITEM.valueOf(process).equals(LOG_ITEM.RETURN_VOID)))
-                executing.pop();
             return true;
         }
         return false;

@@ -43,7 +43,7 @@ public class MethodExecution {
     }
 
     private boolean relationshipCheck(int methodInvokedId, int calleeId, List<Integer> params, int returnValId, int resultThisId) {
-        MethodDetails methodInvoked = InstrumentResult.getSingleton().getMethodDetailsMap().get(methodInvokedId);
+        MethodDetails methodInvoked = InstrumentResult.getSingleton().getMethodDetailByID(methodInvokedId);
         ExecutionTrace trace = ExecutionTrace.getSingleton();
         VarDetail callee = calleeId == -1 ? null : trace.getAllVars().get(calleeId);
         VarDetail returnVal = returnValId == -1 ? null : trace.getAllVars().get(returnValId);
@@ -96,7 +96,7 @@ public class MethodExecution {
     }
 
     public void addParam(int param) {
-        if(this.params.size() == InstrumentResult.getSingleton().getMethodDetailsMap().get(this.methodInvokedId).getParameterTypes().size())
+        if(this.params.size() == InstrumentResult.getSingleton().getMethodDetailByID(this.methodInvokedId).getParameterTypes().size())
             throw new IllegalArgumentException("Params cannot be set twice");
         this.params.add(param);
     }

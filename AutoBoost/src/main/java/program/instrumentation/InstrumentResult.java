@@ -41,4 +41,10 @@ public class InstrumentResult {
     public boolean visitedMethod(String declaringClass, String subsignature) {
         return this.methodDetailsMap.values().stream().anyMatch(m -> m.getDeclaringClass().equals(declaringClass)&& m.getSubsignature().equals(subsignature));
     }
+
+    public MethodDetails getMethodDetailByID(int methodID) {
+        if(!this.methodDetailsMap.containsKey(methodID))
+            throw new IllegalArgumentException("MethodDetails for " + methodID + " does not exist");
+        else return this.getMethodDetailsMap().get(methodID);
+    }
 }
