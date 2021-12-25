@@ -122,6 +122,11 @@ public class ExecutionTrace {
         this.callToVarUsageMap.get(executionID).add(detail.getID());
     }
 
+    /**
+     * Add record of a MethodExecution (with ID executionID) using a particular VarDetail (with ID detailID)
+     * @param detailID ID of existing VarDetail
+     * @param executionID ID of a method execution
+     */
     public void addVarDetailUsage(int detailID, int executionID) {
         this.setUpVarMaps(detailID);
         this.setUpCallMaps(executionID);
