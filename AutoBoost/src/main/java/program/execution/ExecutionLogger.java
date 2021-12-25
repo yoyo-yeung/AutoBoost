@@ -22,7 +22,7 @@ public class ExecutionLogger {
     private static Stack<MethodExecution> executing = new Stack<>();
     private static final String[] skipMethods = {"equals", "toString", "hashCode"};
     private static int sameMethodCount = 0; // this variable is used for keeping track of no. of methods, sharing same methodId with the top one in stack, not logged but processing
-    private static Gson gson = new GsonBuilder().addSerializationExclusionStrategy(new ExclusionStrategy() {
+    private static final Gson gson = new GsonBuilder().addSerializationExclusionStrategy(new ExclusionStrategy() {
         @Override
         public boolean shouldSkipField(FieldAttributes fieldAttributes) {
             if(Arrays.stream(fieldAttributes.getDeclaringClass().getDeclaredFields()).filter(field -> fieldAttributes.getName().equals(field.getName())).count()>1)
@@ -43,7 +43,7 @@ public class ExecutionLogger {
     public static void start(int methodId, String process) {
         if(!LOG_ITEM.START_CALL.equals(LOG_ITEM.valueOf(process)))
             throw new IllegalArgumentException("Unacceptable process for current operation ");
-        // skip logging of method IF it is a method call enclosed
+        // skip logging of method if it is a method call enclosed
         if(returnNow(methodId, process))
             return;
         executing.add(new MethodExecution(ExecutionTrace.getSingleton().getNewExeID(), methodId));
