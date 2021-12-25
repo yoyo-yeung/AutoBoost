@@ -83,6 +83,12 @@ public class Instrumenter extends BodyTransformer {
                     // set paramLogged to prevent re-logging
                     paramLogged = true;
                 }
+                if(stmt instanceof ThrowStmt) {
+                    Value thrownOp = ((ThrowStmt)stmt).getOp();
+                    invExpr = Jimple.v().newStaticInvokeExpr(logMethodMap.get(Object.class.getName()).makeRef(), IntConstant.v(methodId), StringConstant.v(LOG_ITEM.THREW_EXCEPTION.toString()), StringConstant.v(thrownOp.getType().toString()), thrownOp instanceof Local ? (Local)thrownOp : thrownOp);
+                    invStmt = Jimple.v().newInvokeStmt(invExpr);
+                    units.insertBefore(invStmt, stmt);
+                }
                 if(stmt instanceof  ReturnStmt || stmt instanceof ReturnVoidStmt) {
                     if (methodDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR) || methodDetails.getType().equals(METHOD_TYPE.MEMBER)) {
                         invExpr = Jimple.v().newStaticInvokeExpr(logMethodMap.get(Object.class.getName()).makeRef(), IntConstant.v(methodId), StringConstant.v(LOG_ITEM.RETURN_THIS.toString()), StringConstant.v(body.getThisLocal().getName()), body.getThisLocal());

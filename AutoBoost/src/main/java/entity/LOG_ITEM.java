@@ -6,5 +6,6 @@ public enum LOG_ITEM {
         CALL_PARAM,
         RETURN_ITEM,
         RETURN_THIS,
-        RETURN_VOID
+        RETURN_VOID,
+        THREW_EXCEPTION
 }

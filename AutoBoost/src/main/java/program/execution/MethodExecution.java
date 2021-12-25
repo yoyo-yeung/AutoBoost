@@ -17,6 +17,7 @@ public class MethodExecution {
     private final List<Integer> params;
     private int returnValId; // if non void
     private int resultThisId; // if member function, object after executing its member function
+    private Class<?> exceptionClass;
 
     public MethodExecution(int ID, int methodInvokedId) {
         this.ID = ID;
@@ -25,9 +26,10 @@ public class MethodExecution {
         this.params = new ArrayList<>();
         this.returnValId = -1;
         this.resultThisId = -1;
+        this.exceptionClass = null;
     }
 
-    public MethodExecution(int ID, int methodInvokedId, int calleeId, List<Integer> params, int returnValId, int resultThisId) {
+    public MethodExecution(int ID, int methodInvokedId, int calleeId, List<Integer> params, int returnValId, int resultThisId, Class<?> e) {
         if(!relationshipCheck(methodInvokedId, calleeId, params, returnValId, resultThisId))
             throw new IllegalArgumentException("Arguments not matched");
         this.ID = ID;
@@ -36,6 +38,7 @@ public class MethodExecution {
         this.params = params == null ? new ArrayList<>() : params;
         this.returnValId = returnValId;
         this.resultThisId = resultThisId;
+        this.exceptionClass = e;
     }
 
     public boolean relationshipCheck() {
@@ -114,6 +117,14 @@ public class MethodExecution {
         this.resultThisId = resultThisId;
     }
 
+    public Class<?> getExceptionClass() {
+        return exceptionClass;
+    }
+
+    public void setExceptionClass(Class<?> exceptionClass) {
+        this.exceptionClass = exceptionClass;
+    }
+
     @Override
     public String toString() {
         return "MethodExecution{" +
@@ -123,6 +134,7 @@ public class MethodExecution {
                 ", params=" + params +
                 ", returnValId=" + returnValId +
                 ", resultThisId=" + resultThisId +
+                ", e=" + exceptionClass.getName() +
                 '}';
     }
 
