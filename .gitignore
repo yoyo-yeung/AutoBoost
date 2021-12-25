@@ -7,3 +7,4 @@ TestInspector/*
 .DS_Store
 *.log
 *.sh
+AutoBoost/src/main/resources/log4j2.xml
