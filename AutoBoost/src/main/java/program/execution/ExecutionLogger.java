@@ -5,7 +5,6 @@ import com.google.gson.FieldAttributes;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import entity.LOG_ITEM;
-import entity.METHOD_TYPE;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -58,12 +57,46 @@ public class ExecutionLogger {
      * @return true if the current operation and value should not be logged, false if they should
      */
     private static boolean returnNow(int methodId, String process) {
-
-        if(executing.size() == 0 || executing.peek() == null)
+        InstrumentResult result = InstrumentResult.getSingleton();
+        if(executing == null || executing.size() == 0)
             return false;
-        int latestID = executing.peek().getMethodInvokedId();
-        MethodDetails latestDetails = InstrumentResult.getSingleton().getMethodDetailByID(latestID);
+        MethodExecution execution = executing.peek();
+        if(execution == null)
+            return false;
+        int latestID = execution.getMethodInvokedId();
+        MethodDetails latestDetails = result.getMethodDetailByID(latestID);
         // if the method logged most recently is to be skipped
+        if(Arrays.stream(skipMethods).anyMatch(m -> m.equals(latestDetails.getName()))) {
+            if (latestID == methodId) {
+                switch(LOG_ITEM.valueOf(process)) {
+                    // if the current method to be logged is same as the latest one, add to count to prevent inconsistent popping
+                    case START_CALL:
+                        sameMethodCount ++;
+                        break;
+                    // if the current method trying to be logged is the one to be skipped + it is "return-ing", then remove it from stack and go back to logging as expected
+                    case RETURN_VOID:
+                    case RETURN_ITEM:
+                        if (sameMethodCount == 0)  executing.pop();
+                        else sameMethodCount--;
+                }
+            }
+            return true;
+        }
+        // if the current method is sub-method of a method stored before, then there is no need to store it
+        // after storing the last method completely (prevent infinite loop)
+
+        if(executing.stream().filter(e -> e.sameCalleeParamNMethod(execution)).count() > 1 ){
+            if(methodId == latestID) {
+                switch(LOG_ITEM.valueOf(process)) {
+                    case START_CALL:
+                        sameMethodCount++ ;
+                        break;
+                    case RETURN_ITEM:
+                    case RETURN_VOID:
+                        if(sameMethodCount == 0 ) executing.pop();
+                        else sameMethodCount --;
+                }
+            }
             return true;
         }
         return false;

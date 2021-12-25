@@ -138,8 +138,8 @@ public class MethodExecution {
                 '}';
     }
 
-    public boolean sameCalleeAndParams(MethodExecution ex) {
-        if(this.calleeId != ex.calleeId || (this.params.size() != ex.params.size()))
+    public boolean sameCalleeParamNMethod(MethodExecution ex) {
+        if(this.getMethodInvokedId() != ex.getMethodInvokedId() || this.calleeId != ex.calleeId || (this.params.size() != ex.params.size()))
             return false;
 
         for (int i = 0; i < this.params.size(); i++) {
