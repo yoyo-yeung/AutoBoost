@@ -1,6 +1,9 @@
 package program.execution.variable;
 
+import program.execution.ExecutionTrace;
+
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ArrVarDetails extends VarDetail{
     Class<?> componentType;
@@ -38,5 +41,26 @@ public class ArrVarDetails extends VarDetail{
     @Override
     public String getTypeSimpleName() {
         return this.type.getSimpleName();
+    }
+
+    @Override
+    public String toString() {
+        return "ArrVarDetails{" +
+                "componentType=" + componentType +
+                ", type=" + type +
+                ", components=" + components +
+                ", value=" + value +
+                '}';
+    }
+
+    @Override
+    public String toDetailedString() {
+        return "ArrVarDetails{" +
+                "componentType=" + componentType.getSimpleName() +
+                ", type=" + type.getSimpleName() +
+                ", components=" + components.stream().filter(c -> c!= -1).map(c -> ExecutionTrace.getSingleton().getVarDetailByID(c).toString()).collect(Collectors.joining(",")) +
+                ", value=" + value.toString() +
+                '}';
+
     }
 }

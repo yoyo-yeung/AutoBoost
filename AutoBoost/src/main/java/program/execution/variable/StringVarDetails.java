@@ -37,4 +37,17 @@ public class StringVarDetails extends VarDetail{
     public int hashCode() {
         return Objects.hash(value);
     }
+
+    @Override
+    public String toString() {
+        return "StringVarDetails{" +
+                "ID=" + getID() +
+                ", value='" + value + '\'' +
+                '}';
+    }
+
+    @Override
+    public String toDetailedString() {
+        return this.toString();
+    }
 }

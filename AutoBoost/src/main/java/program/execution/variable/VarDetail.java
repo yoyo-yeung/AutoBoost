@@ -19,4 +19,15 @@ public abstract class VarDetail{
 
     public abstract String getTypeSimpleName();
 
+    @Override
+    public String toString() {
+        return "VarDetail{" +
+                "ID=" + ID +
+                '}';
+    }
+
+    public String toDetailedString() {
+        return this.toString();
+    }
+
 }

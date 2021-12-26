@@ -73,7 +73,8 @@ public class PrimitiveVarDetails extends VarDetail{
     @Override
     public String toString() {
         return "PrimitiveVarDetails{" +
-                "type=" + type +
+                "ID=" + getID() +
+                ", type=" + type.getSimpleName() +
                 ", byteValue=" + byteValue +
                 ", shortValue=" + shortValue +
                 ", intValue=" + intValue +
@@ -83,5 +84,10 @@ public class PrimitiveVarDetails extends VarDetail{
                 ", charValue=" + charValue +
                 ", booleanValue=" + booleanValue +
                 '}';
+    }
+
+    @Override
+    public String toDetailedString() {
+        return this.toString();
     }
 }

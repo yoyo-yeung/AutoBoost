@@ -43,4 +43,18 @@ public class WrapperVarDetails extends VarDetail{
     public int hashCode() {
         return Objects.hash(type, value);
     }
+
+    @Override
+    public String toString() {
+        return "WrapperVarDetails{" +
+                "ID=" + getID() +
+                ", type=" + type.getSimpleName() +
+                ", value=" + value +
+                '}';
+    }
+
+    @Override
+    public String toDetailedString() {
+        return this.toString();
+    }
 }
