@@ -120,14 +120,14 @@ public class ExecutionLogger {
         if(varID == -1 ) {
             try {
                 PrimitiveVarDetails varDetails = new PrimitiveVarDetails(ExecutionTrace.getSingleton().getNewVarID(), c, value);
-                ExecutionTrace.getSingleton().addNewVarDetail(varDetails, executing.peek().getID());
+                ExecutionTrace.getSingleton().addNewVarDetail(varDetails, getLatestExecution().getID());
                 varID = varDetails.getID();
             } catch (NoSuchFieldException | IllegalAccessException e) {
                 logger.error(e.getLocalizedMessage());
                 throw new RuntimeException("Failed to create PrimitiveVarDetail with value provided");
             }
         } else {
-            ExecutionTrace.getSingleton().addVarDetailUsage(varID, executing.peek().getID());
+            ExecutionTrace.getSingleton().addVarDetailUsage(varID, getLatestExecution().getID());
         }
         setVarIDforExecutions(methodId, process, varID);
     }
