@@ -10,6 +10,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import program.analysis.MethodDetails;
 import program.execution.variable.ObjVarDetails;
+import program.execution.variable.PrimitiveVarDetails;
+import program.execution.variable.StringVarDetails;
 import program.execution.variable.VarDetail;
 import program.instrumentation.InstrumentResult;
 
@@ -114,7 +116,7 @@ public class ExecutionLogger {
         else if(ClassUtils.isPrimitiveWrapper(obj.getClass())){}
         else {
             String objValue = gson.toJson(obj);
-            int ID = trace.getObjVarDetailsID(objValue);
+            int ID = trace.getVarDetailID(obj.getClass(), objValue);
             VarDetail varDetails;
             if(ID == -1) {
                 ID = trace.getNewVarID();
@@ -128,53 +130,64 @@ public class ExecutionLogger {
 
     }
 
-    public static void log(int methodId, String process, String name, byte value) {
+    private static void logPrimitive(int methodId, String process, Class<?> c, Object value) {
         if(returnNow(methodId, process))
-        return;
+            return;
+        int varID = ExecutionTrace.getSingleton().getVarDetailID(c, value);
+        if(varID == -1 ) {
+            try {
+                PrimitiveVarDetails varDetails = new PrimitiveVarDetails(ExecutionTrace.getSingleton().getNewVarID(), c, value);
+                ExecutionTrace.getSingleton().addNewVarDetail(varDetails, executing.peek().getID());
+                varID = varDetails.getID();
+            } catch (NoSuchFieldException | IllegalAccessException e) {
+                logger.error(e.getLocalizedMessage());
+                throw new RuntimeException("Failed to create PrimitiveVarDetail with value provided");
+            }
+        } else {
+            ExecutionTrace.getSingleton().addVarDetailUsage(varID, executing.peek().getID());
+        }
+        setVarIDforExecutions(methodId, process, varID);
+    }
+    public static void log(int methodId, String process, String name, byte value) {
+        logPrimitive(methodId, process, byte.class, (Byte)value);
     }
 
     public static void log(int methodId, String process, String name, short value) {
-        if(returnNow(methodId, process))
-        return;
-
+        logPrimitive(methodId, process, short.class, (Short)value);
     }
     public static void log(int methodId, String process, String name, int value) {
-        if(returnNow(methodId, process))
-        return;
-        try {
-//            logger.debug(new PrimitiveVarDetails(0, int.class, (Integer) value));
-        }
-        catch (Exception e) {
-            logger.error(e);
-        }
+        logPrimitive(methodId, process, int.class, (Integer)value);
     }
     public static void log(int methodId, String process, String name, long value) {
-        if(returnNow(methodId, process))
-        return;
+        logPrimitive(methodId, process, long.class, (Long)value);
     }
     public static void log(int methodId, String process, String name, float value) {
-        if(returnNow(methodId, process))
-        return;
+        logPrimitive(methodId, process, float.class, (Float)value);
     }
     public static void log(int methodId, String process, String name, double value) {
-        if(returnNow(methodId, process))
-        return;
+        logPrimitive(methodId, process, double.class, (Double)value);
     }
     public static void log(int methodId, String process, String name, boolean value) {
-        if(returnNow(methodId, process))
-        return;
+        logPrimitive(methodId, process, boolean.class, (Boolean)value);
     }
     public static void log(int methodId, String process, String name, char value) {
-        if(returnNow(methodId, process))
-        return;
+        logPrimitive(methodId, process, char.class, (Character)value);
     }
     public static void log(int methodId, String process, String name, String value) {
         if(returnNow(methodId, process))
-        return;
+            return;
         if(value == null || process.equals(LOG_ITEM.RETURN_VOID.toString())) {
             setVarIDforExecutions(methodId, process, -1);
             return;
         }
+        int varID = ExecutionTrace.getSingleton().getVarDetailID(String.class, value);
+        if (varID == -1) {
+            StringVarDetails varDetails = new StringVarDetails(ExecutionTrace.getSingleton().getNewVarID(), value);
+            ExecutionTrace.getSingleton().addNewVarDetail(varDetails, executing.peek().getID());
+            varID = varDetails.getID();
+        } else ExecutionTrace.getSingleton().addVarDetailUsage(varID, executing.peek().getID());
+        setVarIDforExecutions(methodId, process, varID);
+
     }
 
     public static Stack<MethodExecution> getExecuting() {
@@ -227,4 +240,5 @@ public class ExecutionLogger {
                 throw new RuntimeException("Invalid value provided for process " + process);
         }
     }
+
 }

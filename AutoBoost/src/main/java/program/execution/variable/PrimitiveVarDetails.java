@@ -50,7 +50,7 @@ public class PrimitiveVarDetails extends VarDetail{
         Field field = null;
         try {
             field = getClass().getDeclaredField(type.getName() + "Value");
-            return field.get(this).toString();
+            return ClassUtils.primitiveToWrapper(this.type).cast(field.get(this));
         } catch (NoSuchFieldException | IllegalAccessException e) {
             e.printStackTrace();
             return null;
@@ -68,5 +68,20 @@ public class PrimitiveVarDetails extends VarDetail{
     @Override
     public int hashCode() {
         return Objects.hash(type, byteValue, shortValue, intValue, longValue, floatValue, doubleValue, charValue, booleanValue);
+    }
+
+    @Override
+    public String toString() {
+        return "PrimitiveVarDetails{" +
+                "type=" + type +
+                ", byteValue=" + byteValue +
+                ", shortValue=" + shortValue +
+                ", intValue=" + intValue +
+                ", longValue=" + longValue +
+                ", floatValue=" + floatValue +
+                ", doubleValue=" + doubleValue +
+                ", charValue=" + charValue +
+                ", booleanValue=" + booleanValue +
+                '}';
     }
 }

@@ -4,6 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jgrapht.graph.DefaultDirectedGraph;
 import org.jgrapht.graph.DefaultEdge;
+import program.execution.variable.ObjVarDetails;
 import program.execution.variable.VarDetail;
 
 import java.util.*;
@@ -78,8 +79,8 @@ public class ExecutionTrace {
      * @param objValue
      * @return ID of ObjVarDetails if the obj was defined and stored before, -1 if not
      */
-    public int getObjVarDetailsID(String objValue) {
-        List<VarDetail> results = this.allVars.values().stream().filter(v ->v.getValue().equals(objValue)).collect(Collectors.toList());
+    public int getVarDetailID(Class<?> type, Object objValue) {
+        List<VarDetail> results = this.allVars.values().stream().filter(Objects::nonNull).filter(v -> v.getType().equals(type) && v.getValue().equals(objValue)).collect(Collectors.toList());
         if(results.size() == 0 ) return -1;
         else return results.get(0).getID();
     }
@@ -116,7 +117,9 @@ public class ExecutionTrace {
         this.allVars.put(detail.getID(), detail);
         this.setUpVarMaps(detail.getID());
         this.setUpCallMaps(executionID);
-        this.varToDefMap.get(detail.getID()).add(executionID);
+        // only store it as a def if it is an object (need construction)
+        if(detail instanceof ObjVarDetails)
+            this.varToDefMap.get(detail.getID()).add(executionID);
         this.varToUsageMap.get(detail.getID()).add(executionID);
         this.callToVarDefMap.get(executionID).add(detail.getID());
         this.callToVarUsageMap.get(executionID).add(detail.getID());
@@ -144,4 +147,15 @@ public class ExecutionTrace {
         this.callGraph.addEdge(father, son);
     }
 
+    public VarDetail getVarDetailByID(int varID) {
+        if(!this.allVars.containsKey(varID))
+            throw new IllegalArgumentException("VarDetail with ID" + varID + " does not exist.");
+        return this.allVars.get(varID);
+    }
+
+    public MethodExecution getMethodExecutionByID(int exeID) {
+        if(!this.allMethodExecs.containsKey(exeID))
+            throw new IllegalArgumentException("MethodExecution with ID " + exeID + " does not exist");
+        return this.allMethodExecs.get(exeID);
+    }
 }
