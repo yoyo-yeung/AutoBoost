@@ -48,8 +48,8 @@ public class WrapperVarDetails extends VarDetail{
     public String toString() {
         return "WrapperVarDetails{" +
                 "ID=" + getID() +
-                ", type=" + type.getSimpleName() +
-                ", value=" + value +
+                ", type=" + (type == null ? "null" : type.getSimpleName() )+
+                ", value=" + (value == null ? "null" : value) +
                 '}';
     }
 

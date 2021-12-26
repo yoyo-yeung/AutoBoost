@@ -46,8 +46,8 @@ public class ObjVarDetails extends VarDetail{
     public String toString() {
         return "ObjVarDetails{" +
                 "ID=" + getID() +
-                ", type=" + type.getSimpleName() +
-                ", value=" + value +
+                ", type=" + (type == null ? "null" : type.getSimpleName()) +
+                ", value=" + (value == null ? "null" : value) +
                 '}';
     }
 

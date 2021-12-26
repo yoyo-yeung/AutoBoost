@@ -74,7 +74,7 @@ public class PrimitiveVarDetails extends VarDetail{
     public String toString() {
         return "PrimitiveVarDetails{" +
                 "ID=" + getID() +
-                ", type=" + type.getSimpleName() +
+                ", type=" + (type == null ? "null" : type.getSimpleName()) +
                 ", byteValue=" + byteValue +
                 ", shortValue=" + shortValue +
                 ", intValue=" + intValue +

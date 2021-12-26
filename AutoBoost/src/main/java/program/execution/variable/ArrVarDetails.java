@@ -47,17 +47,19 @@ public class ArrVarDetails extends VarDetail{
     @Override
     public String toString() {
         return "ArrVarDetails{" +
-                "componentType=" + componentType +
-                ", type=" + type +
-                ", components=" + components +
-                ", value=" + value +
+                "ID=" + getID() +
+                ", componentType=" + (componentType == null ? "null" : componentType.getSimpleName()) +
+                ", type=" + (type == null ? "null" : type.getSimpleName())  +
+                ", components=" + (components == null ? "null" : components.toString()) +
+                ", value=" + (value == null ? "null" : value.toString()) +
                 '}';
     }
 
     @Override
     public String toDetailedString() {
         return "ArrVarDetails{" +
-                "componentType=" + (componentType == null ? "null" : componentType.getSimpleName()) +
+                "ID=" + getID() +
+                ", componentType=" + (componentType == null ? "null" : componentType.getSimpleName()) +
                 ", type=" + (type == null ? "null" : type.getSimpleName()) +
                 ", components=" + (components == null ? "null" : components.stream().filter(c -> c!= -1).map(c -> ExecutionTrace.getSingleton().getVarDetailByID(c).toString()).collect(Collectors.joining(","))) +
                 ", value=" + (value == null ? "null" : value.toString()) +

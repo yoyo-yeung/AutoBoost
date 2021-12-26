@@ -42,7 +42,7 @@ public class StringVarDetails extends VarDetail{
     public String toString() {
         return "StringVarDetails{" +
                 "ID=" + getID() +
-                ", value='" + value + '\'' +
+                ", value='" + (value == null ? "null" : value) + '\'' +
                 '}';
     }
 
