@@ -7,9 +7,11 @@ import org.jgrapht.graph.DefaultEdge;
 import program.execution.variable.ObjVarDetails;
 import program.execution.variable.VarDetail;
 
+import java.lang.reflect.Array;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class ExecutionTrace {
     private static final Logger logger = LogManager.getLogger(ExecutionTrace.class);
@@ -80,7 +82,12 @@ public class ExecutionTrace {
      * @return ID of ObjVarDetails if the obj was defined and stored before, -1 if not
      */
     public int getVarDetailID(Class<?> type, Object objValue) {
-        List<VarDetail> results = this.allVars.values().stream().filter(Objects::nonNull).filter(v -> v.getType().equals(type) && v.getValue().equals(objValue)).collect(Collectors.toList());
+        if(type.isArray()) {
+            Object finalObjValue = objValue;
+            objValue = IntStream.range(0, Array.getLength(objValue)).mapToObj(i -> Array.get(finalObjValue, i).toString()).collect(Collectors.joining(","));
+        }
+        Object finalObjValue1 = objValue;
+        List<VarDetail> results = this.allVars.values().stream().filter(Objects::nonNull).filter(v -> v.getType().equals(type) && v.getValue().equals(finalObjValue1)).collect(Collectors.toList());
         if(results.size() == 0 ) return -1;
         else return results.get(0).getID();
     }
