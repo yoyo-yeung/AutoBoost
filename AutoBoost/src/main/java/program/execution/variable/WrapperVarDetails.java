@@ -28,7 +28,7 @@ public class WrapperVarDetails extends VarDetail{
 
     @Override
     public Object getValue() {
-        return value.toString();
+        return value;
     }
 
     @Override

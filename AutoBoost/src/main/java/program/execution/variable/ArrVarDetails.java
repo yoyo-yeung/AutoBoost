@@ -1,7 +1,9 @@
 package program.execution.variable;
 
+import org.apache.commons.lang3.ClassUtils;
 import program.execution.ExecutionTrace;
 
+import java.lang.reflect.Array;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -31,7 +33,9 @@ public class ArrVarDetails extends VarDetail{
 
     @Override
     public Object getValue() {
-        return value; // change later (test case generation related)
+        if(components == null)
+            return null;
+        return components.stream().filter(c -> c != -1).map(c -> ExecutionTrace.getSingleton().getVarDetailByID(c).getValue().toString()).collect(Collectors.joining(","));
     }
 
     @Override
