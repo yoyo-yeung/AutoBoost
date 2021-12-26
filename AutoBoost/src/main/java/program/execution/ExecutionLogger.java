@@ -62,42 +62,25 @@ public class ExecutionLogger {
         InstrumentResult result = InstrumentResult.getSingleton();
         if(executing == null || executing.size() == 0)
             return false;
-        MethodExecution execution = executing.peek();
-        if(execution == null)
+        MethodExecution latestExecution = getLatestExecution();
+        if(latestExecution == null)
             return false;
-        int latestID = execution.getMethodInvokedId();
+        int latestID = latestExecution.getMethodInvokedId();
         MethodDetails latestDetails = result.getMethodDetailByID(latestID);
-        // if the method logged most recently is to be skipped
-        if(Arrays.stream(skipMethods).anyMatch(m -> m.equals(latestDetails.getName()))) {
-            if (latestID == methodId) {
-                switch(LOG_ITEM.valueOf(process)) {
-                    // if the current method to be logged is same as the latest one, add to count to prevent inconsistent popping
-                    case START_CALL:
-                        sameMethodCount ++;
-                        break;
-                    // if the current method trying to be logged is the one to be skipped + it is "return-ing", then remove it from stack and go back to logging as expected
-                    case RETURN_VOID:
-                    case RETURN_ITEM:
-                        if (sameMethodCount == 0)  executing.pop();
-                        else sameMethodCount--;
-                }
-            }
-            return true;
-        }
-        // if the current method is sub-method of a method stored before, then there is no need to store it
-        // after storing the last method completely (prevent infinite loop)
-
-        if(executing.stream().filter(e -> e.sameCalleeParamNMethod(execution)).count() > 1 ){
-            if(methodId == latestID) {
-                switch(LOG_ITEM.valueOf(process)) {
-                    case START_CALL:
-                        sameMethodCount++ ;
-                        break;
-                    case RETURN_ITEM:
-                    case RETURN_VOID:
-                        if(sameMethodCount == 0 ) executing.pop();
-                        else sameMethodCount --;
-                }
+        // if the method logged most recently is to be skipped, OR it is a sub-method of a method stored before (prevent infinite loop)
+        if(Arrays.stream(skipMethods).anyMatch(m -> m.equals(latestDetails.getName())) || executing.stream().filter(e -> e.sameCalleeParamNMethod(latestExecution)).count() > 1 ) {
+            if (latestID != methodId)
+                return true;
+            switch (LOG_ITEM.valueOf(process)) {
+                // if the current method to be logged is same as the latest one, add to count to prevent inconsistent popping
+                case START_CALL:
+                    sameMethodCount++;
+                    break;
+                // if the current method trying to be logged is the one to be skipped + it is "return-ing", then remove it from stack and go back to logging as expected
+                case RETURN_VOID:
+                case RETURN_ITEM:
+                    if (sameMethodCount == 0) executing.pop();
+                    else sameMethodCount--;
             }
             return true;
         }
@@ -174,6 +157,7 @@ public class ExecutionLogger {
         logPrimitive(methodId, process, char.class, (Character)value);
     }
     public static void log(int methodId, String process, String name, String value) {
+        MethodExecution latestExecution = getLatestExecution();
         if(returnNow(methodId, process))
             return;
         if(value == null || process.equals(LOG_ITEM.RETURN_VOID.toString())) {
@@ -183,9 +167,9 @@ public class ExecutionLogger {
         int varID = ExecutionTrace.getSingleton().getVarDetailID(String.class, value);
         if (varID == -1) {
             StringVarDetails varDetails = new StringVarDetails(ExecutionTrace.getSingleton().getNewVarID(), value);
-            ExecutionTrace.getSingleton().addNewVarDetail(varDetails, executing.peek().getID());
+            ExecutionTrace.getSingleton().addNewVarDetail(varDetails, latestExecution.getID());
             varID = varDetails.getID();
-        } else ExecutionTrace.getSingleton().addVarDetailUsage(varID, executing.peek().getID());
+        } else ExecutionTrace.getSingleton().addVarDetailUsage(varID, latestExecution.getID());
         setVarIDforExecutions(methodId, process, varID);
 
     }
@@ -193,6 +177,8 @@ public class ExecutionLogger {
     public static Stack<MethodExecution> getExecuting() {
         return executing;
     }
+
+    public static MethodExecution getLatestExecution() {return executing.peek();}
 
     /**
      * called when method has finished logging
@@ -216,7 +202,7 @@ public class ExecutionLogger {
      * @param ID ID of the VarDetail object to store
      */
     private static void setVarIDforExecutions(int methodId, String process, int ID) {
-        MethodExecution execution = executing.peek();
+        MethodExecution execution = getLatestExecution();
         if( methodId != execution.getMethodInvokedId() )
             throw new RuntimeException("Method processing does NOT match stored method ");
         switch (LOG_ITEM.valueOf(process)) {
