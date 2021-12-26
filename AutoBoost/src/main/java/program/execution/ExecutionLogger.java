@@ -19,8 +19,8 @@ import java.util.Arrays;
 import java.util.Stack;
 
 public class ExecutionLogger {
-    private static Logger logger = LogManager.getLogger(ExecutionLogger.class);
-    private static Stack<MethodExecution> executing = new Stack<>();
+    private static final Logger logger = LogManager.getLogger(ExecutionLogger.class);
+    private static final Stack<MethodExecution> executing = new Stack<>();
     private static final String[] skipMethods = {"equals", "toString", "hashCode"};
     private static int sameMethodCount = 0; // this variable is used for keeping track of no. of methods, sharing same methodId with the top one in stack, not logged but processing
     private static final Gson gson = new GsonBuilder().addSerializationExclusionStrategy(new ExclusionStrategy() {
