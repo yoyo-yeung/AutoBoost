@@ -2,6 +2,7 @@ package program.execution;
 
 
 import entity.METHOD_TYPE;
+import helper.Properties;
 import program.analysis.MethodDetails;
 import program.execution.variable.VarDetail;
 import program.instrumentation.InstrumentResult;
@@ -9,6 +10,7 @@ import soot.VoidType;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class MethodExecution {
     private final int ID;
@@ -134,7 +136,20 @@ public class MethodExecution {
                 ", params=" + params +
                 ", returnValId=" + returnValId +
                 ", resultThisId=" + resultThisId +
-                ", e=" + exceptionClass.getName() +
+                ", e=" + (exceptionClass == null ? "null" : exceptionClass.getName()) +
+                '}';
+    }
+
+    public String toDetailedString(){
+        ExecutionTrace trace = ExecutionTrace.getSingleton();
+        return "MethodExecution{" +
+                "ID=" + ID +
+                ", methodInvokedId=" + InstrumentResult.getSingleton().getMethodDetailByID(methodInvokedId).toString() +
+                ", calleeId=" + (calleeId == -1 ? "null" : trace.getVarDetailByID(calleeId).toString() )+
+                ", params=" + params.stream().map(p -> p == -1 ? "null" : trace.getVarDetailByID(p).toString()).collect(Collectors.joining(Properties.getDELIMITER())) +
+                ", returnValId=" + (returnValId == -1 ? "null" : trace.getVarDetailByID(returnValId).toString()) +
+                ", resultThisId=" + (resultThisId == -1 ? "null" : trace.getVarDetailByID(resultThisId).toString()) +
+                ", e=" + (exceptionClass == null ? "null" : exceptionClass.getName()) +
                 '}';
     }
 
