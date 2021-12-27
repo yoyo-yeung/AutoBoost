@@ -28,6 +28,7 @@ public class Instrumenter extends BodyTransformer {
         logMethodMap =  Arrays.stream(supportedType).collect(Collectors.toMap(t -> t, t -> loggerClass.getMethod("void log(int,java.lang.String,java.lang.String,"+t+")")));
     }
 
+    // future task : add casting of primitive value to wrapper type to for code reuse
     @Override
     protected void internalTransform(Body body, String phaseName, Map<String, String> options) {
         InstrumentResult result = InstrumentResult.getSingleton();
