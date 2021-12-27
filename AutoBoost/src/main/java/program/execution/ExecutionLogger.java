@@ -22,18 +22,6 @@ public class ExecutionLogger {
     private static final Stack<MethodExecution> executing = new Stack<>();
     private static final String[] skipMethods = {"equals", "toString", "hashCode"};
     private static int sameMethodCount = 0; // this variable is used for keeping track of no. of methods, sharing same methodId with the top one in stack, not logged but processing
-    private static final Gson gson = new GsonBuilder().addSerializationExclusionStrategy(new ExclusionStrategy() {
-        @Override
-        public boolean shouldSkipField(FieldAttributes fieldAttributes) {
-            if(Arrays.stream(fieldAttributes.getDeclaringClass().getDeclaredFields()).filter(field -> fieldAttributes.getName().equals(field.getName())).count()>1)
-                return true;
-            return false;
-        }
-        @Override
-        public boolean shouldSkipClass(Class<?> aClass) {
-            return aClass.equals(java.text.DecimalFormat.class);
-        }
-    }).create();
 
     /**
      * Invoked when a method has started its execution. the method would be added to stack for further processing
@@ -86,71 +74,25 @@ public class ExecutionLogger {
         return false;
     }
 
-    /**
-     * If object already stored, return existing VarDetail ID stored
-     * If not, create a new VarDetail and return the corresponding ID
-     * @param type type of the object to be stored
-     * @param objValue object to be stored
-     * @return ID of the VarDetail storing the provided object
-     */
-    private static int getVarDetailID(Class<?>type, Object objValue) {
-        int varID = ExecutionTrace.getSingleton().getVarDetailID(type, objValue);
-        ExecutionTrace trace = ExecutionTrace.getSingleton();
-        VarDetail varDetail;
-        if(varID == -1) {
-            if(type.isPrimitive()) {
-                try {
-                    varDetail = new PrimitiveVarDetails(trace.getNewVarID(), type, objValue);
-                } catch (NoSuchFieldException | IllegalAccessException e) {
-                    logger.error("Error when trying to create PrimitiveVarDetails");
-                    varDetail = null;
-                }
-            }
-            else if (type.equals(String.class)) {
-                varDetail = new StringVarDetails(trace.getNewVarID(), (String) objValue);
-            }
-            else if (type.isArray()) {
-                List<Integer> components = new ArrayList<Integer>();
-                IntStream.range(0, Array.getLength(objValue)).forEach(i -> {
-                    components.add(getVarDetailID(objValue.getClass().getComponentType(), Array.get(objValue, i)));
-                });
-                varDetail = new ArrVarDetails(trace.getNewVarID(), components, objValue);
-            }
-            else if (ClassUtils.isPrimitiveWrapper(type)) {
-                varDetail = new WrapperVarDetails(trace.getNewVarID(), type, objValue);
-            }
-
-            else {
-                // other cases
-                varDetail = new ObjVarDetails(trace.getNewVarID(), type, gson.toJson(objValue));
-            }
-            assert varDetail != null; // if null, then fail to generate test
-            trace.addNewVarDetail(varDetail, getLatestExecution().getID());
-            varID = varDetail.getID();
-        }
-        else {
-            trace.addVarDetailUsage(varID, getLatestExecution().getID());
-        }
-        return varID;
-    }
     public static void log(int methodId, String process, String name, Object obj) {
+        ExecutionTrace trace = ExecutionTrace.getSingleton();
         if(returnNow(methodId, process))
             return;
         if(LOG_ITEM.valueOf(process).equals(LOG_ITEM.THREW_EXCEPTION)){
             getLatestExecution().setExceptionClass(obj.getClass());
         }
-        else if(obj == null || LOG_ITEM.valueOf(process).equals(LOG_ITEM.RETURN_VOID)) {
+        else if(LOG_ITEM.valueOf(process).equals(LOG_ITEM.RETURN_VOID)) {
             setVarIDforExecutions(methodId, process, -1);
         }
         else
-            setVarIDforExecutions(methodId, process, getVarDetailID(obj.getClass(), obj));
+            setVarIDforExecutions(methodId, process, trace.getVarDetailID(obj == null ? Object.class: obj.getClass(), obj));
 
     }
 
     private static void logPrimitive(int methodId, String process, Class<?> c, Object value) {
         if(returnNow(methodId, process))
             return;
-        setVarIDforExecutions(methodId, process, getVarDetailID(c, value));
+        setVarIDforExecutions(methodId, process, ExecutionTrace.getSingleton().getVarDetailID(c, value));
     }
     public static void log(int methodId, String process, String name, byte value) {
         logPrimitive(methodId, process, byte.class, (Byte)value);
@@ -181,11 +123,11 @@ public class ExecutionLogger {
         MethodExecution latestExecution = getLatestExecution();
         if(returnNow(methodId, process))
             return;
-        if(value == null || process.equals(LOG_ITEM.RETURN_VOID.toString())) {
+        if(process.equals(LOG_ITEM.RETURN_VOID.toString())) {
             setVarIDforExecutions(methodId, process, -1);
             return;
         }
-        setVarIDforExecutions(methodId, process, getVarDetailID(String.class, value));
+        setVarIDforExecutions(methodId, process, ExecutionTrace.getSingleton().getVarDetailID(String.class, value));
 
     }
 

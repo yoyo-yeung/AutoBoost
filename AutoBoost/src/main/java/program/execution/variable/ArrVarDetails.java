@@ -16,7 +16,7 @@ public class ArrVarDetails extends VarDetail{
     public ArrVarDetails(int ID, List<Integer> components, Object value) {
         super(ID);
         if(value == null || components == null) throw new IllegalArgumentException("Value details not provided");
-        if (!value.getClass().isArray()) throw new IllegalArgumentException("Non array type value provided");
+        if (!value.getClass().isArray() && !ClassUtils.getAllInterfaces(value.getClass()).contains(List.class)) throw new IllegalArgumentException("Non array type value provided");
         this.componentType = value.getClass().getComponentType();
         this.type = value.getClass();
         this.components = components;
@@ -35,7 +35,7 @@ public class ArrVarDetails extends VarDetail{
     public Object getValue() {
         if(components == null)
             return null;
-        return components.stream().filter(c -> c != -1).map(c -> ExecutionTrace.getSingleton().getVarDetailByID(c).getValue().toString()).collect(Collectors.joining(","));
+        return components.stream().map(String::valueOf).collect(Collectors.joining(","));
     }
 
     @Override
