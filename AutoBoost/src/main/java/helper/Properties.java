@@ -12,6 +12,7 @@ public class Properties {
     private static final String classMethSep = "::";
     private static final String classSep = ",";
     private static final String NEW_LINE = "\n";
+    private static final String DELIMITER = ",";
 
     public Properties() {
     }
@@ -58,6 +59,10 @@ public class Properties {
         this.testCases = testCases;
         logProperty("testCases", String.join(",", this.testCases));
 
+    }
+
+    public static String getDELIMITER() {
+        return DELIMITER;
     }
 
     public static String getNewLine() {

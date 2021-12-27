@@ -1,10 +1,12 @@
 package program.execution.variable;
 
+import helper.Properties;
 import org.apache.commons.lang3.ClassUtils;
 import program.execution.ExecutionTrace;
 
-import java.lang.reflect.Array;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class ArrVarDetails extends VarDetail{
@@ -16,7 +18,7 @@ public class ArrVarDetails extends VarDetail{
     public ArrVarDetails(int ID, List<Integer> components, Object value) {
         super(ID);
         if(value == null || components == null) throw new IllegalArgumentException("Value details not provided");
-        if (!value.getClass().isArray() && !ClassUtils.getAllInterfaces(value.getClass()).contains(List.class)) throw new IllegalArgumentException("Non array type value provided");
+        if (!availableTypeCheck(value.getClass())) throw new IllegalArgumentException("Non array type value provided");
         this.componentType = value.getClass().getComponentType();
         this.type = value.getClass();
         this.components = components;
@@ -35,7 +37,7 @@ public class ArrVarDetails extends VarDetail{
     public Object getValue() {
         if(components == null)
             return null;
-        return components.stream().map(String::valueOf).collect(Collectors.joining(","));
+        return components.stream().map(String::valueOf).collect(Collectors.joining(Properties.getDELIMITER()));
     }
 
     @Override
@@ -65,9 +67,13 @@ public class ArrVarDetails extends VarDetail{
                 "ID=" + getID() +
                 ", componentType=" + (componentType == null ? "null" : componentType.getSimpleName()) +
                 ", type=" + (type == null ? "null" : type.getSimpleName()) +
-                ", components=" + (components == null ? "null" : components.stream().filter(c -> c!= -1).map(c -> ExecutionTrace.getSingleton().getVarDetailByID(c).toString()).collect(Collectors.joining(","))) +
+                ", components=" + (components == null ? "null" : components.stream().filter(c -> c!= -1).map(c -> ExecutionTrace.getSingleton().getVarDetailByID(c).toString()).collect(Collectors.joining(Properties.getDELIMITER()))) +
                 ", value=" + (value == null ? "null" : value.toString()) +
                 '}';
 
+    }
+
+    public static boolean availableTypeCheck(Class<?> type ){
+        return type.isArray() || ClassUtils.getAllInterfaces(type).contains(Map.class)|| ClassUtils.getAllInterfaces(type).contains(List.class)|| ClassUtils.getAllInterfaces(type).contains(Set.class);
     }
 }

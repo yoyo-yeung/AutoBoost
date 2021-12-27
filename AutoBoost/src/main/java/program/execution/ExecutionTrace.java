@@ -4,6 +4,7 @@ import com.google.gson.ExclusionStrategy;
 import com.google.gson.FieldAttributes;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import helper.Properties;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -106,7 +107,7 @@ public class ExecutionTrace {
     public int getVarDetailID(Class<?> type, Object objValue) {
         if(objValue == null)
             objValue = "null";
-        if(!type.isArray() && !type.equals(String.class) && !ClassUtils.isPrimitiveOrWrapper(type) && !(objValue instanceof List))
+        if(!type.isArray() && !type.equals(String.class) && !ClassUtils.isPrimitiveOrWrapper(type) && !(objValue instanceof Map) && !(objValue instanceof List)&& !(objValue instanceof Set)&&!(objValue instanceof Map.Entry))
             objValue = gson.toJson(objValue);
         int varID = findExistingVarDetailID(type, objValue);
         VarDetail varDetail;
@@ -119,28 +120,32 @@ public class ExecutionTrace {
                     varDetail = null;
                 }
             }
-            else if (type.equals(String.class)) {
+            else if (type.equals(String.class))
                 varDetail = new StringVarDetails(getNewVarID(), (String) objValue);
-            }
-            else if (type.isArray() || ClassUtils.getAllInterfaces(type).contains(List.class)) {
-                List<Integer> components;
+            else if (ArrVarDetails.availableTypeCheck(type)) {
                 Stream<Integer> componentStream;
                 if(type.isArray()) {
                     Object finalObjValue = objValue;
                     componentStream = IntStream.range(0, Array.getLength(objValue)).mapToObj(i -> getVarDetailID(finalObjValue.getClass().getComponentType(), Array.get(finalObjValue, i)));
                 }
-                else {
-                    componentStream = ((List<?>)objValue).stream().map(v -> getVarDetailID(v == null? Object.class: v.getClass(), v));
-                }
+                else if( ClassUtils.getAllInterfaces(type).contains(Map.class))
+                    componentStream = ((Map<?, ?>)objValue).entrySet().stream().map(e -> getVarDetailID(e.getClass(), e)).sorted();
+                else
+                    componentStream = ((Collection<?>)objValue).stream().map(v -> getVarDetailID(getClassOfObj(v), v));
+                if(ClassUtils.getAllInterfaces(type).contains(Set.class))
+                    componentStream = componentStream.sorted();
                 varDetail = new ArrVarDetails(getNewVarID(), componentStream.collect(Collectors.toList()), objValue);
             }
-
+            else if(ClassUtils.getAllInterfaces(type).contains(Map.Entry.class)) {
+                Map.Entry<?, ?> objEntry = (Map.Entry<?,?>)objValue;
+                varDetail = new EntryVarDetails(getNewVarID(), objValue.getClass(), getVarDetailID(getClassOfObj(objEntry.getKey()), objEntry.getKey()), getVarDetailID(getClassOfObj(objEntry.getValue()), objEntry.getValue()), objValue);
+            }
             else if (ClassUtils.isPrimitiveWrapper(type)) {
                 varDetail = new WrapperVarDetails(getNewVarID(), type, objValue);
             }
             else {
                 // other cases
-                varDetail = new ObjVarDetails(getNewVarID(), type, (String) objValue);
+                varDetail = new ObjVarDetails(getNewVarID(), type, (String)objValue);
             }
             assert varDetail != null; // if null, then fail to generate test
             addNewVarDetail(varDetail, ExecutionLogger.getLatestExecution().getID());
@@ -162,18 +167,30 @@ public class ExecutionTrace {
             return nullVar.getID();
         if(type.isArray()) {
             Object finalObjValue = objValue;
-            objValue = IntStream.range(0, Array.getLength(objValue)).mapToObj(i -> Array.get(finalObjValue, i)).map(comp -> String.valueOf(getVarDetailID(finalObjValue.getClass().getComponentType(), comp))).collect(Collectors.joining(","));
+            objValue = IntStream.range(0, Array.getLength(objValue)).mapToObj(i -> Array.get(finalObjValue, i)).map(comp -> String.valueOf(getVarDetailID(finalObjValue.getClass().getComponentType(), comp))).collect(Collectors.joining(Properties.getDELIMITER()));
         }
         if(ClassUtils.getAllInterfaces(type).contains(List.class) && objValue instanceof List) {
-            List<?> finalObjValue = (List<?>) objValue;
-            objValue = finalObjValue.stream().map(comp -> String.valueOf(getVarDetailID(comp == null ? Object.class : comp.getClass(), comp))).collect(Collectors.joining(","));
+            objValue = ((List<?>) objValue).stream().map(comp -> String.valueOf(getVarDetailID(getClassOfObj(comp), comp))).collect(Collectors.joining(Properties.getDELIMITER()));
+        }
+        if(ClassUtils.getAllInterfaces(type).contains(Set.class) && objValue instanceof Set) {
+            objValue = ((Set<?>) objValue).stream().map(comp -> String.valueOf(getVarDetailID(getClassOfObj(comp), comp))).sorted().collect(Collectors.joining(Properties.getDELIMITER()));
+        }
+        if(ClassUtils.getAllInterfaces(type).contains(Map.class) && objValue instanceof Map) {
+            objValue = ((Map<?,?>) objValue).entrySet().stream().map(comp -> String.valueOf(getVarDetailID(getClassOfObj(comp), comp))).collect(Collectors.joining(Properties.getDELIMITER()));
+        }
+        if(ClassUtils.getAllInterfaces(type).contains(Map.Entry.class) && objValue instanceof Map.Entry) {
+            Map.Entry<?,?> finalObjValue = (Map.Entry<?,?>) objValue;
+            objValue = getVarDetailID(getClassOfObj(finalObjValue.getKey()), finalObjValue.getKey()) + "="+ getVarDetailID(getClassOfObj(finalObjValue.getValue()), finalObjValue.getValue());
         }
         Object finalObjValue1 = objValue;
         List<VarDetail> results = this.allVars.values().stream().filter(Objects::nonNull).filter(v -> v.getType().equals(type) && v.getValue().equals(finalObjValue1)).collect(Collectors.toList());
         if(results.size() == 0 ) return -1;
         else return results.get(0).getID();
     }
-
+    private Class<?> getClassOfObj(Object obj) {
+        if(obj != null) return obj.getClass();
+        else return Object.class;
+    }
     /**
      * Set up all maps using VarDetail key as ID
      * @param varID key of VarDetail
