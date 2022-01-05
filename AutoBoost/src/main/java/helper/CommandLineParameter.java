@@ -18,6 +18,7 @@ public class CommandLineParameter {
         options.addOption("CUTs", true, "Classes under test, will be instrumented. Separated by " + Properties.getClassSep());
         options.addOption(Help.getOption());
         options.addOption("testCases", true, "Failing test case's name. It should be in the format of testClass" + Properties.getClassMethSep() +"testCaseName. Separated by " + Properties.getClassSep());
+        options.addOption("generatedPackage", true, "Package of the generated test cases");
         return options;
     }
     public static void processCommand(CommandLine line) throws MissingArgumentException {
@@ -44,5 +45,8 @@ public class CommandLineParameter {
         if(!line.hasOption("testCases"))
             throw new MissingArgumentException("Missing argument for testCases");
         properties.setTestCases(line.getOptionValue("testCases").split(Properties.getClassSep()));
+        if(!line.hasOption("generatedPackage"))
+            throw new MissingArgumentException("Missing argument for generatedPackage");
+        properties.setGeneratedPackage(line.getOptionValue("generatedPackage"));
     }
 }

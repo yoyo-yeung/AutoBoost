@@ -13,6 +13,7 @@ public class Properties {
     private static final String classSep = ",";
     private static final String NEW_LINE = "\n";
     private static final String DELIMITER = ",";
+    private String generatedPackage = null;
 
     public Properties() {
     }
@@ -59,6 +60,15 @@ public class Properties {
         this.testCases = testCases;
         logProperty("testCases", String.join(",", this.testCases));
 
+    }
+
+    public String getGeneratedPackage() {
+        return generatedPackage;
+    }
+
+    public void setGeneratedPackage(String generatedPackage) {
+        this.generatedPackage = generatedPackage;
+        logProperty("generatedPackage", this.generatedPackage);
     }
 
     public static String getDELIMITER() {
