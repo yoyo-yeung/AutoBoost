@@ -1,5 +1,7 @@
 package program.execution.variable;
 
+import entity.CREATION_TYPE;
+
 import java.util.List;
 
 public abstract class VarDetail{
@@ -29,5 +31,5 @@ public abstract class VarDetail{
     public String toDetailedString() {
         return this.toString();
     }
-
+    public abstract CREATION_TYPE getCreatedBy();
 }

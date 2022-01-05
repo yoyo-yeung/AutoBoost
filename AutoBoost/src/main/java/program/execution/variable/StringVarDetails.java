@@ -1,16 +1,22 @@
 package program.execution.variable;
 
 
+import entity.CREATION_TYPE;
 import org.apache.commons.text.StringEscapeUtils;
 
 import java.util.Objects;
 
 public class StringVarDetails extends VarDetail{
+    private static final CREATION_TYPE createdBy = CREATION_TYPE.DIRECT_ASSIGN;
     private final String value;
 
     public StringVarDetails(int ID, String value) {
         super(ID);
         this.value = value;
+    }
+
+    public CREATION_TYPE getCreatedBy() {
+        return createdBy;
     }
 
     @Override

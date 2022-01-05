@@ -1,11 +1,13 @@
 package program.execution.variable;
 
+import entity.CREATION_TYPE;
 import org.apache.commons.lang3.ClassUtils;
 
 import java.lang.reflect.Field;
 import java.util.Objects;
 
 public class PrimitiveVarDetails extends VarDetail{
+    private static final CREATION_TYPE createdBy = CREATION_TYPE.DIRECT_ASSIGN;
     private final Class<?> type;
     private byte byteValue;
     private short shortValue;
@@ -55,6 +57,10 @@ public class PrimitiveVarDetails extends VarDetail{
             e.printStackTrace();
             return null;
         }
+    }
+
+    public CREATION_TYPE getCreatedBy() {
+        return createdBy;
     }
 
     @Override

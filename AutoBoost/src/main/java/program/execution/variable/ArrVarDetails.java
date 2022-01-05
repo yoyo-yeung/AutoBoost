@@ -1,5 +1,6 @@
 package program.execution.variable;
 
+import entity.CREATION_TYPE;
 import helper.Properties;
 import org.apache.commons.lang3.ClassUtils;
 import program.execution.ExecutionTrace;
@@ -10,6 +11,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public class ArrVarDetails extends VarDetail{
+    private static final CREATION_TYPE createdBy = CREATION_TYPE.CONSTRUCTOR;
     Class<?> componentType;
     Class<?> type;
     List<Integer> components;
@@ -74,6 +76,11 @@ public class ArrVarDetails extends VarDetail{
     }
 
     public static boolean availableTypeCheck(Class<?> type ){
-        return type.isArray() || ClassUtils.getAllInterfaces(type).contains(Map.class)|| ClassUtils.getAllInterfaces(type).contains(List.class)|| ClassUtils.getAllInterfaces(type).contains(Set.class);
+        return type.isArray() || ClassUtils.getAllInterfaces(type).contains(List.class)|| ClassUtils.getAllInterfaces(type).contains(Set.class);
     }
+
+    public CREATION_TYPE getCreatedBy() {
+        return createdBy;
+    }
+
 }

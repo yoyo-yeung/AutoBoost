@@ -1,9 +1,12 @@
 package program.execution.variable;
 
+import entity.CREATION_TYPE;
+
 import java.util.Objects;
 
 // store it separately from other object var as they can be directly assigned
 public class WrapperVarDetails extends VarDetail{
+    private static final CREATION_TYPE createdBy = CREATION_TYPE.DIRECT_ASSIGN;
     private final Class<?> type;
     private final Object value;
 
@@ -14,6 +17,10 @@ public class WrapperVarDetails extends VarDetail{
     }
     public WrapperVarDetails(int ID, String typeName, Object value) throws ClassNotFoundException {
         this(ID, Class.forName(typeName), value);
+    }
+
+    public CREATION_TYPE getCreatedBy() {
+        return createdBy;
     }
 
     @Override
