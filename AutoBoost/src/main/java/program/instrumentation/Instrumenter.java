@@ -88,7 +88,7 @@ public class Instrumenter extends BodyTransformer {
 
                 if (stmt instanceof ReturnStmt) {
                     Value returnOp = ((ReturnStmt) stmt).getOp();
-                    invExpr = Jimple.v().newStaticInvokeExpr(logMethodMap.getOrDefault(returnOp.getType().toString(), logMethodMap.get(Object.class.getName())).makeRef(), IntConstant.v(methodId), StringConstant.v(LOG_ITEM.RETURN_ITEM.toString()), StringConstant.v("RETURN"), returnOp instanceof Local ? (Local) returnOp : returnOp);
+                    invExpr = Jimple.v().newStaticInvokeExpr(logMethodMap.getOrDefault(body.getMethod().getReturnType().toString(), logMethodMap.get(Object.class.getName())).makeRef(), IntConstant.v(methodId), StringConstant.v(LOG_ITEM.RETURN_ITEM.toString()), StringConstant.v("RETURN"), returnOp instanceof Local ? (Local) returnOp : returnOp);
                 } else
                     invExpr = Jimple.v().newStaticInvokeExpr(logMethodMap.get(String.class.getName()).makeRef(), IntConstant.v(methodId), StringConstant.v(LOG_ITEM.RETURN_VOID.toString()), StringConstant.v("RETURN"), StringConstant.v("NULL"));
                 invStmt = Jimple.v().newInvokeStmt(invExpr);
