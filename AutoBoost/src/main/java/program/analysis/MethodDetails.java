@@ -19,7 +19,7 @@ public class MethodDetails {
     private final ACCESS access;
     private final METHOD_TYPE type;
     private final SootClass declaringClass;
-    private final String subsignature;
+    private final String signature;
     private boolean directAssignment; //if there is direct assignment to object field in method
     private boolean testable;
 
@@ -29,7 +29,7 @@ public class MethodDetails {
         this.parameterTypes = method.getParameterTypes();
         this.name = method.getName();
         this.returnType = method.getReturnType();
-        this.subsignature = method.getSubSignature();
+        this.signature = method.getSignature();
         if(this.method.isStaticInitializer())
             this.type = METHOD_TYPE.STATIC_INITIALIZER;
         else if(this.method.isStatic())
@@ -91,8 +91,8 @@ public class MethodDetails {
         this.directAssignment = directAssignment;
     }
 
-    public String getSubsignature() {
-        return subsignature;
+    public String getSignature() {
+        return signature;
     }
 
     @Override
@@ -106,7 +106,7 @@ public class MethodDetails {
                 ", access=" + access +
                 ", type=" + type +
                 ", declaringClass=" + declaringClass +
-                ", subsignature='" + subsignature + '\'' +
+                ", subsignature='" + signature + '\'' +
                 ", directAssignment=" + directAssignment +
                 ", testable=" + testable +
                 '}';
