@@ -9,6 +9,7 @@ public class Properties {
     private String insBinPath =  null;
     private String[] CUTs = null;
     private String[] testCases = null;
+    private String[] faultyFunc = null;
     private static final String classMethSep = "::";
     private static final String classSep = ",";
     private static final String NEW_LINE = "\n";
@@ -77,5 +78,14 @@ public class Properties {
 
     public static String getNewLine() {
         return NEW_LINE;
+    }
+
+    public String[] getFaultyFunc() {
+        return faultyFunc;
+    }
+
+    public void setFaultyFunc(String[] faultyFunc) {
+        this.faultyFunc = faultyFunc;
+        logProperty("faultyFunc", String.join(",", this.faultyFunc));
     }
 }

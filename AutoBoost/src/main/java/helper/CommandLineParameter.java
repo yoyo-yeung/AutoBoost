@@ -19,6 +19,7 @@ public class CommandLineParameter {
         options.addOption(Help.getOption());
         options.addOption("testCases", true, "Failing test case's name. It should be in the format of testClass" + Properties.getClassMethSep() +"testCaseName. Separated by " + Properties.getClassSep());
         options.addOption("generatedPackage", true, "Package of the generated test cases");
+        options.addOption("faultyFunc", true, "Faulty function's subsignatures, each enclosed by <>. Separated by " + Properties.getClassSep() + "e.g. <org.apache.commons.math.analysis.integration.SimpsonIntegrator: double integrate(double,double)>" + Properties.getClassSep()+"<org.apache.commons.math.optimization.linear.SimplexTableau: org.apache.commons.math.optimization.RealPointValuePair getSolution()>");
         return options;
     }
     public static void processCommand(CommandLine line) throws MissingArgumentException {
@@ -48,5 +49,8 @@ public class CommandLineParameter {
         if(!line.hasOption("generatedPackage"))
             throw new MissingArgumentException("Missing argument for generatedPackage");
         properties.setGeneratedPackage(line.getOptionValue("generatedPackage"));
+        if(!line.hasOption("faultyFunc"))
+            throw new MissingArgumentException("Missing argument for faultyFunc");
+        properties.setFaultyFunc(line.getOptionValue("faultyFunc").split(Properties.getClassSep()));
     }
 }
