@@ -48,11 +48,16 @@ public class ExecutionLogger {
         int latestID = latestExecution.getMethodInvokedId();
         MethodDetails latestDetails = result.getMethodDetailByID(latestID);
         // if the method logged most recently is to be skipped, OR it is a sub-method of a method stored before (prevent infinite loop)
-        if(Arrays.stream(skipMethods).anyMatch(m -> m.equals(latestDetails.getName())) || executing.stream().filter(e -> e.sameCalleeParamNMethod(latestExecution)).count() > 1 || latestDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR) || latestDetails.getType().equals(METHOD_TYPE.STATIC_INITIALIZER)) {
+        if(Arrays.stream(skipMethods).anyMatch(m -> m.equals(latestDetails.getName())) || executing.stream().filter(e -> e.sameCalleeParamNMethod(latestExecution)).count() > 1  || ExecutionTrace.getSingleton().getAllMethodExecs().values().stream().anyMatch(e -> e.sameCalleeParamNMethod(latestExecution)) || latestDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR)) {
             MethodDetails current = result.getMethodDetailByID(methodId);
-            if(latestDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR) && (current.getType().equals(METHOD_TYPE.CONSTRUCTOR) ) && latestID!=methodId && current.getDeclaringClass()!= latestDetails.getDeclaringClass() && !ClassUtils.getAllSuperclasses(Class.forName(latestDetails.getDeclaringClass().getName())).contains(Class.forName(current.getDeclaringClass().getName()))) {
-                return false;
+            if(latestDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR)) {
+                if((current.getType().equals(METHOD_TYPE.CONSTRUCTOR) ) && latestID!=methodId && current.getDeclaringClass()!= latestDetails.getDeclaringClass() && !ClassUtils.getAllSuperclasses(Class.forName(latestDetails.getDeclaringClass().getName())).contains(Class.forName(current.getDeclaringClass().getName()))) {
+                    return false;
+                }
+                else if (!current.getType().equals(METHOD_TYPE.CONSTRUCTOR))
+                    return false;
             }
+
             if (latestID != methodId)
                 return true;
 
@@ -85,10 +90,6 @@ public class ExecutionLogger {
             setVarIDforExecutions(methodId, process, -1);
         }
         else {
-//            logger.debug(getLatestExecution().toDetailedString());
-//            logger.debug("logging for " + process);
-//            logger.debug((new Gson()).toJson(obj));
-//            logger.debug(ToStringBuilder.reflectionToString(obj));
             setVarIDforExecutions(methodId, process, trace.getVarDetailID(obj == null ? Object.class : obj.getClass(), obj, LOG_ITEM.valueOf(process)));
         }
 
