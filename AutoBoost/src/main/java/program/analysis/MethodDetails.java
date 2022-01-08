@@ -14,21 +14,21 @@ public class MethodDetails {
     private int id;
     private final SootMethod method;
     private final List<Type> parameterTypes;
+    private final int parameterCount;
     private final String name;
-    private final Type returnType;
+    private final String returnType;
     private final ACCESS access;
     private final METHOD_TYPE type;
     private final SootClass declaringClass;
     private final String signature;
-    private boolean directAssignment; //if there is direct assignment to object field in method
-    private boolean testable;
 
     public MethodDetails(SootMethod method) {
         this.id = methodIdGenerator.incrementAndGet();
         this.method = method;
         this.parameterTypes = method.getParameterTypes();
+        this.parameterCount = method.getParameterCount();
         this.name = method.getName();
-        this.returnType = method.getReturnType();
+        this.returnType = method.getReturnType().toString();
         this.signature = method.getSignature();
         if(this.method.isStaticInitializer())
             this.type = METHOD_TYPE.STATIC_INITIALIZER;
@@ -39,8 +39,6 @@ public class MethodDetails {
         else this.type = METHOD_TYPE.MEMBER;
         this.access = method.isPrivate()? ACCESS.PRIVATE: (method.isPublic()? ACCESS.PUBLIC: ACCESS.PROTECTED);
         this.declaringClass = method.getDeclaringClass();
-        if(this.access!=ACCESS.PRIVATE && !method.isEntryMethod() && this.type!=METHOD_TYPE.STATIC_INITIALIZER && !name.equals("hashCode"))
-            this.testable = true;
     }
 
     public int getId() {
@@ -63,7 +61,7 @@ public class MethodDetails {
         return name;
     }
 
-    public Type getReturnType() {
+    public String getReturnType() {
         return returnType;
     }
 
@@ -79,36 +77,11 @@ public class MethodDetails {
         return declaringClass;
     }
 
-    public boolean isTestable() {
-        return testable;
-    }
-
-    public boolean isDirectAssignment() {
-        return directAssignment;
-    }
-
-    public void setDirectAssignment(boolean directAssignment) {
-        this.directAssignment = directAssignment;
-    }
-
     public String getSignature() {
         return signature;
     }
 
-    @Override
-    public String toString() {
-        return "MethodDetails{" +
-                "id=" + id +
-                ", method=" + method +
-                ", parameterTypes=" + parameterTypes +
-                ", name='" + name + '\'' +
-                ", returnType=" + returnType +
-                ", access=" + access +
-                ", type=" + type +
-                ", declaringClass=" + declaringClass +
-                ", subsignature='" + signature + '\'' +
-                ", directAssignment=" + directAssignment +
-                ", testable=" + testable +
-                '}';
+    public int getParameterCount() {
+        return parameterCount;
     }
 }
