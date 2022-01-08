@@ -25,15 +25,11 @@ public class InstrumentResult {
         this.methodDetailsMap.put(details.getId(), details);
     }
     public void addMethod(SootMethod method) {
-
          addMethod(new MethodDetails(method));
     }
 
     public Map<Integer, MethodDetails> getMethodDetailsMap() {
         return methodDetailsMap;
-    }
-    public boolean visitedMethod(String declaringClass, String subsignature) {
-        return this.methodDetailsMap.values().stream().anyMatch(m -> m.getDeclaringClass().equals(declaringClass)&& m.getSignature().equals(subsignature));
     }
 
     public MethodDetails getMethodDetailByID(int methodID) {

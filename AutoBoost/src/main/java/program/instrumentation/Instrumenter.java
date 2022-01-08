@@ -99,7 +99,6 @@ public class Instrumenter extends BodyTransformer {
 
 
         }
-        methodDetails.setDirectAssignment(directAssgn);
         result.addMethod(methodDetails);
 //        if(methodDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR)){
 //            stmtIt = units.snapshotIterator();
