@@ -1,6 +1,5 @@
 package program.instrumentation;
 
-import program.analysis.ClassAnalysis;
 import program.analysis.MethodDetails;
 import soot.SootMethod;
 
@@ -11,8 +10,7 @@ public class InstrumentResult {
     private static InstrumentResult singleton = new InstrumentResult();
     private Map<Integer, MethodDetails> methodDetailsMap = Collections.synchronizedMap(new HashMap<>());
     private AtomicInteger methodIdGenerator = new AtomicInteger(0);
-    private ClassAnalysis classAnalysis = new ClassAnalysis();
-//    private List<>
+    //    private List<>
 
     public static InstrumentResult getSingleton() {
         return singleton;
@@ -31,15 +29,11 @@ public class InstrumentResult {
          addMethod(new MethodDetails(method));
     }
 
-    public ClassAnalysis getClassAnalysis() {
-        return classAnalysis;
-    }
-
     public Map<Integer, MethodDetails> getMethodDetailsMap() {
         return methodDetailsMap;
     }
     public boolean visitedMethod(String declaringClass, String subsignature) {
-        return this.methodDetailsMap.values().stream().anyMatch(m -> m.getDeclaringClass().equals(declaringClass)&& m.getSubsignature().equals(subsignature));
+        return this.methodDetailsMap.values().stream().anyMatch(m -> m.getDeclaringClass().equals(declaringClass)&& m.getSignature().equals(subsignature));
     }
 
     public MethodDetails getMethodDetailByID(int methodID) {
