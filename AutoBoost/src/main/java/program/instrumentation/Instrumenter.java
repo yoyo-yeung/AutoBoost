@@ -4,7 +4,6 @@ import entity.LOG_ITEM;
 import entity.METHOD_TYPE;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import program.analysis.ClassAnalysis;
 import program.analysis.MethodDetails;
 import soot.*;
 import soot.jimple.*;
@@ -32,28 +31,14 @@ public class Instrumenter extends BodyTransformer {
     @Override
     protected void internalTransform(Body body, String phaseName, Map<String, String> options) {
         InstrumentResult result = InstrumentResult.getSingleton();
-        ClassAnalysis analysis = result.getClassAnalysis();
         Stmt stmt;
         Chain<Unit> units = body.getUnits();
         Iterator<?> stmtIt = units.snapshotIterator();
-
         MethodDetails methodDetails = new MethodDetails(body.getMethod());
         int methodId = methodDetails.getId();
         SootClass declaringClass = body.getMethod().getDeclaringClass();
         InvokeExpr invExpr;
         Stmt invStmt;
-        if(!analysis.isVisited(declaringClass.getName())){
-            analysis.addClass(declaringClass);
-            if(declaringClass.hasSuperclass() && !declaringClass.getSuperclass().isLibraryClass() && !declaringClass.getSuperclass().isJavaLibraryClass()){
-                analysis.addClass(declaringClass.getSuperclass());
-                analysis.addRelation(declaringClass.getSuperclass().getName(), declaringClass.getName());
-            }
-            declaringClass.getInterfaces().forEach(i -> {
-                analysis.addClass(i);
-                analysis.addRelation(i.getName(), declaringClass.getName());
-            });
-            analysis.addVisitedClass(declaringClass.getName());
-        }
         boolean directAssgn = false, paramLogged = false;
         while(stmtIt.hasNext()){
             stmt = (Stmt) stmtIt.next();
