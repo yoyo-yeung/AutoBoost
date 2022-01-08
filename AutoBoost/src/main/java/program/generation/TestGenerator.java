@@ -10,7 +10,7 @@ import program.execution.ExecutionTrace;
 import program.execution.MethodExecution;
 import program.execution.stmt.*;
 import program.execution.variable.*;
-import program.generation.testcase.DefaultTestCase;
+import program.generation.test.TestCase;
 import program.instrumentation.InstrumentResult;
 
 import java.util.*;
@@ -22,7 +22,7 @@ public class TestGenerator {
     private final ExecutionTrace executionTrace = ExecutionTrace.getSingleton();
     private final InstrumentResult instrumentResult = InstrumentResult.getSingleton();
     private final Set<MethodExecution> coveredExecutions = new HashSet<>();
-    private final List<DefaultTestCase> testCases = new ArrayList<>();
+    private final List<TestCase> testCases = new ArrayList<>();
 
     public TestGenerator() {
     }
@@ -37,7 +37,7 @@ public class TestGenerator {
                 .filter(e -> !executionTrace.getDefExeList(e.getReturnValId()).contains(e.getID()) ) // prevent self checking
                 .forEach(e ->
         {
-            DefaultTestCase testCase = new DefaultTestCase();
+            TestCase testCase = new TestCase();
             MethodInvStmt invStmt = getMethodInvStmt(e, testCase);
             VarStmt returnValStmt = new VarStmt(executionTrace.getVarDetailByID(e.getReturnValId()).getType(), testCase.getNewVarID());
             testCase.addStmt(new AssignStmt(returnValStmt, invStmt));
@@ -51,7 +51,7 @@ public class TestGenerator {
         executionTrace.getAllMethodExecs().values().stream()
                 .filter(e -> exeCanBeTested(e.getID()) && e.getCalleeId()!= -1 && e.getCalleeId() == e.getResultThisId() && !executionTrace.getDefExeList(e.getReturnValId()).contains(e.getID()) )
                 .map(e -> {
-                    DefaultTestCase testCase = new DefaultTestCase();
+                    TestCase testCase = new TestCase();
                     MethodInvStmt invStmt = getMethodInvStmt(e, testCase);
                     testCase.addStmt(invStmt);
                     generateDefStmt(e.getCalleeId(), testCase, false, true);
@@ -93,7 +93,7 @@ public class TestGenerator {
             return true;
         return false;
     }
-    public Stmt generateDefStmt(Integer varDetailsID, DefaultTestCase testCase, boolean checkExisting, boolean store) throws IllegalArgumentException {
+    public Stmt generateDefStmt(Integer varDetailsID, TestCase testCase, boolean checkExisting, boolean store) throws IllegalArgumentException {
         VarDetail varDetail = executionTrace.getVarDetailByID(varDetailsID);
         if(checkExisting && testCase.getExistingVar(varDetail)!=null && testCase.getExistingVar(varDetail).size()>0)
             return testCase.getExistingVar(varDetail).get(0);
@@ -106,7 +106,7 @@ public class TestGenerator {
         else return getComplexDefStmt(varDetail, testCase);
     }
 
-    private Stmt getSingleDefStmt(VarDetail varDetail, DefaultTestCase testCase) {
+    private Stmt getSingleDefStmt(VarDetail varDetail, TestCase testCase) {
         if(executionTrace.getDefExeList(varDetail.getID()).size() != 0 || !(varDetail instanceof PrimitiveVarDetails || varDetail instanceof WrapperVarDetails || varDetail instanceof StringVarDetails || varDetail instanceof MapVarDetails || varDetail instanceof ArrVarDetails || varDetail instanceof EnumVarDetails))
             throw new IllegalArgumentException("Provided VarDetail cannot be assigned with single stmt");
         if(varDetail instanceof PrimitiveVarDetails || varDetail instanceof WrapperVarDetails || varDetail instanceof StringVarDetails || varDetail instanceof EnumVarDetails)
@@ -125,7 +125,7 @@ public class TestGenerator {
         return varStmt;
     }
 
-    private MethodInvStmt getMethodInvStmt(MethodExecution execution, DefaultTestCase testCase) {
+    private MethodInvStmt getMethodInvStmt(MethodExecution execution, TestCase testCase) {
         MethodDetails details = instrumentResult.getMethodDetailByID(execution.getMethodInvokedId());
         MethodInvStmt invokeStmt = null;
         VarStmt varStmt;
@@ -143,7 +143,7 @@ public class TestGenerator {
         }
         return invokeStmt;
     }
-    private VarStmt getComplexDefStmt(VarDetail varDetail, DefaultTestCase testCase) {
+    private VarStmt getComplexDefStmt(VarDetail varDetail, TestCase testCase) {
         int varDetailID = varDetail.getID();
         executionTrace.getDefExeList(varDetailID).forEach(e -> {
             MethodExecution execution = executionTrace.getMethodExecutionByID(e);
@@ -184,7 +184,7 @@ public class TestGenerator {
         return testCase.getExistingVar(varDetail).get(0);
     }
 
-    public List<DefaultTestCase> getTestCases() {
+    public List<TestCase> getTestCases() {
         return testCases;
     }
 }

@@ -1,4 +1,4 @@
-package program.generation.testcase;
+package program.generation.test;
 
 import program.execution.ExecutionTrace;
 import program.execution.stmt.AssertStmt;
@@ -9,7 +9,7 @@ import program.execution.variable.VarDetail;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class DefaultTestCase {
+public class TestCase {
     private static final AtomicInteger testIDGenerator = new AtomicInteger(0);
     private final AtomicInteger varIDGenerator = new AtomicInteger(0);
     private final int ID;
@@ -19,7 +19,7 @@ public class DefaultTestCase {
     private AssertStmt assertion;
     private Set<Class<?>> allImports = new HashSet<>();
 
-    public DefaultTestCase() {
+    public TestCase() {
         this.ID = testIDGenerator.incrementAndGet();
     }
 
