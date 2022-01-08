@@ -11,6 +11,7 @@ import soot.VoidType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class MethodExecution {
     private final int ID;
@@ -63,10 +64,11 @@ public class MethodExecution {
         }
         if(methodInvoked.getType().equals(METHOD_TYPE.STATIC) && (callee != null || resultThis != null))
             return false;
-        if(params.size()!=methodInvoked.getParameterCount())
-            return false;
 
-        if(methodInvoked.getReturnType() != null && !methodInvoked.getReturnType().equalsIgnoreCase("void") && (returnVal == null || !methodInvoked.getReturnType().getClass().equals(returnVal.getType())))
+        if(params.size()!=methodInvoked.getParameterCount()) {
+            return false;
+        }
+        if(methodInvoked.getReturnType() != null && !methodInvoked.getReturnType().equalsIgnoreCase("void") && (returnVal == null))
             return false;
         return true;
     }

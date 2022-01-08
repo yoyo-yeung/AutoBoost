@@ -17,7 +17,7 @@ public class InstrumentResult {
     public void addMethod(MethodDetails details) {
         this.methodDetailsMap.put(details.getId(), details);
     }
-    
+
     public void addMethod(SootMethod method) {
          addMethod(new MethodDetails(method));
     }

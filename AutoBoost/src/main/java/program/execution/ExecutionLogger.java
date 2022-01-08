@@ -150,6 +150,8 @@ public class ExecutionLogger {
             throw new RuntimeException("Method finishing logging does not match stored method");
         MethodExecution finishedMethod = executing.pop();
         ExecutionTrace executionTrace = ExecutionTrace.getSingleton();
+        if(!finishedMethod.relationshipCheck())
+            throw new RuntimeException("Method finished incorrect. ");
         executionTrace.addMethodExecution(finishedMethod);
         // some method called the finishedMethod
         if(executing.size()!=0)
@@ -181,7 +183,6 @@ public class ExecutionLogger {
                 ID = -1;
             case RETURN_ITEM:
                execution.setReturnValId(ID);
-               execution.relationshipCheck();
                 endLogMethod(methodId);
                 break;
             default:

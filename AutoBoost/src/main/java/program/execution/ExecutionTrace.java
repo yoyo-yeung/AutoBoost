@@ -153,7 +153,7 @@ public class ExecutionTrace {
     }
 
     private Stream<Integer> getComponentStream(Class<?> type, Object obj, LOG_ITEM process) {
-        if(ArrVarDetails.availableTypeCheck(type))
+        if(!ArrVarDetails.availableTypeCheck(type))
             throw new IllegalArgumentException("Provided Obj cannot be handled.");
         Stream<Integer> componentStream;
         if(type.isArray()){
