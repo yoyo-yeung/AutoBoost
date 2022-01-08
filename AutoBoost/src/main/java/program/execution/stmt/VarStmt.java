@@ -1,15 +1,14 @@
 package program.execution.stmt;
 
-import java.util.List;
-
 public class VarStmt extends Stmt{
     String varName;
     Class<?> varType;
 
 
-    public VarStmt(Class<?>varType) {
-        this.varName = "var"+this.getID();
+    public VarStmt(Class<?> varType, int varID) {
+        this.varName = "var"+ varID;
         this.varType = varType;
+        this.addImports(varType);
     }
 
     @Override
@@ -21,8 +20,4 @@ public class VarStmt extends Stmt{
         return "final "+ varType.getSimpleName() + " " + varName;
     }
 
-    @Override
-    public List<Class<?>> getImports() {
-        return null;
-    }
 }
