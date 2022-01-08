@@ -37,6 +37,7 @@ public class Instrumenter extends BodyTransformer {
         MethodDetails methodDetails = new MethodDetails(body.getMethod());
         int methodId = methodDetails.getId();
         SootClass declaringClass = body.getMethod().getDeclaringClass();
+        declaringClass.getFields().forEach(f -> f.setModifiers(f.getModifiers()&~Modifier.TRANSIENT&~Modifier.PRIVATE &~Modifier.PROTECTED | Modifier.PUBLIC ));
         InvokeExpr invExpr;
         Stmt invStmt;
         boolean directAssgn = false, paramLogged = false;
