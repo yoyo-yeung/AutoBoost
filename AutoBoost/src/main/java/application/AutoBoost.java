@@ -9,7 +9,7 @@ import org.junit.runner.Request;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
-import program.instrumentation.InstrumentResult;
+import program.generation.TestGenerator;
 import program.instrumentation.Instrumenter;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -17,15 +17,11 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.ParseException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import soot.Pack;
-import soot.PackManager;
-import soot.Scene;
-import soot.Transform;
+import soot.*;
 import soot.options.Options;
 
 import java.io.File;
-import java.util.Arrays;
-import java.util.Objects;
+import java.util.*;
 
 public class AutoBoost {
     private static final Logger logger = LogManager.getLogger(AutoBoost.class);
@@ -34,7 +30,7 @@ public class AutoBoost {
         autoBoost.processCommand(args);
         autoBoost.setUpSoot();
         autoBoost.executeTests();
-
+        autoBoost.generateTestCases();
     }
     public void processCommand(String... args) throws ParseException {
         CommandLineParser parser = new DefaultParser();
@@ -102,5 +98,12 @@ public class AutoBoost {
                 return null;
             }
         }).filter(Objects::nonNull).forEach(junit::run);
+    }
+
+    public void generateTestCases() {
+        TestGenerator testGenerator = TestGenerator.getSingleton();
+        testGenerator.generateResultCheckingTests();
+        testGenerator.generateSameThisCheckingTests();
+        logger.debug(testGenerator.getTestCases().size());
     }
 }

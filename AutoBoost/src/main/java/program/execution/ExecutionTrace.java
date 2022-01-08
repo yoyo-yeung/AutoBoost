@@ -283,6 +283,15 @@ public class ExecutionTrace {
         this.callGraph.addEdge(father, son);
     }
 
+    public Set<Integer> getAllChildern(int father) {
+        Set<Integer> results = new HashSet<>();
+        this.callGraph.outgoingEdgesOf(father).forEach(e -> {
+            results.add(this.callGraph.getEdgeTarget(e));
+            results.addAll(getAllChildern(this.callGraph.getEdgeTarget(e)));
+        });
+        return results;
+    }
+
     public VarDetail getVarDetailByID(int varID) {
         if(!this.allVars.containsKey(varID))
             throw new IllegalArgumentException("VarDetail with ID" + varID + " does not exist.");
