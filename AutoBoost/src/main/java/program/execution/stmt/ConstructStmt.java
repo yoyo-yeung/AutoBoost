@@ -11,6 +11,7 @@ import program.execution.variable.VarDetail;
 import program.instrumentation.InstrumentResult;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -26,7 +27,6 @@ public class ConstructStmt extends Stmt{
         VarDetail varDetail = trace.getVarDetailByID(resultVarDetailID);
         if(!varDetail.getCreatedBy().equals(CREATION_TYPE.CONSTRUCTOR))
             throw new IllegalArgumentException("VarDetail provided should not be created by construction");
-//        System.out.println(varDetail.toDetailedString());
         if(varDetail instanceof ObjVarDetails && methodExecutionID == null)
             throw new IllegalArgumentException("Missing execution details");
         if(methodExecutionID !=null && methodExecutionID != -1 ) {
@@ -40,6 +40,8 @@ public class ConstructStmt extends Stmt{
             methodID = null;
         }
         this.paramStmts = paramStmtIDs == null ? new ArrayList<>() : paramStmtIDs;
+        if(!varDetail.getType().isArray())
+            this.addImports(varDetail.getType());
     }
 
     public Integer getMethodID() {
@@ -82,8 +84,11 @@ public class ConstructStmt extends Stmt{
     private String getMapStmtString(){
         return "(){{" + paramStmts.stream().map(s-> "put("+s.getStmt()+")").collect(Collectors.joining(";" + Properties.getNewLine())) + ";}}";
     }
+
     @Override
-    public List<Class<?>> getImports() {
-        return null;
+    public Set<Class<?>> getImports() {
+        Set<Class<?>> results = new HashSet<>(this.imports);
+        this.paramStmts.forEach(stmt -> results.addAll(stmt.getImports()));
+        return results;
     }
 }

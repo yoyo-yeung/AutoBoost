@@ -2,7 +2,9 @@ package program.execution.stmt;
 
 import helper.Properties;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class PairStmt extends Stmt{
     private final Stmt keyStmt;
@@ -11,6 +13,7 @@ public class PairStmt extends Stmt{
     public PairStmt(Stmt keyStmt, Stmt valueStmt) {
         this.keyStmt = keyStmt;
         this.valueStmt = valueStmt;
+
     }
 
     @Override
@@ -19,7 +22,10 @@ public class PairStmt extends Stmt{
     }
 
     @Override
-    public List<Class<?>> getImports() {
-        return null;
+    public Set<Class<?>> getImports() {
+        Set<Class<?>> results = new HashSet<>(this.imports);
+        results.addAll(keyStmt.getImports());
+        results.addAll(valueStmt.getImports());
+        return results;
     }
 }

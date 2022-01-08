@@ -1,6 +1,7 @@
 package program.execution.stmt;
 
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 public class AssignStmt extends Stmt{
     private Stmt leftStmt;
@@ -35,7 +36,10 @@ public class AssignStmt extends Stmt{
     }
 
     @Override
-    public List<Class<?>> getImports() {
-        return null;
+    public Set<Class<?>> getImports() {
+        Set<Class<?>> results = new HashSet<>(this.imports);
+        results.addAll(leftStmt.getImports());
+        results.addAll(rightStmt.getImports());
+        return results;
     }
 }
