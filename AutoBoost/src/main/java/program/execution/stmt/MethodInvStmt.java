@@ -11,9 +11,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public class MethodInvStmt extends Stmt{
-    private String callee;
-    private int methodInvID;
-    private List<Stmt> paramStmts;
+    private final String callee;
+    private final int methodInvID;
+    private final List<Stmt> paramStmts;
 
     public MethodInvStmt(String callee, int methodInvID, List<Stmt> paramStmts) {
         this.callee = callee;
@@ -21,7 +21,7 @@ public class MethodInvStmt extends Stmt{
         this.paramStmts = paramStmts;
         try {
             Class<?> declaringClass = Class.forName(InstrumentResult.getSingleton().getMethodDetailByID(methodInvID).getDeclaringClass().getName());
-            if(!declaringClass.isArray())
+            if(!declaringClass.isArray() && !declaringClass.isPrimitive())
                 this.addImports(declaringClass);
         } catch (ClassNotFoundException e) {
             e.printStackTrace();

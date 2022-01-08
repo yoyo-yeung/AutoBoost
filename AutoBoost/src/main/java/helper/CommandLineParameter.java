@@ -20,6 +20,7 @@ public class CommandLineParameter {
         options.addOption("testCases", true, "Failing test case's name. It should be in the format of testClass" + Properties.getClassMethSep() +"testCaseName. Separated by " + Properties.getClassSep());
         options.addOption("generatedPackage", true, "Package of the generated test cases");
         options.addOption("faultyFunc", true, "Faulty function's subsignatures, each enclosed by <>. Separated by " + Properties.getClassSep() + "e.g. <org.apache.commons.math.analysis.integration.SimpsonIntegrator: double integrate(double,double)>" + Properties.getClassSep()+"<org.apache.commons.math.optimization.linear.SimplexTableau: org.apache.commons.math.optimization.RealPointValuePair getSolution()>");
+        options.addOption(Help.getOption());
         return options;
     }
     public static void processCommand(CommandLine line) throws MissingArgumentException {

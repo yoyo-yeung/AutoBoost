@@ -3,12 +3,14 @@ package program.execution.stmt;
 import org.junit.Assert;
 import program.execution.ExecutionTrace;
 
-import java.util.HashSet;
+import java.util.Collection;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class AssertStmt extends Stmt{
-    private Stmt expected;
-    private Stmt actual;
+    private final Stmt expected;
+    private final Stmt actual;
     private final String MARGIN = "1e-16";
 
     public AssertStmt(Stmt expected, Stmt actual) {
@@ -25,9 +27,6 @@ public class AssertStmt extends Stmt{
 
     @Override
     public Set<Class<?>> getImports() {
-        Set<Class<?>> results = new HashSet<>(imports);
-        results.addAll(expected.getImports());
-        results.addAll(actual.getImports());
-        return results;
+        return Stream.of(this.imports, expected.getImports(), actual.getImports()).flatMap(Collection::stream).collect(Collectors.toSet());
     }
 }

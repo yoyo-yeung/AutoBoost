@@ -25,6 +25,7 @@ import java.util.*;
 
 public class AutoBoost {
     private static final Logger logger = LogManager.getLogger(AutoBoost.class);
+    private final Properties properties = Properties.getSingleton();
     public static void main(String... args) throws ParseException {
         AutoBoost autoBoost = new AutoBoost();
         autoBoost.processCommand(args);
@@ -46,7 +47,6 @@ public class AutoBoost {
         }
     }
     public void setUpSoot(){
-        Properties properties = Properties.getSingleton();
         Options.v().set_soot_classpath(Scene.v().defaultClassPath() + File.pathSeparator + properties.getInsBinPath() + File.pathSeparator + System.getProperty("java.class.path"));
         Options.v().set_process_dir(Arrays.asList(properties.getInsBinPath()));
         Options.v().set_output_dir(properties.getInsBinPath());
@@ -61,7 +61,6 @@ public class AutoBoost {
     }
     public void executeTests() {
         logger.info("Execute tests");
-        Properties properties = Properties.getSingleton();
         JUnitCore junit = new JUnitCore();
         junit.addListener(new RunListener() {
             public void testRunStarted(Description description) {
@@ -77,9 +76,7 @@ public class AutoBoost {
 
             @Override
             public void testFinished(Description description) throws Exception {
-//                properties.getTestCases()
-//                String testName = description.getTestClass().getName()+Properties.getClassMethSep() + description.getMethodName();
-//                logger.debug
+
             }
 
             @Override

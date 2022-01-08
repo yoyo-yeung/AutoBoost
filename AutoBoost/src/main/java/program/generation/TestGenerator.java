@@ -17,12 +17,12 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class TestGenerator {
-    private static Logger logger = LogManager.getLogger(TestGenerator.class);
-    private static TestGenerator singleton = new TestGenerator();
-    private ExecutionTrace executionTrace = ExecutionTrace.getSingleton();
-    private InstrumentResult instrumentResult = InstrumentResult.getSingleton();
-    private Set<MethodExecution> coveredExecutions = new HashSet<>();
-    private List<DefaultTestCase> testCases = new ArrayList<>();
+    private static final Logger logger = LogManager.getLogger(TestGenerator.class);
+    private static final TestGenerator singleton = new TestGenerator();
+    private final ExecutionTrace executionTrace = ExecutionTrace.getSingleton();
+    private final InstrumentResult instrumentResult = InstrumentResult.getSingleton();
+    private final Set<MethodExecution> coveredExecutions = new HashSet<>();
+    private final List<DefaultTestCase> testCases = new ArrayList<>();
 
     public TestGenerator() {
     }

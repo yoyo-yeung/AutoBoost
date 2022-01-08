@@ -43,6 +43,7 @@ public abstract class Stmt {
     public void addImports(Set<Class<?>> importClass) {
         this.imports.addAll(importClass);
     }
+
     protected static int getNewStmtID(){
         return stmtIDGenerator.incrementAndGet();
     }

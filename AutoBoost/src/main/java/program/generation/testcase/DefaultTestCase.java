@@ -13,9 +13,9 @@ public class DefaultTestCase {
     private static final AtomicInteger testIDGenerator = new AtomicInteger(0);
     private final AtomicInteger varIDGenerator = new AtomicInteger(0);
     private final int ID;
-    private List<Stmt> stmtList = new ArrayList<>();
-    private List<VarStmt> varAvailable = new ArrayList<VarStmt>();
-    private Map<VarDetail, List<VarStmt>> detailToStmtMap = new HashMap<>();
+    private final List<Stmt> stmtList = new ArrayList<>();
+    private final List<VarStmt> varAvailable = new ArrayList<VarStmt>();
+    private final Map<VarDetail, List<VarStmt>> detailToStmtMap = new HashMap<>();
     private AssertStmt assertion;
     private Set<Class<?>> allImports = new HashSet<>();
 
@@ -32,9 +32,6 @@ public class DefaultTestCase {
         return stmtList;
     }
 
-    public void setStmtList(List<Stmt> stmtList) {
-        this.stmtList = stmtList;
-    }
 
     public void addStmt(Stmt stmt) {
         this.stmtList.add(stmt);
@@ -43,10 +40,6 @@ public class DefaultTestCase {
 
     public List<VarStmt> getVarAvailable() {
         return varAvailable;
-    }
-
-    public void setVarAvailable(List<VarStmt> varAvailable) {
-        this.varAvailable = varAvailable;
     }
 
     public AssertStmt getAssertion() {

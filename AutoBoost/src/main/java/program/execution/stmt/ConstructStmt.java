@@ -10,10 +10,7 @@ import program.execution.variable.ObjVarDetails;
 import program.execution.variable.VarDetail;
 import program.instrumentation.InstrumentResult;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class ConstructStmt extends Stmt{
@@ -37,7 +34,7 @@ public class ConstructStmt extends Stmt{
         }
         else {
             this.methodExecutionID = null;
-            methodID = null;
+            this.methodID = null;
         }
         this.paramStmts = paramStmtIDs == null ? new ArrayList<>() : paramStmtIDs;
         if(!varDetail.getType().isArray())
@@ -58,7 +55,7 @@ public class ConstructStmt extends Stmt{
         VarDetail resultVarDetail = trace.getVarDetailByID(resultVarDetailID);
 
         StringBuilder result = new StringBuilder();
-        result.append("new " + trace.getVarDetailByID(resultVarDetailID).getTypeSimpleName() );
+        result.append("new ").append(trace.getVarDetailByID(resultVarDetailID).getTypeSimpleName());
         if(resultVarDetail instanceof ArrVarDetails) {
             if(resultVarDetail.getType().isArray())
                 result.append(getArrString());

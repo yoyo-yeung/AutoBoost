@@ -4,17 +4,17 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class Properties {
-    private static Logger logger = LogManager.getLogger(Properties.class);
+    private static final Logger logger = LogManager.getLogger(Properties.class);
     private static final Properties singleton = new Properties();
     private String insBinPath =  null;
     private String[] CUTs = null;
     private String[] testCases = null;
     private String[] faultyFunc = null;
+    private String generatedPackage = null;
     private static final String classMethSep = "::";
     private static final String classSep = ",";
     private static final String NEW_LINE = "\n";
     private static final String DELIMITER = ",";
-    private String generatedPackage = null;
 
     public Properties() {
     }

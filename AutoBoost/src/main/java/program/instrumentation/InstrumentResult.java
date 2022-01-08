@@ -8,22 +8,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class InstrumentResult {
     private static InstrumentResult singleton = new InstrumentResult();
-    private Map<Integer, MethodDetails> methodDetailsMap = Collections.synchronizedMap(new HashMap<>());
-    private AtomicInteger methodIdGenerator = new AtomicInteger(0);
-    //    private List<>
+    private final Map<Integer, MethodDetails> methodDetailsMap = Collections.synchronizedMap(new HashMap<>());
 
     public static InstrumentResult getSingleton() {
         return singleton;
     }
 
-
-    public int getNewMethodId() {
-        return methodIdGenerator.incrementAndGet();
-    }
-
     public void addMethod(MethodDetails details) {
         this.methodDetailsMap.put(details.getId(), details);
     }
+    
     public void addMethod(SootMethod method) {
          addMethod(new MethodDetails(method));
     }

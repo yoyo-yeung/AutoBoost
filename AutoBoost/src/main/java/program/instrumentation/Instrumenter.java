@@ -97,17 +97,7 @@ public class Instrumenter extends BodyTransformer {
 
             }
 
-
         }
         result.addMethod(methodDetails);
-//        if(methodDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR)){
-//            stmtIt = units.snapshotIterator();
-//            logger.info(methodDetails.getSubsignature());
-//            while(stmtIt.hasNext()){
-//                stmt  = (Stmt) stmtIt.next();
-//                logger.debug(stmt);
-//            }
-//        }
-//        logger.debug(methodDetails);
     }
 }

@@ -63,8 +63,9 @@ public class MethodExecution {
         }
         if(methodInvoked.getType().equals(METHOD_TYPE.STATIC) && (callee != null || resultThis != null))
             return false;
-        if(methodInvoked.getParameterTypes() != null && methodInvoked.getParameterTypes().size() > 0 && (params == null || params.size() != methodInvoked.getParameterTypes().size()))
+        if(params.size()!=methodInvoked.getParameterCount())
             return false;
+
         if(methodInvoked.getReturnType() != null && !methodInvoked.getReturnType().equalsIgnoreCase("void") && (returnVal == null || !methodInvoked.getReturnType().getClass().equals(returnVal.getType())))
             return false;
         return true;

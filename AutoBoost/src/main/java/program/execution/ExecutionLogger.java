@@ -15,6 +15,7 @@ public class ExecutionLogger {
     private static final Stack<MethodExecution> executing = new Stack<>();
     private static final String[] skipMethods = {"equals", "toString", "hashCode"};
     private static int sameMethodCount = 0; // this variable is used for keeping track of no. of methods, sharing same methodId with the top one in stack, not logged but processing
+    private static InstrumentResult result = InstrumentResult.getSingleton();
 
     /**
      * Invoked when a method has started its execution. the method would be added to stack for further processing
@@ -39,15 +40,14 @@ public class ExecutionLogger {
      * @return true if the current operation and value should not be logged, false if they should
      */
     private static boolean returnNow(int methodId, String process) throws ClassNotFoundException {
-        InstrumentResult result = InstrumentResult.getSingleton();
-        if(executing == null || executing.size() == 0)
+        if(executing.size() == 0)
             return false;
         MethodExecution latestExecution = getLatestExecution();
         if(latestExecution == null)
             return false;
         int latestID = latestExecution.getMethodInvokedId();
         MethodDetails latestDetails = result.getMethodDetailByID(latestID);
-        // if the method logged most recently is to be skipped, OR it is a sub-method of a method stored before (prevent infinite loop)
+        // if the method logged most recently is to be skipped, OR it is a sub-method of a method stored before (prevent infinite loop), OR the execution (same method, callee and parameters) have been logged before, OR it is constructor of a parent class or same class called by another constructor
         if(Arrays.stream(skipMethods).anyMatch(m -> m.equals(latestDetails.getName())) || executing.stream().filter(e -> e.sameCalleeParamNMethod(latestExecution)).count() > 1  || ExecutionTrace.getSingleton().getAllMethodExecs().values().stream().anyMatch(e -> e.sameCalleeParamNMethod(latestExecution)) || latestDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR)) {
             MethodDetails current = result.getMethodDetailByID(methodId);
             if(latestDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR)) {
@@ -126,10 +126,9 @@ public class ExecutionLogger {
         logPrimitive(methodId, process, char.class, (Character)value);
     }
     public static void log(int methodId, String process, String name, String value) throws ClassNotFoundException {
-        MethodExecution latestExecution = getLatestExecution();
         if(returnNow(methodId, process))
             return;
-        if(process.equals(LOG_ITEM.RETURN_VOID.toString())) {
+        if(LOG_ITEM.valueOf(process).equals(LOG_ITEM.RETURN_VOID)) {
             setVarIDforExecutions(methodId, process, -1);
             return;
         }
