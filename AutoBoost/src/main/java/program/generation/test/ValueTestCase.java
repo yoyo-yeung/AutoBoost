@@ -35,6 +35,6 @@ public class ValueTestCase extends TestCase{
 
     @Override
     protected String outputStmts(String indentation) {
-        return super.outputStmts(indentation) + indentation + this.getAssertion().getAssertStmts().stream().collect(Collectors.joining(";\n"+indentation)) + ";\n";
+        return super.outputStmts(indentation) + indentation + this.getAssertion().getStmt() + ";\n";
     }
 }
