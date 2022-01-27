@@ -6,12 +6,10 @@ import helper.Properties;
 import program.analysis.MethodDetails;
 import program.execution.variable.VarDetail;
 import program.instrumentation.InstrumentResult;
-import soot.VoidType;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public class MethodExecution {
     private final int ID;
@@ -21,6 +19,7 @@ public class MethodExecution {
     private int returnValId; // if non void
     private int resultThisId; // if member function, object after executing its member function
     private Class<?> exceptionClass;
+    private boolean reproducible = false;
 
     public MethodExecution(int ID, int methodInvokedId) {
         this.ID = ID;
@@ -57,9 +56,9 @@ public class MethodExecution {
         if(methodInvoked == null ) return false;
         if(methodInvoked.getType() == null) return false;
         if(methodInvoked.getType().equals(METHOD_TYPE.MEMBER)) {
-            if(callee == null || resultThis == null)
+            if(callee == null || (resultThis == null && exceptionClass == null))
                 return false;
-            if(!callee.getType().equals(resultThis.getType()))
+            if(resultThis != null && !callee.getType().equals(resultThis.getType()))
                 return false;
         }
         if(methodInvoked.getType().equals(METHOD_TYPE.STATIC) && (callee != null || resultThis != null))
@@ -68,7 +67,7 @@ public class MethodExecution {
         if(params.size()!=methodInvoked.getParameterCount()) {
             return false;
         }
-        if(methodInvoked.getReturnType() != null && !methodInvoked.getReturnType().equalsIgnoreCase("void") && (returnVal == null))
+        if(methodInvoked.getReturnType() != null && !methodInvoked.getReturnType().equalsIgnoreCase("void") && (returnVal == null) && exceptionClass == null)
             return false;
         return true;
     }
@@ -129,6 +128,7 @@ public class MethodExecution {
     public void setExceptionClass(Class<?> exceptionClass) {
         this.exceptionClass = exceptionClass;
     }
+
 
     @Override
     public String toString() {
