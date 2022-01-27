@@ -3,6 +3,8 @@ package program.generation;
 import entity.ACCESS;
 import entity.METHOD_TYPE;
 import helper.Properties;
+import org.apache.commons.lang3.ClassUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import program.analysis.MethodDetails;
@@ -10,9 +12,12 @@ import program.execution.ExecutionTrace;
 import program.execution.MethodExecution;
 import program.execution.stmt.*;
 import program.execution.variable.*;
-import program.generation.test.TestCase;
+import program.generation.test.*;
 import program.instrumentation.InstrumentResult;
+import soot.Modifier;
 
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -22,7 +27,11 @@ public class TestGenerator {
     private final ExecutionTrace executionTrace = ExecutionTrace.getSingleton();
     private final InstrumentResult instrumentResult = InstrumentResult.getSingleton();
     private final Set<MethodExecution> coveredExecutions = new HashSet<>();
-    private final List<TestCase> testCases = new ArrayList<>();
+    private final TestSuite testSuite = new TestSuite();
+    private final Set<Integer> passedVar = new HashSet<>();
+    private final Set<Integer> passedExe = new HashSet<>();
+    private final Set<Integer> failedExe = new HashSet<>();
+    private static final String[] skipMethods = {"equals", "toString", "hashCode"};
 
     public TestGenerator() {
     }
@@ -31,65 +40,149 @@ public class TestGenerator {
         return singleton;
     }
 
-    public void generateResultCheckingTests() {
-        executionTrace.getAllMethodExecs().values().stream()
-                .filter(e -> exeCanBeTested(e.getID()) && e.getReturnValId()!=-1)
-                .filter(e -> !executionTrace.getDefExeList(e.getReturnValId()).contains(e.getID()) ) // prevent self checking
-                .forEach(e ->
+    public void generateResultCheckingTests(List<MethodExecution> snapshot) {
+        snapshot.stream()
+                .filter(e -> Arrays.stream(skipMethods).noneMatch(s -> instrumentResult.getMethodDetailByID(e.getMethodInvokedId()).getName().equals(s)) || ! instrumentResult.getMethodDetailByID(e.getMethodInvokedId()).getType().equals(METHOD_TYPE.MEMBER))
+                .filter(e -> e.getReturnValId()!=-1 && (executionTrace.getDefExeList(e.getReturnValId()) == null || !executionTrace.getDefExeList(e.getReturnValId()).equals(e.getID()) ) && exeCanBeTested(e.getID(), 0, -1, new HashSet<>()) )// prevent self checking
+                .filter(e -> !(executionTrace.getVarDetailByID(e.getReturnValId()) instanceof ObjVarDetails) || e.getReturnValId() == executionTrace.getNullVar().getID())
+                .filter(e -> !executionTrace.getVarDetailByID(e.getReturnValId()).getType().isArray() || StringUtils.countMatches(instrumentResult.getMethodDetailByID(e.getMethodInvokedId()).getReturnType(), "[]") == StringUtils.countMatches(executionTrace.getVarDetailByID(e.getReturnValId()).getType().getSimpleName(), "[]")
+                )
+                .map(e ->
         {
-            TestCase testCase = new TestCase();
+            ValueTestCase testCase = new ValueTestCase();
             MethodInvStmt invStmt = getMethodInvStmt(e, testCase);
-            VarStmt returnValStmt = new VarStmt(executionTrace.getVarDetailByID(e.getReturnValId()).getType(), testCase.getNewVarID());
+            VarStmt returnValStmt = new VarStmt(instrumentResult.getMethodDetailByID(e.getMethodInvokedId()).getReturnType(),executionTrace.getVarDetailByID(e.getReturnValId()).getType(),  testCase.getNewVarID(), e.getReturnValId());
             testCase.addStmt(new AssignStmt(returnValStmt, invStmt));
             testCase.setAssertion(new AssertStmt(generateDefStmt(e.getReturnValId(), testCase, false, true), returnValStmt));
-            testCases.add(testCase);
-        });
+            this.coveredExecutions.add(e);
+            return testCase;
+        }).forEach(testSuite::assignTestCase);
+
     }
 
-
-    public void generateSameThisCheckingTests() {
-        executionTrace.getAllMethodExecs().values().stream()
-                .filter(e -> exeCanBeTested(e.getID()) && e.getCalleeId()!= -1 && e.getCalleeId() == e.getResultThisId() && !executionTrace.getDefExeList(e.getReturnValId()).contains(e.getID()) )
+    public void generateExceptionTests(List<MethodExecution> snapshot) {
+        snapshot.stream()
+                .filter(e -> e.getReturnValId() == -1 && e.getExceptionClass()!= null&& exeCanBeTested(e.getID(), 0, -1, new HashSet<>()))
                 .map(e -> {
-                    TestCase testCase = new TestCase();
+                    ExceptionTestCase testCase = new ExceptionTestCase();
                     MethodInvStmt invStmt = getMethodInvStmt(e, testCase);
                     testCase.addStmt(invStmt);
-                    generateDefStmt(e.getCalleeId(), testCase, false, true);
-                    testCase.setAssertion(new AssertStmt(testCase.getExistingVar(e.getCalleeId()).get(0),  testCase.getExistingVar(e.getCalleeId()).get(1)));
+                    testCase.setExceptionClass(e.getExceptionClass());
+                    testCase.output();
                     return testCase;
-                }).forEach(t-> testCases.add(t));
+                }).forEach(testSuite::assignTestCase);
     }
-    public boolean exeCanBeTested(Integer methodExecutionID) {
+    public boolean exeCanBeTested(Integer methodExecutionID, int lv, int calleeVar, Set<Integer> exeUnderCheck) {
         MethodExecution execution = executionTrace.getMethodExecutionByID(methodExecutionID);
         MethodDetails details = instrumentResult.getMethodDetailByID(execution.getMethodInvokedId());
+        if(passedExe.contains(methodExecutionID))
+            return true;
+
+        if(exeUnderCheck.contains(methodExecutionID)) {
+            return false;
+        }
+        if(failedExe.contains(methodExecutionID)) {
+            return false;
+        }
+        exeUnderCheck.add(methodExecutionID);
         if(containsFaultyDef(methodExecutionID)) {
+            failedExe.add(methodExecutionID);
+            exeUnderCheck.remove(methodExecutionID);
             return false;
         }
-        if(details.getType().equals(METHOD_TYPE.STATIC_INITIALIZER)) return false;
+        if(details.getType().equals(METHOD_TYPE.STATIC_INITIALIZER)) {
+            failedExe.add(methodExecutionID);
+            exeUnderCheck.remove(methodExecutionID);
+            return false;
+        }
         if(details.getAccess().equals(ACCESS.PRIVATE) || (details.getAccess().equals(ACCESS.PROTECTED) && !details.getDeclaringClass().getPackageName().equals(Properties.getSingleton().getGeneratedPackage()))) {
+            failedExe.add(methodExecutionID);
+            exeUnderCheck.remove(methodExecutionID);
             return false;
         }
-        if(execution.getCalleeId()!=-1 && !varCanBeTested(execution.getCalleeId())) {
+        if(details.getName().equals("access$000")) {
+            failedExe.add(methodExecutionID);
+            exeUnderCheck.remove(methodExecutionID);
             return false;
         }
-        if(execution.getParams().stream().anyMatch(p -> !varCanBeTested(p))) {
+        if((details.getType().equals(METHOD_TYPE.CONSTRUCTOR) && details.getDeclaringClass().isAbstract()) || details.getDeclaringClass().isPrivate() || (!details.getDeclaringClass().isPrivate() && !details.getDeclaringClass().isPublic()  && !details.getDeclaringClass().getPackageName().equals(Properties.getSingleton().getGeneratedPackage()))) {
+            failedExe.add(methodExecutionID);
+            exeUnderCheck.remove(methodExecutionID);
             return false;
         }
-        if(execution.getReturnValId()!=-1 && !varCanBeTested(execution.getReturnValId())) {
+        if(execution.getCalleeId()!=-1 && execution.getCalleeId() == calleeVar) {
+            exeUnderCheck.remove(methodExecutionID);
             return false;
         }
+        else if (execution.getCalleeId()!=-1 && !varCanBeTested(execution.getCalleeId(), lv+1, exeUnderCheck) ) {
+            failedExe.add(methodExecutionID);
+            exeUnderCheck.remove(methodExecutionID);
+            return false;
+        }
+        if(execution.getParams().stream().anyMatch(p -> p == calleeVar)) {
+
+            exeUnderCheck.remove(methodExecutionID);
+            return false;
+        }
+        else if(execution.getParams().stream().anyMatch(p ->!varCanBeTested(p, lv+1, exeUnderCheck))) {
+            failedExe.add(methodExecutionID);
+            exeUnderCheck.remove(methodExecutionID);
+            return false;
+        }
+        if(execution.getReturnValId()!=-1 && execution.getReturnValId() == calleeVar ) {
+            exeUnderCheck.remove(methodExecutionID);
+            return true;
+        }
+
+        else if(execution.getReturnValId()!=-1 && !varCanBeTested(execution.getReturnValId(), lv+1, exeUnderCheck)) {
+            failedExe.add(methodExecutionID);
+            exeUnderCheck.remove(methodExecutionID);
+            return false;
+        }
+        passedExe.add(methodExecutionID);
+        exeUnderCheck.remove(methodExecutionID);
         return true;
     }
-    private boolean varCanBeTested(Integer varID) {
+    private boolean memberClassCheck(Class<?> memberClass) {
+        int modifier = memberClass.getModifiers();
+        if(Modifier.isPrivate(modifier) || (!Modifier.isPrivate(modifier) && !Modifier.isPublic(modifier) && !memberClass.getPackage().getName().equals(Properties.getSingleton().getGeneratedPackage())) || ((memberClass.isMemberClass() || memberClass.isLocalClass()) && !Modifier.isStatic(modifier)))
+            return false;
+        if(memberClass.isAnonymousClass()) return false;
+        if(memberClass.isMemberClass() || memberClass.isLocalClass()) return memberClass.getEnclosingClass().getPackage().getName().startsWith("java") || memberClassCheck(memberClass.getEnclosingClass());
+        else return true;
+
+    }
+    private boolean varCanBeTested(Integer varID, int lv, Set<Integer> exeUnderCheck) {
         VarDetail varDetail = executionTrace.getVarDetailByID(varID);
-        if(executionTrace.getDefExeList(varID).size() == 0 && (varDetail instanceof PrimitiveVarDetails || varDetail instanceof WrapperVarDetails || varDetail instanceof StringVarDetails || varDetail instanceof MapVarDetails || varDetail instanceof ArrVarDetails || varDetail instanceof EnumVarDetails || varDetail.equals(executionTrace.getNullVar())))
+        if(varDetail.getType().isMemberClass())logger.debug(Modifier.toString(varDetail.getType().getEnclosingClass().getModifiers()));
+        if(passedVar.contains(varID)) return true;
+        if(executionTrace.getDefExeList(varID) == null && (varDetail instanceof PrimitiveVarDetails || varDetail instanceof WrapperVarDetails || varDetail instanceof StringVarDetails || varDetail instanceof EnumVarDetails || varDetail.equals(executionTrace.getNullVar()))) {
+            passedVar.add(varID);
             return true;
-        if(executionTrace.getDefExeList(varID).size() == 0 || executionTrace.getDefExeList(varID).stream().anyMatch(d -> !exeCanBeTested(d))) return false;
+        }
+        else if (varDetail instanceof MapVarDetails ) {
+            if(((MapVarDetails)varDetail).getKeyValuePairs().entrySet().stream().allMatch(e -> varCanBeTested(e.getKey(), lv+1, exeUnderCheck) && varCanBeTested(e.getValue(), lv+1, exeUnderCheck))) {
+                passedVar.add(varID);
+                return true;
+            }
+            return false;
+        }
+        else if (varDetail instanceof ArrVarDetails) {
+            if (((ArrVarDetails)varDetail).getComponents().stream().allMatch(varID1 -> varCanBeTested(varID1, lv+1, exeUnderCheck))) {
+                passedVar.add(varID);
+                return true;
+            }
+            return false;
+        }
+        else if(!varDetail.equals(ExecutionTrace.getSingleton().getNullVar()) && (((varDetail.getType().isLocalClass() || varDetail.getType().isMemberClass())&& !memberClassCheck(varDetail.getType())) || varDetail.getType().isAnonymousClass() || executionTrace.getDefExeList(varID) == null || !exeCanBeTested(executionTrace.getDefExeList(varID), lv+1, varID, exeUnderCheck))) {
+            return false;
+        }
+        passedVar.add(varID);
         return true;
     }
     private boolean containsFaultyDef(Integer exeID) {
         MethodExecution execution = executionTrace.getMethodExecutionByID(exeID);
-        if(Arrays.stream(Properties.getSingleton().getFaultyFunc()).anyMatch(s -> s.equals(instrumentResult.getMethodDetailByID(execution.getMethodInvokedId()).getSignature()) || executionTrace.getAllChildern(exeID).stream().anyMatch(e -> instrumentResult.getMethodDetailByID(executionTrace.getMethodExecutionByID(e).getMethodInvokedId()).getSignature().equals(s))))
+        if(Properties.getSingleton().getFaultyFunc().stream().anyMatch(s -> s.equals(instrumentResult.getMethodDetailByID(execution.getMethodInvokedId()).getSignature()) || executionTrace.getAllChildern(exeID).stream().anyMatch(e -> instrumentResult.getMethodDetailByID(executionTrace.getMethodExecutionByID(e).getMethodInvokedId()).getSignature().equals(s))))
             return true;
         return false;
     }
@@ -99,15 +192,17 @@ public class TestGenerator {
             return testCase.getExistingVar(varDetail).get(0);
         if(varDetail.equals(executionTrace.getNullVar()))
             return new ConstantStmt(varDetailsID);
-        if(executionTrace.getDefExeList(varDetail.getID()).size() == 0 && (varDetail instanceof PrimitiveVarDetails || varDetail instanceof WrapperVarDetails || varDetail instanceof StringVarDetails || varDetail instanceof MapVarDetails || varDetail instanceof ArrVarDetails || varDetail instanceof EnumVarDetails))
+        if(executionTrace.getDefExeList(varDetail.getID()) == null && (varDetail instanceof PrimitiveVarDetails || varDetail instanceof WrapperVarDetails || varDetail instanceof StringVarDetails || varDetail instanceof MapVarDetails || varDetail instanceof ArrVarDetails || varDetail instanceof EnumVarDetails))
             return getSingleDefStmt(varDetail, testCase);
-        else if(executionTrace.getDefExeList(varDetail.getID()).size()==0)
+        else if(executionTrace.getDefExeList(varDetail.getID()) == null) {
+            logger.debug(varDetail.toDetailedString());
             throw new IllegalArgumentException("Missing def list");
+        }
         else return getComplexDefStmt(varDetail, testCase);
     }
 
     private Stmt getSingleDefStmt(VarDetail varDetail, TestCase testCase) {
-        if(executionTrace.getDefExeList(varDetail.getID()).size() != 0 || !(varDetail instanceof PrimitiveVarDetails || varDetail instanceof WrapperVarDetails || varDetail instanceof StringVarDetails || varDetail instanceof MapVarDetails || varDetail instanceof ArrVarDetails || varDetail instanceof EnumVarDetails))
+        if(executionTrace.getDefExeList(varDetail.getID()) != null || !(varDetail instanceof PrimitiveVarDetails || varDetail instanceof WrapperVarDetails || varDetail instanceof StringVarDetails || varDetail instanceof MapVarDetails || varDetail instanceof ArrVarDetails || varDetail instanceof EnumVarDetails))
             throw new IllegalArgumentException("Provided VarDetail cannot be assigned with single stmt");
         if(varDetail instanceof PrimitiveVarDetails || varDetail instanceof WrapperVarDetails || varDetail instanceof StringVarDetails || varDetail instanceof EnumVarDetails)
             return new ConstantStmt(varDetail.getID());
@@ -117,9 +212,16 @@ public class TestGenerator {
         }
         else {
             params = ((ArrVarDetails)varDetail).getComponents().stream().map(e -> generateDefStmt(e, testCase, true, true)).collect(Collectors.toList());
-            return new ConstructStmt(varDetail.getID(), null, params);
+            if(((ArrVarDetails)varDetail).getComponents().stream().map(executionTrace::getVarDetailByID).noneMatch(e -> e.getType().isArray()) && ((ArrVarDetails)varDetail).getComponents().size()<=25)
+                return new ConstructStmt(varDetail.getID(), null, params);
+            else {
+                VarStmt varStmt = new VarStmt(varDetail.getTypeSimpleName(), varDetail.getType(), testCase.getNewVarID(), varDetail.getID());
+                testCase.addStmt(new AssignStmt(varStmt, new ConstructStmt(varDetail.getID(), null, params)));
+                testCase.addOrUpdateVar(varStmt, varDetail);
+                return varStmt;
+            }
         }
-        VarStmt varStmt = new VarStmt(varDetail.getType(), testCase.getNewVarID());
+        VarStmt varStmt = new VarStmt(varDetail.getType().toString(), varDetail.getType(), testCase.getNewVarID(), varDetail.getID());
         testCase.addStmt(new AssignStmt(varStmt, new ConstructStmt(varDetail.getID(), null, params)));
         testCase.addOrUpdateVar(varStmt, varDetail);
         return varStmt;
@@ -131,7 +233,7 @@ public class TestGenerator {
         VarStmt varStmt;
         switch(details.getType()) {
             case STATIC:
-                invokeStmt = new MethodInvStmt(details.getDeclaringClass().getName(), details.getId(), execution.getParams().stream().map(p -> generateDefStmt(p, testCase, true, true)).collect(Collectors.toList()));
+                invokeStmt = new MethodInvStmt(details.getDeclaringClass().getShortName(), details.getId(), execution.getParams().stream().map(p -> generateDefStmt(p, testCase, true, true)).collect(Collectors.toList()));
                 break;
             case CONSTRUCTOR:
                 invokeStmt = new MethodInvStmt("", details.getId(), execution.getParams().stream().map(p-> generateDefStmt(p, testCase, true, true)).collect(Collectors.toList()));
@@ -145,7 +247,7 @@ public class TestGenerator {
     }
     private VarStmt getComplexDefStmt(VarDetail varDetail, TestCase testCase) {
         int varDetailID = varDetail.getID();
-        executionTrace.getDefExeList(varDetailID).forEach(e -> {
+        int e = executionTrace.getDefExeList(varDetailID);
             MethodExecution execution = executionTrace.getMethodExecutionByID(e);
             MethodDetails details = instrumentResult.getMethodDetailByID(execution.getMethodInvokedId());
             MethodInvStmt invokeStmt = getMethodInvStmt(execution, testCase);
@@ -158,20 +260,20 @@ public class TestGenerator {
                         List<VarStmt> availableStmts = testCase.getExistingVar(execution.getReturnValId());
                         varStmt = availableStmts == null || availableStmts.size() == 0? null : availableStmts.get(0);
                         if(varStmt == null)
-                            varStmt = new VarStmt(executionTrace.getVarDetailByID(execution.getReturnValId()).getType(), testCase.getNewVarID());
+                            varStmt = new VarStmt(details.getReturnType(), executionTrace.getVarDetailByID(execution.getReturnValId()).getType(), testCase.getNewVarID(), execution.getReturnValId());
                         testCase.addStmt(new AssignStmt(varStmt, invokeStmt));
                         testCase.addOrUpdateVar(varStmt, executionTrace.getVarDetailByID(execution.getReturnValId()));
                     }
                     break;
                 case CONSTRUCTOR:
-                    varStmt = new VarStmt(executionTrace.getVarDetailByID(execution.getResultThisId()).getType(), testCase.getNewVarID());
+                    varStmt = new VarStmt(details.getDeclaringClass().getName(), executionTrace.getVarDetailByID(execution.getResultThisId()).getType(), testCase.getNewVarID(), execution.getResultThisId());
                     testCase.addStmt(new AssignStmt(varStmt, invokeStmt));
                     testCase.addOrUpdateVar(varStmt, executionTrace.getVarDetailByID(execution.getResultThisId()));
                     break;
                 case MEMBER:
                     varStmt = (VarStmt) generateDefStmt(execution.getCalleeId(), testCase, true, true);
                     if(!details.getReturnType().equalsIgnoreCase("void")){
-                        VarStmt varStmt1 = new VarStmt(executionTrace.getVarDetailByID(execution.getReturnValId()).getType(), testCase.getNewVarID());
+                        VarStmt varStmt1 = new VarStmt(details.getReturnType(), executionTrace.getVarDetailByID(execution.getReturnValId()).getType(), testCase.getNewVarID(), execution.getReturnValId());
                         testCase.addStmt(new AssignStmt(varStmt1, invokeStmt));
                         testCase.addOrUpdateVar(varStmt1, executionTrace.getVarDetailByID(execution.getReturnValId()));
                     }
@@ -180,11 +282,35 @@ public class TestGenerator {
                     testCase.addOrUpdateVar(varStmt, executionTrace.getVarDetailByID(execution.getResultThisId()));
                 break;
             }
-        });
         return testCase.getExistingVar(varDetail).get(0);
     }
 
-    public List<TestCase> getTestCases() {
-        return testCases;
+
+    public void output() throws IOException {
+        Properties properties = Properties.getSingleton();
+        File packageDir = new File(properties.getTestSourceDir(), properties.getGeneratedPackage().replace(".", File.separator));
+        if(!packageDir.exists() || !packageDir.isDirectory())
+            packageDir.mkdirs();
+        File file;
+        FileOutputStream writeStream;
+        if(Properties.getSingleton().getJunitVer()!=3) {
+            file = new File(packageDir, testSuite.getTestSuiteName() + ".java");
+            file.createNewFile();
+            writeStream = new FileOutputStream(file);
+            writeStream.write(testSuite.output().getBytes(StandardCharsets.UTF_8));
+            writeStream.close();
+        }
+        for(TestClass tc : testSuite.getTestClasses()) {
+            file = new File(packageDir, tc.getClassName()+".java");
+            file.createNewFile();
+            writeStream = new FileOutputStream(file);
+            writeStream.write(tc.output().getBytes(StandardCharsets.UTF_8));
+            writeStream.close();
+        }
+        file = new File(properties.getTestSourceDir(), "ab-tests.stdout");
+        file.createNewFile();
+        writeStream = new FileOutputStream(file);
+        writeStream.write(testSuite.getTestClasses().stream().map(c -> properties.getGeneratedPackage() + "."+c.getClassName()).collect(Collectors.joining(",")).getBytes(StandardCharsets.UTF_8));
+        writeStream.close();
     }
 }
