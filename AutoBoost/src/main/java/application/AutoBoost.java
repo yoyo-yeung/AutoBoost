@@ -56,7 +56,7 @@ public class AutoBoost {
         Instrumenter instrumenter = new Instrumenter();
         jtp.add(new Transform("jtp.instrumenter", instrumenter));
         logger.info("Instrumentation begins");
-        soot.Main.main(properties.getCUTs());
+        soot.Main.main(Scene.v().getBasicClasses().toArray(new String[0]));
 //        logger.debug(InstrumentResult.getSingleton().getClassAnalysis().toString());
     }
     public void executeTests() {

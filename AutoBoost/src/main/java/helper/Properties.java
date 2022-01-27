@@ -3,14 +3,24 @@ package helper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.lang.reflect.Array;
+import java.lang.reflect.Field;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
 public class Properties {
     private static final Logger logger = LogManager.getLogger(Properties.class);
     private static final Properties singleton = new Properties();
     private String insBinPath =  null;
-    private String[] CUTs = null;
     private String[] testCases = null;
-    private String[] faultyFunc = null;
+    private List<String> faultyFunc = new ArrayList<>();
+    private List<Integer> faultyFuncIds = new ArrayList<>();
     private String generatedPackage = null;
+    private String testSourceDir = null;
+    private String testSuitePrefix = "AB";
+    private int junitVer = 4;
+    private Map<String, List<Integer>> faultyClassLineMap = new HashMap<String, List<Integer>>();
     private static final String classMethSep = "::";
     private static final String classSep = ",";
     private static final String NEW_LINE = "\n";
@@ -29,16 +39,6 @@ public class Properties {
 
     public void setInsBinPath(String insBinPath) {
         this.insBinPath = insBinPath;
-        logProperty("insBinPath", this.insBinPath);
-    }
-
-    public String[] getCUTs() {
-        return CUTs;
-    }
-
-    public void setCUTs(String[] CUTs) {
-        this.CUTs = CUTs;
-        logProperty("CUTs", String.join(",", this.CUTs));
     }
 
     public static String getClassMethSep() {
@@ -49,8 +49,8 @@ public class Properties {
         return classSep;
     }
 
-    private void logProperty(String name, String value){
-        logger.debug(String.format("Argument set for %-15s:", name) + String.format(" %s", value));
+    private void logProperty(String name, Object value){
+        logger.debug(String.format("Argument set for %-15s:", name) + (value == null ? "null" : String.format(" %s", value)));
     }
 
     public String[] getTestCases() {
@@ -59,7 +59,6 @@ public class Properties {
 
     public void setTestCases(String[] testCases) {
         this.testCases = testCases;
-        logProperty("testCases", String.join(",", this.testCases));
 
     }
 
@@ -69,7 +68,6 @@ public class Properties {
 
     public void setGeneratedPackage(String generatedPackage) {
         this.generatedPackage = generatedPackage;
-        logProperty("generatedPackage", this.generatedPackage);
     }
 
     public static String getDELIMITER() {
@@ -80,12 +78,76 @@ public class Properties {
         return NEW_LINE;
     }
 
-    public String[] getFaultyFunc() {
+    public List<String> getFaultyFunc() {
         return faultyFunc;
     }
 
     public void setFaultyFunc(String[] faultyFunc) {
-        this.faultyFunc = faultyFunc;
+        this.faultyFunc = Arrays.asList(faultyFunc);
+    }
+    public void addFaultyFunc(String faultyFunc) {
+        this.faultyFunc.add(faultyFunc);
+    }
+    public String getTestSourceDir() {
+        return testSourceDir;
+    }
+
+    public void setTestSourceDir(String testSourceDir) {
+        this.testSourceDir = testSourceDir;
+    }
+
+    public String getTestSuitePrefix() {
+        return testSuitePrefix;
+    }
+
+    public void setTestSuitePrefix(String testSuitePrefix) {
+        this.testSuitePrefix = testSuitePrefix;
+    }
+
+    public Map<String, List<Integer>> getFaultyClassLineMap() {
+        return faultyClassLineMap;
+    }
+
+    public void setFaultyClassLineMap(Map<String, List<Integer>> faultyClassLineMap) {
+        this.faultyClassLineMap = faultyClassLineMap;
+    }
+
+    public void addFaultyClassLineMap(String key, Integer value) {
+        if(!this.faultyClassLineMap.containsKey(key))
+            this.faultyClassLineMap.put(key, new ArrayList<>());
+        this.faultyClassLineMap.get(key).add(value);
+    }
+
+    public int getJunitVer() {
+        return junitVer;
+    }
+
+    public void setJunitVer(int junitVer) {
+        this.junitVer = junitVer;
+    }
+
+    public void logProperties() {
+        logProperty("insBinPath", this.insBinPath);
+        logProperty("testCases", String.join(",", this.testCases));
+        logProperty("generatedPackage", this.generatedPackage);
         logProperty("faultyFunc", String.join(",", this.faultyFunc));
+        logProperty("testSourceDir", this.testSourceDir);
+        logProperty("testClassPrefix", this.testSuitePrefix);
+        logProperty("faultyClassLineMap", this.faultyClassLineMap.entrySet().stream().map(i -> i.getKey() + ":" + i.getValue()).collect(Collectors.joining(",")));
+    }
+    public void logFaultyFunc() {
+        logProperty("faultyFunc", String.join(",", this.faultyFunc));
+    }
+
+    public List<Integer> getFaultyFuncIds() {
+        return faultyFuncIds;
+    }
+
+    public void setFaultyFuncIds(List<Integer> faultyFuncIds) {
+        this.faultyFuncIds = faultyFuncIds;
+    }
+
+    public void addFaultyFuncId(Integer faultyFuncId) {
+        this.faultyFuncIds.add(faultyFuncId);
     }
 }
