@@ -73,6 +73,7 @@ public class MethodDetails {
         return type;
     }
 
+    // may change to use ClassDetails later
     public SootClass getDeclaringClass() {
         return declaringClass;
     }
@@ -84,4 +85,21 @@ public class MethodDetails {
     public int getParameterCount() {
         return parameterCount;
     }
+
+    @Override
+    public String toString() {
+        return "MethodDetails{" +
+                "id=" + id +
+                ", method=" + method +
+                ", parameterTypes=" + parameterTypes +
+                ", parameterCount=" + parameterCount +
+                ", name='" + name + '\'' +
+                ", returnType='" + returnType + '\'' +
+                ", access=" + access +
+                ", type=" + type +
+                ", declaringClass=" + declaringClass +
+                ", signature='" + signature + '\'' +
+                '}';
+    }
+
 }
