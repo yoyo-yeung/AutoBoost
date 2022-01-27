@@ -2,20 +2,24 @@ package program.execution;
 
 import entity.LOG_ITEM;
 import entity.METHOD_TYPE;
+import helper.Properties;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
 import program.analysis.MethodDetails;
 import program.instrumentation.InstrumentResult;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class ExecutionLogger {
     private static final Logger logger = LogManager.getLogger(ExecutionLogger.class);
     private static final Stack<MethodExecution> executing = new Stack<>();
-    private static final String[] skipMethods = {"equals", "toString", "hashCode"};
     private static int sameMethodCount = 0; // this variable is used for keeping track of no. of methods, sharing same methodId with the top one in stack, not logged but processing
     private static InstrumentResult result = InstrumentResult.getSingleton();
+    private static ExecutionTrace executionTrace = ExecutionTrace.getSingleton();
+
 
     /**
      * Invoked when a method has started its execution. the method would be added to stack for further processing
@@ -28,7 +32,7 @@ public class ExecutionLogger {
         // skip logging of method if it is a method call enclosed
         if(returnNow(methodId, process))
             return;
-        executing.add(new MethodExecution(ExecutionTrace.getSingleton().getNewExeID(), methodId));
+        executing.add(new MethodExecution(executionTrace.getNewExeID(), methodId));
     }
 
     /**
@@ -40,7 +44,7 @@ public class ExecutionLogger {
      * @return true if the current operation and value should not be logged, false if they should
      */
     private static boolean returnNow(int methodId, String process) throws ClassNotFoundException {
-        if(executing.size() == 0)
+        if(executing.size() == 0 || LOG_ITEM.valueOf(process).equals(LOG_ITEM.THREW_EXCEPTION) || Properties.getSingleton().getFaultyFuncIds().contains(methodId))
             return false;
         MethodExecution latestExecution = getLatestExecution();
         if(latestExecution == null)
@@ -48,7 +52,7 @@ public class ExecutionLogger {
         int latestID = latestExecution.getMethodInvokedId();
         MethodDetails latestDetails = result.getMethodDetailByID(latestID);
         // if the method logged most recently is to be skipped, OR it is a sub-method of a method stored before (prevent infinite loop), OR the execution (same method, callee and parameters) have been logged before, OR it is constructor of a parent class or same class called by another constructor
-        if(Arrays.stream(skipMethods).anyMatch(m -> m.equals(latestDetails.getName())) || executing.stream().filter(e -> e.sameCalleeParamNMethod(latestExecution)).count() > 1  || ExecutionTrace.getSingleton().getAllMethodExecs().values().stream().anyMatch(e -> e.sameCalleeParamNMethod(latestExecution)) || latestDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR)) {
+        if( executing.stream().filter(e -> e.sameCalleeParamNMethod(latestExecution)).count() > 1  || executionTrace.getAllMethodExecs().values().stream().anyMatch(e -> e.sameCalleeParamNMethod(latestExecution)) || latestDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR)) {
             MethodDetails current = result.getMethodDetailByID(methodId);
             if(latestDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR)) {
                 if((current.getType().equals(METHOD_TYPE.CONSTRUCTOR) ) && latestID!=methodId && current.getDeclaringClass()!= latestDetails.getDeclaringClass() && !ClassUtils.getAllSuperclasses(Class.forName(latestDetails.getDeclaringClass().getName())).contains(Class.forName(current.getDeclaringClass().getName()))) {
@@ -57,9 +61,9 @@ public class ExecutionLogger {
                 else if (!current.getType().equals(METHOD_TYPE.CONSTRUCTOR))
                     return false;
             }
-
-            if (latestID != methodId)
+            if (latestID != methodId) {
                 return true;
+            }
 
             switch (LOG_ITEM.valueOf(process)) {
                 // if the current method to be logged is same as the latest one, add to count to prevent inconsistent popping
@@ -80,9 +84,9 @@ public class ExecutionLogger {
     }
 
     public static void log(int methodId, String process, String name, Object obj) throws ClassNotFoundException {
-        ExecutionTrace trace = ExecutionTrace.getSingleton();
-        if(returnNow(methodId, process))
+        if(returnNow(methodId, process)) {
             return;
+        }
         if(LOG_ITEM.valueOf(process).equals(LOG_ITEM.THREW_EXCEPTION)){
             getLatestExecution().setExceptionClass(obj.getClass());
         }
@@ -90,7 +94,7 @@ public class ExecutionLogger {
             setVarIDforExecutions(methodId, process, -1);
         }
         else {
-            setVarIDforExecutions(methodId, process, trace.getVarDetailID(obj == null ? Object.class : obj.getClass(), obj, LOG_ITEM.valueOf(process)));
+            setVarIDforExecutions(methodId, process, executionTrace.getVarDetailID(obj == null ? Object.class : obj.getClass(), obj, LOG_ITEM.valueOf(process)));
         }
 
     }
@@ -98,7 +102,7 @@ public class ExecutionLogger {
     private static void logPrimitive(int methodId, String process, Class<?> c, Object value) throws ClassNotFoundException {
         if(returnNow(methodId, process))
             return;
-        setVarIDforExecutions(methodId, process, ExecutionTrace.getSingleton().getVarDetailID(c, value, LOG_ITEM.valueOf(process)));
+        setVarIDforExecutions(methodId, process, executionTrace.getVarDetailID(c, value, LOG_ITEM.valueOf(process)));
     }
     public static void log(int methodId, String process, String name, byte value) throws ClassNotFoundException {
         logPrimitive(methodId, process, byte.class, (Byte)value);
@@ -132,7 +136,7 @@ public class ExecutionLogger {
             setVarIDforExecutions(methodId, process, -1);
             return;
         }
-        setVarIDforExecutions(methodId, process, ExecutionTrace.getSingleton().getVarDetailID(String.class, value, LOG_ITEM.valueOf(process)));
+        setVarIDforExecutions(methodId, process, executionTrace.getVarDetailID(String.class, value, LOG_ITEM.valueOf(process)));
 
     }
 
@@ -149,7 +153,6 @@ public class ExecutionLogger {
         if(methodId!=executing.peek().getMethodInvokedId())
             throw new RuntimeException("Method finishing logging does not match stored method");
         MethodExecution finishedMethod = executing.pop();
-        ExecutionTrace executionTrace = ExecutionTrace.getSingleton();
         if(!finishedMethod.relationshipCheck())
             throw new RuntimeException("Method finished incorrect. ");
         executionTrace.addMethodExecution(finishedMethod);
@@ -167,8 +170,18 @@ public class ExecutionLogger {
      */
     private static void setVarIDforExecutions(int methodId, String process, int ID) {
         MethodExecution execution = getLatestExecution();
-        if( methodId != execution.getMethodInvokedId() )
-            throw new RuntimeException("Method processing does NOT match stored method ");
+        if( methodId != execution.getMethodInvokedId() ) {
+            if(execution.getExceptionClass()!=null){
+                Class<?> exceptionClass = execution.getExceptionClass();
+                while(getLatestExecution().getMethodInvokedId() != methodId){
+                    getLatestExecution().setExceptionClass(exceptionClass);
+                    endLogMethod(getLatestExecution().getMethodInvokedId());
+                }
+            } else {
+                throw new RuntimeException("Inconsistent method invoke");
+            }
+            execution =getLatestExecution();
+        }
         switch (LOG_ITEM.valueOf(process)) {
             case CALL_THIS:
                execution.setCalleeId(ID);
