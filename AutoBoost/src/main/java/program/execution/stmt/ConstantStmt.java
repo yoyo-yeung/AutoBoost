@@ -7,7 +7,7 @@ import program.execution.variable.VarDetail;
 public class ConstantStmt extends Stmt{
     public ConstantStmt(int resultVarDetailID) {
         VarDetail varDetail = ExecutionTrace.getSingleton().getVarDetailByID(resultVarDetailID);
-        if(!varDetail.getCreatedBy().equals(CREATION_TYPE.DIRECT_ASSIGN))
+        if(!varDetail.getCreatedBy().equals(CREATION_TYPE.DIRECT_ASSIGN) && !varDetail.equals(ExecutionTrace.getSingleton().getNullVar()))
             throw new IllegalArgumentException("Invalid type");
         this.resultVarDetailID = resultVarDetailID;
         if(!varDetail.getType().isPrimitive() && !varDetail.getType().isArray())

@@ -52,7 +52,7 @@ public class PrimitiveVarDetails extends VarDetail{
         Field field = null;
         try {
             field = getClass().getDeclaredField(type.getName() + "Value");
-            return ClassUtils.primitiveToWrapper(this.type).cast(field.get(this));
+            return this.type.equals(long.class) || this.type.equals(Long.class) ? ClassUtils.primitiveToWrapper(this.type).cast(field.get(this)) + "L" : ClassUtils.primitiveToWrapper(this.type).cast(field.get(this));
         } catch (NoSuchFieldException | IllegalAccessException e) {
             e.printStackTrace();
             return null;

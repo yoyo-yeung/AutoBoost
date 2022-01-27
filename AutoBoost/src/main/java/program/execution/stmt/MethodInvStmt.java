@@ -21,7 +21,7 @@ public class MethodInvStmt extends Stmt{
         this.paramStmts = paramStmts;
         try {
             Class<?> declaringClass = Class.forName(InstrumentResult.getSingleton().getMethodDetailByID(methodInvID).getDeclaringClass().getName());
-            if(!declaringClass.isArray() && !declaringClass.isPrimitive())
+            if(!declaringClass.isArray() && !declaringClass.isPrimitive() && (InstrumentResult.getSingleton().getMethodDetailByID(methodInvID).getType().equals(METHOD_TYPE.CONSTRUCTOR) || InstrumentResult.getSingleton().getMethodDetailByID(methodInvID).getType().equals(METHOD_TYPE.STATIC) ))
                 this.addImports(declaringClass);
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
@@ -31,7 +31,7 @@ public class MethodInvStmt extends Stmt{
     @Override
     public String getStmt() {
         MethodDetails details  = InstrumentResult.getSingleton().getMethodDetailByID(methodInvID);
-        return (callee == null ? "" : callee) + (details.getType().equals(METHOD_TYPE.CONSTRUCTOR) ? ("new " + details.getDeclaringClass().getShortName()): (callee == null ? "" : ".") + details.getName()) + "(" + paramStmts.stream().map(Stmt::getStmt).collect(Collectors.joining(Properties.getDELIMITER())) + ")";
+        return (callee == null ? "" : callee) + (details.getType().equals(METHOD_TYPE.CONSTRUCTOR) ? ("new " + details.getDeclaringClass().getShortName().replaceAll("\\$", ".")): (callee == null ? "" : ".") + details.getName()) + "(" + paramStmts.stream().map(Stmt::getStmt).collect(Collectors.joining(Properties.getDELIMITER())) + ")";
     }
 
     @Override

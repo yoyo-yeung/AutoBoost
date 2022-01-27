@@ -1,13 +1,26 @@
 package program.execution.stmt;
 
+import org.apache.commons.lang3.ClassUtils;
+
 public class VarStmt extends Stmt{
     String varName;
-    Class<?> varType;
+    String varType;
+    Class<?> actualType;
 
-    public VarStmt(Class<?> varType, int varID) {
+    public VarStmt(String varType, Class<?> actualType,  int varID, int resultVarDetailID) {
         this.varName = "var"+ varID;
+        this.actualType = actualType;
         this.varType = varType;
-        this.addImports(varType);
+        this.resultVarDetailID = resultVarDetailID;
+        if(!ClassUtils.isPrimitiveOrWrapper(actualType) && !actualType.isArray()) {
+            if(!actualType.getName().contains("$"))
+                this.imports.add(actualType);
+            try {
+                this.imports.add(Class.forName(varType.substring(varType.lastIndexOf(" ")+1)));
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     @Override
@@ -16,7 +29,7 @@ public class VarStmt extends Stmt{
     }
 
     public String getDeclarationStmt() {
-        return "final "+ varType.getSimpleName() + " " + varName;
+        return "final "+ varType.substring(varType.lastIndexOf(".")+1).replaceAll("\\$", ".") + " " + varName;
     }
 
 }
