@@ -2,11 +2,15 @@ package program.instrumentation;
 
 import entity.LOG_ITEM;
 import entity.METHOD_TYPE;
+import helper.Properties;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import program.analysis.MethodDetails;
 import soot.*;
 import soot.jimple.*;
+import soot.tagkit.AttributeValueException;
+import soot.tagkit.LineNumberTag;
+import soot.tagkit.Tag;
 import soot.util.Chain;
 
 import java.util.Arrays;
@@ -21,6 +25,17 @@ public class Instrumenter extends BodyTransformer {
     private static Map<String, SootMethod> logMethodMap = new HashMap<>();
     private static final SootMethod startLogMethod;
     private static final String[] supportedType = {Object.class.getName(), byte.class.getName(), short.class.getName(), int.class.getName(), long.class.getName(), float.class.getName(), double.class.getName(), boolean.class.getName(), char.class.getName(), String.class.getName() };
+    private static final Tag NEWLY_ADDED_TAG =new Tag() {
+        @Override
+        public String getName() {
+            return "NEWLY_ADDED";
+        }
+
+        @Override
+        public byte[] getValue() throws AttributeValueException {
+            return new byte[0];
+        }
+    };
     static {
         loggerClass = Scene.v().loadClassAndSupport("program.execution.ExecutionLogger");
         startLogMethod = loggerClass.getMethod("void start(int,java.lang.String)");
@@ -30,25 +45,33 @@ public class Instrumenter extends BodyTransformer {
     // future task : add casting of primitive value to wrapper type to for code reuse
     @Override
     protected void internalTransform(Body body, String phaseName, Map<String, String> options) {
+//        logger.debug(body.getMethod().getDeclaringClass());
         InstrumentResult result = InstrumentResult.getSingleton();
         Stmt stmt;
         Chain<Unit> units = body.getUnits();
         Iterator<?> stmtIt = units.snapshotIterator();
+
         MethodDetails methodDetails = new MethodDetails(body.getMethod());
         int methodId = methodDetails.getId();
         SootClass declaringClass = body.getMethod().getDeclaringClass();
         declaringClass.getFields().forEach(f -> f.setModifiers(f.getModifiers()&~Modifier.TRANSIENT&~Modifier.PRIVATE &~Modifier.PROTECTED | Modifier.PUBLIC ));
         InvokeExpr invExpr;
         Stmt invStmt;
-        boolean directAssgn = false, paramLogged = false;
+        boolean paramLogged = false;
+        int startLineNo = body.getMethod().getJavaSourceStartLineNumber();
+        int endLineNo = startLineNo;
+        Stmt latestIdentityStmt = null;
+        HashMap<String, Unit> replacedUnits = new HashMap<>();
         while(stmtIt.hasNext()){
             stmt = (Stmt) stmtIt.next();
-
+            Stmt finalStmt = stmt;
+//            logger.debug(stmt.getTags().stream().map(e -> e.getName() + "," + e.getValue()).collect(Collectors.joining(",")));
+            if(stmt.hasTag("LineNumberTag") && endLineNo < ((LineNumberTag)finalStmt.getTag("LineNumberTag")).getLineNumber())
+                endLineNo = ((LineNumberTag)finalStmt.getTag("LineNumberTag")).getLineNumber();
             if(stmt instanceof soot.jimple.internal.JIdentityStmt) {
                 continue;
             }
-            if(!directAssgn && stmt instanceof AssignStmt && ((AssignStmt) stmt).getLeftOp().toString().indexOf("this")==0)
-                directAssgn = true;
+
 
             // log if the method is NOT static initializer and NOT enum class
             if(methodDetails.getType().equals(METHOD_TYPE.STATIC_INITIALIZER) || declaringClass.isEnum())
@@ -57,11 +80,14 @@ public class Instrumenter extends BodyTransformer {
                 // log start of method
                 invExpr = Jimple.v().newStaticInvokeExpr(startLogMethod.makeRef(), IntConstant.v(methodId), StringConstant.v(LOG_ITEM.START_CALL.toString()));
                 invStmt = Jimple.v().newInvokeStmt(invExpr);
+                invStmt.addTag(NEWLY_ADDED_TAG);
                 units.insertBefore(invStmt, stmt);
                 // log callee details if it is a member function
                 if (methodDetails.getType().equals(METHOD_TYPE.MEMBER)) {
                     invExpr = Jimple.v().newStaticInvokeExpr(logMethodMap.get(Object.class.getName()).makeRef(), IntConstant.v(methodId), StringConstant.v(LOG_ITEM.CALL_THIS.toString()), StringConstant.v(body.getThisLocal().getName()), body.getThisLocal());
                     invStmt = Jimple.v().newInvokeStmt(invExpr);
+
+                    invStmt.addTag(NEWLY_ADDED_TAG);
                     units.insertBefore(invStmt, stmt);
                 }
                 // log params if there is one
@@ -69,6 +95,7 @@ public class Instrumenter extends BodyTransformer {
                     for (Local l : body.getParameterLocals()) {
                         invExpr = Jimple.v().newStaticInvokeExpr(logMethodMap.getOrDefault(l.getType().toString(), logMethodMap.get(Object.class.getName())).makeRef(), IntConstant.v(methodId), StringConstant.v(LOG_ITEM.CALL_PARAM.toString()), StringConstant.v(l.getName()), l);
                         invStmt = Jimple.v().newInvokeStmt(invExpr);
+                        invStmt.addTag(NEWLY_ADDED_TAG);
                         units.insertBefore(invStmt, stmt);
                     }
                 // set paramLogged to prevent re-logging
@@ -78,12 +105,14 @@ public class Instrumenter extends BodyTransformer {
                 Value thrownOp = ((ThrowStmt) stmt).getOp();
                 invExpr = Jimple.v().newStaticInvokeExpr(logMethodMap.get(Object.class.getName()).makeRef(), IntConstant.v(methodId), StringConstant.v(LOG_ITEM.THREW_EXCEPTION.toString()), StringConstant.v(thrownOp.getType().toString()), thrownOp instanceof Local ? (Local) thrownOp : thrownOp);
                 invStmt = Jimple.v().newInvokeStmt(invExpr);
+                invStmt.addTag(NEWLY_ADDED_TAG);
                 units.insertBefore(invStmt, stmt);
             }
             if (stmt instanceof ReturnStmt || stmt instanceof ReturnVoidStmt) {
                 if (methodDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR) || methodDetails.getType().equals(METHOD_TYPE.MEMBER)) {
                     invExpr = Jimple.v().newStaticInvokeExpr(logMethodMap.get(Object.class.getName()).makeRef(), IntConstant.v(methodId), StringConstant.v(LOG_ITEM.RETURN_THIS.toString()), StringConstant.v(body.getThisLocal().getName()), body.getThisLocal());
                     invStmt = Jimple.v().newInvokeStmt(invExpr);
+                    invStmt.addTag(NEWLY_ADDED_TAG);
                     units.insertBefore(invStmt, stmt);
                 }
 
@@ -93,11 +122,24 @@ public class Instrumenter extends BodyTransformer {
                 } else
                     invExpr = Jimple.v().newStaticInvokeExpr(logMethodMap.get(String.class.getName()).makeRef(), IntConstant.v(methodId), StringConstant.v(LOG_ITEM.RETURN_VOID.toString()), StringConstant.v("RETURN"), StringConstant.v("NULL"));
                 invStmt = Jimple.v().newInvokeStmt(invExpr);
+                invStmt.addTag(NEWLY_ADDED_TAG);
                 units.insertBefore(invStmt, stmt);
 
+            }
+            if(stmt instanceof GotoStmt && ((GotoStmt)stmt).getTarget().getTags().contains(NEWLY_ADDED_TAG)) {
+                while (((GotoStmt) stmt).getTarget().getTags().contains(NEWLY_ADDED_TAG)) {
+                    ((GotoStmt) stmt).setTarget(units.getSuccOf(((GotoStmt) stmt).getTarget()));
+                }
             }
 
         }
         result.addMethod(methodDetails);
+        int finalEndLineNo = endLineNo;
+        if(Properties.getSingleton().getFaultyClassLineMap().entrySet().stream().anyMatch(e ->
+           ( e.getKey().equals(body.getMethod().getDeclaringClass().getName()) || (body.getMethod().getDeclaringClass().isInnerClass() && body.getMethod().getDeclaringClass().getOuterClass().getName().equals(e.getKey()))) && e.getValue().stream().anyMatch(i -> i <=finalEndLineNo && i >= startLineNo))) {
+            Properties.getSingleton().addFaultyFunc(body.getMethod().getSignature());
+            Properties.getSingleton().addFaultyFuncId(methodId);
+        }
+
     }
 }
