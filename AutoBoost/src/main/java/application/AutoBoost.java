@@ -9,6 +9,8 @@ import org.junit.runner.Request;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
+import program.execution.ExecutionTrace;
+import program.execution.MethodExecution;
 import program.generation.TestGenerator;
 import program.instrumentation.Instrumenter;
 import org.apache.commons.cli.CommandLine;
@@ -21,15 +23,17 @@ import soot.*;
 import soot.options.Options;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
 
 public class AutoBoost {
     private static final Logger logger = LogManager.getLogger(AutoBoost.class);
-    private final Properties properties = Properties.getSingleton();
-    public static void main(String... args) throws ParseException {
+    private static final Properties properties = Properties.getSingleton();
+    public static void main(String... args) throws ParseException, IOException {
         AutoBoost autoBoost = new AutoBoost();
         autoBoost.processCommand(args);
         autoBoost.setUpSoot();
+        properties.logFaultyFunc();
         autoBoost.executeTests();
         autoBoost.generateTestCases();
     }
@@ -52,6 +56,7 @@ public class AutoBoost {
         Options.v().set_output_dir(properties.getInsBinPath());
         Options.v().set_keep_line_number(true);
         Options.v().setPhaseOption("jb", "use-original-names:true");
+//        Options.v().set_include_all(true);
         Pack jtp = PackManager.v().getPack("jtp");
         Instrumenter instrumenter = new Instrumenter();
         jtp.add(new Transform("jtp.instrumenter", instrumenter));
@@ -97,10 +102,13 @@ public class AutoBoost {
         }).filter(Objects::nonNull).forEach(junit::run);
     }
 
-    public void generateTestCases() {
+    public void generateTestCases() throws IOException {
         TestGenerator testGenerator = TestGenerator.getSingleton();
-        testGenerator.generateResultCheckingTests();
-        testGenerator.generateSameThisCheckingTests();
-        logger.debug(testGenerator.getTestCases().size());
+        logger.debug("generating");
+        List<MethodExecution> snapshot = new ArrayList<>(ExecutionTrace.getSingleton().getAllMethodExecs().values());
+        testGenerator.generateResultCheckingTests(snapshot);
+        if(Properties.getSingleton().getJunitVer()==4)
+            testGenerator.generateExceptionTests(snapshot);
+        testGenerator.output();
     }
 }
