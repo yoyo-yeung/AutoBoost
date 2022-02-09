@@ -331,6 +331,8 @@ public class ExecutionTrace {
 
     public void addMethodExecution(MethodExecution execution, int methodId) {
         int executionID = execution.getID();
+        this.allMethodExecs.put(executionID, execution);
+        this.callGraph.addVertex(executionID); // add vertex even if it has no son/ father
     }
 
     public void addMethodRelationship(int father, int son) {
