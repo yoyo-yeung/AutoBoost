@@ -59,7 +59,7 @@ public class ConstructStmt extends Stmt{
         if(resultVarDetail instanceof ArrVarDetails) {
             if(resultVarDetail.getType().isArray())
                 result.append(getArrString());
-            else if(ClassUtils.getAllInterfaces(resultVarDetail.getType()).contains(List.class) || ClassUtils.getAllInterfaces(resultVarDetail.getType()).contains(Set.class)){
+            else if(List.class.isAssignableFrom(resultVarDetail.getType()) || Set.class.isAssignableFrom(resultVarDetail.getType())){
                 result.append(getListSetString());
             }
         }
