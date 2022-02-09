@@ -1,14 +1,14 @@
 package program.instrumentation;
 
+import program.analysis.ClassDetails;
 import program.analysis.MethodDetails;
-import soot.SootMethod;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class InstrumentResult {
-    private static InstrumentResult singleton = new InstrumentResult();
-    private final Map<Integer, MethodDetails> methodDetailsMap = Collections.synchronizedMap(new HashMap<>());
+    private static final InstrumentResult singleton = new InstrumentResult();
+    private final Map<Integer, MethodDetails> methodDetailsMap = new HashMap<>();
+    private final Map<String, ClassDetails> classDetailsMap = new HashMap<>();
 
     public static InstrumentResult getSingleton() {
         return singleton;
@@ -18,17 +18,32 @@ public class InstrumentResult {
         this.methodDetailsMap.put(details.getId(), details);
     }
 
-    public void addMethod(SootMethod method) {
-         addMethod(new MethodDetails(method));
-    }
-
     public Map<Integer, MethodDetails> getMethodDetailsMap() {
         return methodDetailsMap;
     }
 
-    public MethodDetails getMethodDetailByID(int methodID) {
+    public MethodDetails getMethodDetailByID(Integer methodID) {
         if(!this.methodDetailsMap.containsKey(methodID))
             throw new IllegalArgumentException("MethodDetails for " + methodID + " does not exist");
         else return this.getMethodDetailsMap().get(methodID);
+    }
+
+    public Map<String, ClassDetails> getClassDetailsMap() {
+        return classDetailsMap;
+    }
+
+    public ClassDetails getClassDetailsByID(String className) {
+        if(!this.classDetailsMap.containsKey(className))
+            throw new IllegalArgumentException("ClassDetails for " + className + " does not exist");
+        else return this.classDetailsMap.get(className);
+    }
+
+    public void addClassDetails(ClassDetails classDetails) {
+        if(!this.classDetailsMap.containsKey(classDetails.getClassFullName()))
+            this.classDetailsMap.put(classDetails.getClassFullName(), classDetails);
+    }
+
+    public void clearClassDetails() {
+        this.classDetailsMap.clear();
     }
 }
