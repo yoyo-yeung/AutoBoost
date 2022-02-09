@@ -9,9 +9,11 @@ import org.junit.runner.Request;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
+import program.execution.ExecutionLogger;
 import program.execution.ExecutionTrace;
 import program.execution.MethodExecution;
 import program.generation.TestGenerator;
+import program.instrumentation.InstrumentResult;
 import program.instrumentation.Instrumenter;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -29,12 +31,14 @@ import java.util.*;
 public class AutoBoost {
     private static final Logger logger = LogManager.getLogger(AutoBoost.class);
     private static final Properties properties = Properties.getSingleton();
+    private static String executingTest = null;
     public static void main(String... args) throws ParseException, IOException {
         AutoBoost autoBoost = new AutoBoost();
         autoBoost.processCommand(args);
         autoBoost.setUpSoot();
         properties.logFaultyFunc();
         autoBoost.executeTests();
+        autoBoost.clearRuntimeOnlyInfo();
         autoBoost.generateTestCases();
     }
     public void processCommand(String... args) throws ParseException {
@@ -68,22 +72,20 @@ public class AutoBoost {
         logger.info("Execute tests");
         JUnitCore junit = new JUnitCore();
         junit.addListener(new RunListener() {
+            @Override
             public void testRunStarted(Description description) {
                 logger.debug("Test execution started");
             }
+            @Override
             public void testRunFinished(Result result) {
                 logger.debug(result.getRunCount() + " tests executed");
                 logger.debug(result.getFailureCount() + " tests failed");
             }
+            @Override
             public void testStarted(Description description) {
+                executingTest = description.getClassName() + ":" + description.getMethodName();
                 logger.debug(description.getMethodName());
             }
-
-            @Override
-            public void testFinished(Description description) throws Exception {
-
-            }
-
             @Override
             public void testFailure(Failure failure) throws Exception {
                 logger.error(failure.getDescription().getMethodName()+" failed\n" + failure.getTrace());
@@ -110,5 +112,18 @@ public class AutoBoost {
         if(Properties.getSingleton().getJunitVer()==4)
             testGenerator.generateExceptionTests(snapshot);
         testGenerator.output();
+    }
+
+    public static String getExecutingTest() {
+        return executingTest;
+    }
+
+    public static void setExecutingTest(String executingTest) {
+        AutoBoost.executingTest = executingTest;
+    }
+
+    public void clearRuntimeOnlyInfo() {
+        InstrumentResult.getSingleton().clearClassDetails();
+        ExecutionLogger.clearExecutingStack();
     }
 }
