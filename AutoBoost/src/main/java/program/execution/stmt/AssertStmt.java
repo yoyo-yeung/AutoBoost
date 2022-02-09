@@ -25,7 +25,7 @@ public class AssertStmt extends Stmt{
     public String getStmt() {
         Class<?> assertType = ExecutionTrace.getSingleton().getVarDetailByID(expected.resultVarDetailID).getType();
         if(assertType.isArray()) {
-            return  "Assert.assertTrue(" + (assertType.getComponentType().isArray()? "Arrays.deepEquals(" : "Arrays.equals(") + expected.getStmt() + "," + actual.getStmt() + "));";
+            return  (Properties.getSingleton().getJunitVer()==4? "Assert." : "") + "assertTrue(" + (assertType.getComponentType().isArray()? "Arrays.deepEquals(" : "Arrays.equals(") + expected.getStmt() + "," + actual.getStmt() + "));";
         }
 //        if(assertType.isArray() && ExecutionTrace.getSingleton().getVarDetailByID(actual.resultVarDetailID).getType().isArray() && (!(expected instanceof VarStmt) || ((((VarStmt)expected).actualType.isArray()) && ((VarStmt)expected).varType.contains("[]"))) && (!(actual instanceof VarStmt) || (((VarStmt)actual).actualType.isArray())&& ((VarStmt)actual).varType.contains("[]")) )
 //            return getArrStmt(expected.getStmt(), actual.getStmt(), expected.getResultVarDetailID(), assertType);
