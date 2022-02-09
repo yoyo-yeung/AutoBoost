@@ -9,14 +9,16 @@ import java.util.stream.Collectors;
 
 public class MapVarDetails extends VarDetail{
     private static final CREATION_TYPE createdBy = CREATION_TYPE.CONSTRUCTOR;
-    private Class<?> type;
-    private Map<Integer, Integer> keyValuePairs;
-    private Object value;
+    private final Class<?> type;
+    private final Map<Integer, Integer> keyValuePairs;
+    private final String keyValuePairValue;
+    private final Object value;
 
     public MapVarDetails(int ID, Class<?> type, Map<Integer, Integer> keyValuePairs, Object value) {
         super(ID);
         this.type = type;
         this.keyValuePairs = keyValuePairs;
+        this.keyValuePairValue = keyValuePairs == null? null : keyValuePairs.entrySet().stream().map(e -> e.getKey()+"="+e.getValue()).sorted().collect(Collectors.joining(Properties.getDELIMITER()));
         this.value = value;
     }
 
@@ -27,9 +29,7 @@ public class MapVarDetails extends VarDetail{
 
     @Override
     public Object getValue() {
-        if(keyValuePairs == null) return null;
-        else return keyValuePairs.entrySet().stream().map(e -> e.getKey()+"="+e.getValue()).sorted().collect(Collectors.joining(Properties.getDELIMITER()));
-
+        return this.keyValuePairValue;
     }
 
     @Override

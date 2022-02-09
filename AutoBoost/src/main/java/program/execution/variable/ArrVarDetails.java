@@ -15,6 +15,7 @@ public class ArrVarDetails extends VarDetail{
     Class<?> componentType;
     Class<?> type;
     List<Integer> components;
+    String componentValue;
     Object value;
 
     public ArrVarDetails(int ID, List<Integer> components, Object value) {
@@ -24,6 +25,7 @@ public class ArrVarDetails extends VarDetail{
         this.componentType = value.getClass().getComponentType();
         this.type = value.getClass();
         this.components = components;
+        this.componentValue = components.stream().map(String::valueOf).collect(Collectors.joining(Properties.getDELIMITER()));
         this.value = value;
     }
 
@@ -37,9 +39,7 @@ public class ArrVarDetails extends VarDetail{
 
     @Override
     public Object getValue() {
-        if(components == null)
-            return null;
-        return components.stream().map(String::valueOf).collect(Collectors.joining(Properties.getDELIMITER()));
+        return componentValue;
     }
 
     @Override
@@ -76,7 +76,7 @@ public class ArrVarDetails extends VarDetail{
     }
 
     public static boolean availableTypeCheck(Class<?> type ){
-        return type.isArray() || ClassUtils.getAllInterfaces(type).contains(List.class)|| ClassUtils.getAllInterfaces(type).contains(Set.class);
+        return type.isArray() || List.class.isAssignableFrom(type)|| Set.class.isAssignableFrom(type);
     }
 
     public CREATION_TYPE getCreatedBy() {
