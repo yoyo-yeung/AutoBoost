@@ -49,13 +49,25 @@ public class PrimitiveVarDetails extends VarDetail{
 
     @Override
     public Object getValue()  {
-        Field field = null;
-        try {
-            field = getClass().getDeclaredField(type.getName() + "Value");
-            return this.type.equals(long.class) || this.type.equals(Long.class) ? ClassUtils.primitiveToWrapper(this.type).cast(field.get(this)) + "L" : ClassUtils.primitiveToWrapper(this.type).cast(field.get(this));
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            e.printStackTrace();
-            return null;
+        switch(type.getName()) {
+            case "byte":
+                return this.byteValue;
+            case "short":
+                return this.shortValue;
+            case "int":
+                return this.intValue;
+            case "long":
+                return this.longValue+"L";
+            case "float":
+                return this.floatValue;
+            case "double":
+                return this.doubleValue;
+            case "char":
+                return this.charValue;
+            case "boolean":
+                return this.booleanValue;
+            default:
+                return null;
         }
     }
 
@@ -68,7 +80,7 @@ public class PrimitiveVarDetails extends VarDetail{
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         PrimitiveVarDetails that = (PrimitiveVarDetails) o;
-        return byteValue == that.byteValue && shortValue == that.shortValue && intValue == that.intValue && longValue == that.longValue && Float.compare(that.floatValue, floatValue) == 0 && Double.compare(that.doubleValue, doubleValue) == 0 && charValue == that.charValue && booleanValue == that.booleanValue && Objects.equals(type, that.type);
+        return that.type.equals(this.type) && that.getValue().equals(this.getValue());
     }
 
     @Override
