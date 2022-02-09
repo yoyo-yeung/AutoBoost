@@ -8,11 +8,12 @@ import soot.Type;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class MethodDetails {
     private static final AtomicInteger methodIdGenerator = new AtomicInteger(0);
     private int id;
-    private final SootMethod method;
+//    private final SootMethod method;
     private final List<Type> parameterTypes;
     private final int parameterCount;
     private final String name;
@@ -24,17 +25,17 @@ public class MethodDetails {
 
     public MethodDetails(SootMethod method) {
         this.id = methodIdGenerator.incrementAndGet();
-        this.method = method;
+//        this.method = method;
         this.parameterTypes = method.getParameterTypes();
         this.parameterCount = method.getParameterCount();
         this.name = method.getName();
         this.returnType = method.getReturnType().toString();
         this.signature = method.getSignature();
-        if(this.method.isStaticInitializer())
+        if(method.isStaticInitializer())
             this.type = METHOD_TYPE.STATIC_INITIALIZER;
-        else if(this.method.isStatic())
+        else if(method.isStatic())
             this.type = METHOD_TYPE.STATIC;
-        else if(this.method.isConstructor())
+        else if(method.isConstructor())
             this.type = METHOD_TYPE.CONSTRUCTOR;
         else this.type = METHOD_TYPE.MEMBER;
         this.access = method.isPrivate()? ACCESS.PRIVATE: (method.isPublic()? ACCESS.PUBLIC: ACCESS.PROTECTED);
@@ -49,9 +50,9 @@ public class MethodDetails {
         this.id = id;
     }
 
-    public SootMethod getMethod() {
-        return method;
-    }
+//    public SootMethod getMethod() {
+//        return method;
+//    }
 
     public List<Type> getParameterTypes() {
         return parameterTypes;
@@ -90,7 +91,7 @@ public class MethodDetails {
     public String toString() {
         return "MethodDetails{" +
                 "id=" + id +
-                ", method=" + method +
+//                ", method=" + method +
                 ", parameterTypes=" + parameterTypes +
                 ", parameterCount=" + parameterCount +
                 ", name='" + name + '\'' +
