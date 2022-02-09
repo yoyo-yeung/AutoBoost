@@ -1,6 +1,7 @@
 package program.execution;
 
 
+import application.AutoBoost;
 import entity.METHOD_TYPE;
 import helper.Properties;
 import program.analysis.MethodDetails;
@@ -8,8 +9,11 @@ import program.execution.variable.VarDetail;
 import program.instrumentation.InstrumentResult;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class MethodExecution {
     private final int ID;
@@ -19,7 +23,8 @@ public class MethodExecution {
     private int returnValId; // if non void
     private int resultThisId; // if member function, object after executing its member function
     private Class<?> exceptionClass;
-    private boolean reproducible = false;
+    private boolean reproducible = true;
+    private String test = null;
 
     public MethodExecution(int ID, int methodInvokedId) {
         this.ID = ID;
@@ -29,6 +34,7 @@ public class MethodExecution {
         this.returnValId = -1;
         this.resultThisId = -1;
         this.exceptionClass = null;
+        this.test = AutoBoost.getExecutingTest();
     }
 
     public MethodExecution(int ID, int methodInvokedId, int calleeId, List<Integer> params, int returnValId, int resultThisId, Class<?> e) {
@@ -41,6 +47,7 @@ public class MethodExecution {
         this.returnValId = returnValId;
         this.resultThisId = resultThisId;
         this.exceptionClass = e;
+        this.test = AutoBoost.getExecutingTest();
     }
 
     public boolean relationshipCheck() {
@@ -129,7 +136,6 @@ public class MethodExecution {
         this.exceptionClass = exceptionClass;
     }
 
-
     @Override
     public String toString() {
         return "MethodExecution{" +
@@ -139,10 +145,24 @@ public class MethodExecution {
                 ", params=" + params +
                 ", returnValId=" + returnValId +
                 ", resultThisId=" + resultThisId +
-                ", e=" + (exceptionClass == null ? "null" : exceptionClass.getName()) +
+                ", exceptionClass=" + exceptionClass +
+                ", reproducible=" + reproducible +
+                ", test='" + test + '\'' +
                 '}';
     }
-
+    public String toSimpleString() {
+        return "MethodExecution{" +
+                "ID=" + ID +
+                ", methodInvokedId=" + InstrumentResult.getSingleton().getMethodDetailByID(methodInvokedId).toString() +
+                ", calleeId=" + calleeId +
+                ", params=" + params +
+                ", returnValId=" + returnValId +
+                ", resultThisId=" + resultThisId +
+                ", exceptionClass=" + (exceptionClass == null ? "null" : exceptionClass.getName()) +
+                ", reproducible=" + reproducible +
+                ", test='" + (test==null? "null" : test)  +
+                '}';
+    }
     public String toDetailedString(){
         ExecutionTrace trace = ExecutionTrace.getSingleton();
         return "MethodExecution{" +
@@ -153,18 +173,29 @@ public class MethodExecution {
                 ", returnValId=" + (returnValId == -1 ? "null" : trace.getVarDetailByID(returnValId).toString()) +
                 ", resultThisId=" + (resultThisId == -1 ? "null" : trace.getVarDetailByID(resultThisId).toString()) +
                 ", e=" + (exceptionClass == null ? "null" : exceptionClass.getName()) +
+                ", reproducible=" + reproducible +
+                ", test='" + (test==null? "null" : test) + '\'' +
                 '}';
     }
 
     public boolean sameCalleeParamNMethod(MethodExecution ex) {
-        if(this.getMethodInvokedId() != ex.getMethodInvokedId() || this.calleeId != ex.calleeId || (this.params.size() != ex.params.size()))
-            return false;
+        return this.methodInvokedId == ex.methodInvokedId && this.calleeId == ex.calleeId && this.params.equals(ex.params);
 
-        for (int i = 0; i < this.params.size(); i++) {
-            if(!this.params.get(i).equals(ex.getParams().get(i)))
-                return false;
-        }
-        return true;
     }
-    
+
+    public void setReproducible(boolean reproducible) {
+        this.reproducible = reproducible;
+    }
+
+    public boolean isReproducible() {
+        return reproducible;
+    }
+
+    public String getTest() {
+        return test;
+    }
+
+    public void setTest(String test) {
+        this.test = test;
+    }
 }
