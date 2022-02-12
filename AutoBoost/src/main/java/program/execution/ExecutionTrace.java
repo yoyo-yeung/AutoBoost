@@ -382,48 +382,58 @@ public class ExecutionTrace {
     private String toStringWithAttr(Object obj) {
         if (obj == null) return "null";
         StringBuilder result = new StringBuilder();
-        baseFieldsToString(obj, 25, result);
+        toCustomString("this", obj, 7, result, new HashMap<>());
         return result.toString();
     }
 
-    private void baseFieldsToString(Object obj, int depth, StringBuilder result) {
+    private void toCustomString(String fieldName, Object obj, int depth, StringBuilder result, Map<Integer, String> hashCodeToFieldMap) {
         if (obj == null) {
             result.append("null");
             return;
-        } else if (depth == 0) {
-            result.append(obj.getClass().getName()).append("[]");
+        }
+        else if (ClassUtils.isPrimitiveOrWrapper(obj.getClass()) || obj.getClass().getName().startsWith("java")) {
+            result.append(obj);
             return;
-        } else if (obj.getClass().isArray()) {
+        }
+        if (hashCodeToFieldMap.containsKey(System.identityHashCode(obj))) {
+            result.append(hashCodeToFieldMap.get(System.identityHashCode(obj)));
+            return;
+        }
+        else hashCodeToFieldMap.put(System.identityHashCode(obj), fieldName);
+        if (depth == 0) {
+            result.append(obj.getClass().getSimpleName()).append("[]");
+            return;
+        }
+        else if (obj.getClass().isArray()) {
             result.append("[");
             IntStream.range(0, Array.getLength(obj)).forEach(i -> {
                 if (Array.get(obj, i) == null) result.append("null");
-                else baseFieldsToString(Array.get(obj, i), depth - 1, result);
+                else toCustomString(fieldName+"." + i, Array.get(obj, i), depth - 1, result, hashCodeToFieldMap);
                 if (i < Array.getLength(obj) - 1) result.append(",");
             });
             result.append("]");
             return;
         } else if (obj instanceof Map) {
             result.append("{");
+            AtomicInteger i = new AtomicInteger();
             ((Map<?, ?>) obj).forEach((key, value) -> {
                 result.append("[");
-                baseFieldsToString(key, depth - 1, result);
+                toCustomString(fieldName+"." + i.get() + ".key", key, depth - 1, result, hashCodeToFieldMap);
                 result.append("=");
-                baseFieldsToString(value, depth - 1, result);
+                toCustomString(fieldName+"." + i.getAndIncrement() +".value", value, depth - 1, result, hashCodeToFieldMap);
                 result.append("]");
             });
             result.append("}");
             return;
         } else if (obj instanceof Collection) {
             result.append("{");
+            AtomicInteger y = new AtomicInteger();
             ((Collection) obj).forEach(i -> {
-                baseFieldsToString(i, depth - 1, result);
+                toCustomString(fieldName+"." + y.getAndIncrement(), i, depth - 1, result, hashCodeToFieldMap);
                 result.append(",");
             });
             result.deleteCharAt(result.length() - 1);
             result.append("}");
-        } else if (ClassUtils.isPrimitiveOrWrapper(obj.getClass()) || obj.getClass().getName().startsWith("java")) {
-            result.append(obj);
-            return;
         }
 
         if (!InstrumentResult.getSingleton().getClassDetailsMap().containsKey(obj.getClass().getName())) {
@@ -442,7 +452,8 @@ public class ExecutionTrace {
                 .forEach(f -> {
                     f.setAccessible(true);
                     try {
-                        baseFieldsToString(f.get(obj), depth - 1, result);
+                        result.append(f.getName()).append("=");
+                        toCustomString(fieldName+"." + f.getName(), f.get(obj), depth - 1, result, hashCodeToFieldMap);
                         result.append(",");
                     } catch (IllegalAccessException e) {
                         e.printStackTrace();
