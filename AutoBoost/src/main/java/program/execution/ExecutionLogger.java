@@ -17,7 +17,7 @@ import java.util.stream.IntStream;
 public class ExecutionLogger {
     private static final Logger logger = LogManager.getLogger(ExecutionLogger.class);
     private static final Stack<MethodExecution> executing = new Stack<>();
-    private static final InstrumentResult result = InstrumentResult.getSingleton();
+    private static final InstrumentResult instrumentResult = InstrumentResult.getSingleton();
     private static final ExecutionTrace executionTrace = ExecutionTrace.getSingleton();
     private static int sameMethodCount = 0; // this variable is used for keeping track of no. of methods, sharing same methodId with the top one in stack, not logged but processing
     private static boolean skipping = false;
@@ -36,9 +36,12 @@ public class ExecutionLogger {
         if (returnNow(methodId, process))
             return;
         MethodExecution newExecution = new MethodExecution(executionTrace.getNewExeID(), methodId);
-        if (InstrumentResult.getSingleton().getMethodDetailByID(methodId).getType().equals(METHOD_TYPE.STATIC_INITIALIZER) || (executing.size() > 0 && executing.peek().getTest() == null))
+        MethodDetails details = instrumentResult.getMethodDetailByID(methodId);
+        if (details.getType().equals(METHOD_TYPE.STATIC_INITIALIZER) || (executing.size() > 0 && executing.peek().getTest() == null))
             newExecution.setTest(null);
         executing.add(newExecution);
+        if((details.getType().equals(METHOD_TYPE.CONSTRUCTOR) || details.getType().equals(METHOD_TYPE.STATIC)) && details.getParameterCount() == 0 )
+            setSkipping(newExecution);
 
     }
 
@@ -51,10 +54,11 @@ public class ExecutionLogger {
      * @return true if the current operation and value should not be logged, false if they should
      */
     private static boolean returnNow(int methodId, String process) throws ClassNotFoundException {
-        if (executing.size() == 0 || Properties.getSingleton().getFaultyFuncIds().contains(methodId)) {
+        if (executing.size() == 0 ) {
             skipping = false;
             return false;
         }
+        if(Properties.getSingleton().getFaultyFuncIds().contains(methodId)) return false;
         LOG_ITEM processItem = LOG_ITEM.valueOf(process);
         if (processItem.equals(LOG_ITEM.THREW_EXCEPTION)) return false;
         MethodExecution latestExecution = getLatestExecution();
@@ -63,23 +67,13 @@ public class ExecutionLogger {
             return false;
         }
         int latestID = latestExecution.getMethodInvokedId();
+        MethodDetails latestDetails = instrumentResult.getMethodDetailByID(latestID);
+        if(!skipping && !latestDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR))
+            return skipping;
         if (skipping && !(processItem.equals(LOG_ITEM.START_CALL) && methodId == latestID) && !(processItem.equals(LOG_ITEM.RETURN_ITEM) && methodId == latestID) && !(processItem.equals(LOG_ITEM.RETURN_VOID) && methodId == latestID))
             return skipping;
-        MethodDetails latestDetails = result.getMethodDetailByID(latestID);
-        if (!skipping && (processItem.equals(LOG_ITEM.RETURN_VOID) || processItem.equals(LOG_ITEM.RETURN_ITEM)) && !latestDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR) && latestDetails.getType().equals(METHOD_TYPE.MEMBER))
-            return skipping;
-        // if the method logged most recently is to be skipped, OR it is a sub-method of a method stored before (prevent infinite loop), OR the execution (same method, callee and parameters) have been logged before, OR it is constructor of a parent class or same class called by another constructor
 
-        if (skipping || executing.stream().limit(executing.size() - 1).filter(e -> e.getMethodInvokedId() == methodId).anyMatch(e -> e.getTest() != null && e.sameCalleeParamNMethod(latestExecution)) || executionTrace.
-                getAllMethodExecs().values().stream()
-                .filter(e -> e.getMethodInvokedId() == methodId)
-                .anyMatch(e -> e.getTest() != null && e.sameCalleeParamNMethod(latestExecution))) {
-
-            if (latestID != methodId) {
-                skipping = true;
-                return true;
-            }
-
+        if(skipping) {
             switch (processItem) {
                 // if the current method to be logged is same as the latest one, add to count to prevent inconsistent popping
                 case START_CALL:
@@ -97,13 +91,11 @@ public class ExecutionLogger {
                         return true;
                     } else sameMethodCount--;
             }
-
-
             skipping = true;
             return true;
         }
         if (latestDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR)) {
-            MethodDetails current = result.getMethodDetailByID(methodId);
+            MethodDetails current = instrumentResult.getMethodDetailByID(methodId);
             skipping = false;
             if (latestID != methodId) {
                 if (current.getType().equals(METHOD_TYPE.CONSTRUCTOR) && current.getDeclaringClass() != latestDetails.getDeclaringClass() && !ClassUtils.getAllSuperclasses(Class.forName(latestDetails.getDeclaringClass().getName())).contains(Class.forName(current.getDeclaringClass().getName()))) {
@@ -111,7 +103,6 @@ public class ExecutionLogger {
                 } else return current.getType().equals(METHOD_TYPE.CONSTRUCTOR);
             }
         }
-
         skipping = false;
         return false;
     }
@@ -239,12 +230,16 @@ public class ExecutionLogger {
                 throw new RuntimeException("Inconsistent method invoke");
             }
         }
+        MethodDetails details = instrumentResult.getMethodDetailByID(methodId);
         switch (LOG_ITEM.valueOf(process)) {
             case CALL_THIS:
                 execution.setCalleeId(ID);
+                if(details.getParameterCount() == 0)
+                    setSkipping(execution);
                 break;
             case CALL_PARAM:
                 execution.addParam(ID);
+                setSkipping(execution);
                 break;
             case RETURN_THIS:
                 execution.setResultThisId(ID);
@@ -258,10 +253,20 @@ public class ExecutionLogger {
             default:
                 throw new RuntimeException("Invalid value provided for process " + process);
         }
+//        logger.debug("set " + execution.toDetailedString());
     }
 
 
     public static void clearExecutingStack() {
         executing.clear();
+    }
+
+    private static void setSkipping(MethodExecution execution) {
+        if(skipping) return;
+        if(( executing.size() >  1 && executing.stream().limit(executing.size() - 1).filter(e -> e.getMethodInvokedId() == execution.getMethodInvokedId()).anyMatch(e -> e.getTest() != null && e.sameCalleeParamNMethod(execution)) )||  executionTrace.
+                getAllMethodExecs().values().stream()
+                .filter(e -> e.getMethodInvokedId() == execution.getMethodInvokedId())
+                .anyMatch(e -> e.getTest() != null && e.sameCalleeParamNMethod(execution)))
+            skipping = true;
     }
 }
