@@ -60,8 +60,11 @@ public class TestGenerator {
                 {
                     ValueTestCase testCase = new ValueTestCase();
                     MethodInvStmt invStmt = getMethodInvStmt(e, testCase);
-                    VarStmt returnValStmt = new VarStmt(instrumentResult.getMethodDetailByID(e.getMethodInvokedId()).getReturnType(), executionTrace.getVarDetailByID(e.getReturnValId()).getType(), testCase.getNewVarID(), e.getReturnValId());
-                    testCase.addStmt(new AssignStmt(returnValStmt, invStmt));
+                    Class<?> returnValType = executionTrace.getVarDetailByID(e.getReturnValId()).getType();
+                    VarStmt returnValStmt = new VarStmt(returnValType, testCase.getNewVarID(), e.getReturnValId());
+                    MethodDetails methodDetails = instrumentResult.getMethodDetailByID(e.getMethodInvokedId());
+
+                    testCase.addStmt(new AssignStmt(returnValStmt,( methodDetails.getReturnType().equals(returnValType.getName()) ? invStmt : new CastStmt(e.getReturnValId(), returnValType,  invStmt))));
                     testCase.setAssertion(new AssertStmt(generateDefStmt(e.getReturnValId(), testCase, false, true), returnValStmt));
                     this.coveredExecutions.add(e);
                     return testCase;
@@ -219,13 +222,13 @@ public class TestGenerator {
             if (((ArrVarDetails) varDetail).getComponents().stream().map(executionTrace::getVarDetailByID).noneMatch(e -> e.getType().isArray()) && ((ArrVarDetails) varDetail).getComponents().size() <= 25)
                 return new ConstructStmt(varDetail.getID(), null, params);
             else {
-                VarStmt varStmt = new VarStmt(varDetail.getTypeSimpleName(), varDetail.getType(), testCase.getNewVarID(), varDetail.getID());
+                VarStmt varStmt =  new VarStmt(varDetail.getType(), testCase.getNewVarID(), varDetail.getID());
                 testCase.addStmt(new AssignStmt(varStmt, new ConstructStmt(varDetail.getID(), null, params)));
                 testCase.addOrUpdateVar(varDetail.getID(), varStmt);
                 return varStmt;
             }
         }
-        VarStmt varStmt = new VarStmt(varDetail.getType().toString(), varDetail.getType(), testCase.getNewVarID(), varDetail.getID());
+        VarStmt varStmt = new VarStmt( varDetail.getType(), testCase.getNewVarID(), varDetail.getID());
         testCase.addStmt(new AssignStmt(varStmt, new ConstructStmt(varDetail.getID(), null, params)));
         testCase.addOrUpdateVar(varDetail.getID(), varStmt);
         return varStmt;
@@ -246,8 +249,6 @@ public class TestGenerator {
                 varStmt = (VarStmt) generateDefStmt(execution.getCalleeId(), testCase, true, true);
                 invokeStmt = new MethodInvStmt(varStmt.getStmt(), details.getId(), execution.getParams().stream().map(p -> generateDefStmt(p, testCase, true, true)).collect(Collectors.toList()));
 
-                testCase.removeVar(execution.getCalleeId(), varStmt);
-                testCase.addOrUpdateVar(execution.getResultThisId(), varStmt);
                 break;
         }
         return invokeStmt;
@@ -267,25 +268,30 @@ public class TestGenerator {
                 else {
                     List<VarStmt> availableStmts = testCase.getExistingVar(execution.getReturnValId());
                     varStmt = availableStmts == null || availableStmts.size() == 0 ? null : availableStmts.get(0);
+                    Class<?> actualType = executionTrace.getVarDetailByID(execution.getReturnValId()).getType();
                     if (varStmt == null)
-                        varStmt = new VarStmt(details.getReturnType(), executionTrace.getVarDetailByID(execution.getReturnValId()).getType(), testCase.getNewVarID(), execution.getReturnValId());
-                    testCase.addStmt(new AssignStmt(varStmt, invokeStmt));
+                        varStmt = new VarStmt(actualType, testCase.getNewVarID(), execution.getReturnValId());
+                    testCase.addStmt(new AssignStmt(varStmt, (details.getReturnType().equals(actualType.getName()) ? invokeStmt : new CastStmt(execution.getReturnValId(), actualType, invokeStmt))));
                     testCase.addOrUpdateVar(execution.getReturnValId(), varStmt);
                 }
                 break;
             case CONSTRUCTOR:
-                varStmt = new VarStmt(details.getDeclaringClass().getName(), executionTrace.getVarDetailByID(execution.getResultThisId()).getType(), testCase.getNewVarID(), execution.getResultThisId());
+                varStmt = new VarStmt(executionTrace.getVarDetailByID(execution.getResultThisId()).getType(), testCase.getNewVarID(), execution.getResultThisId());
                 testCase.addStmt(new AssignStmt(varStmt, invokeStmt));
                 testCase.addOrUpdateVar(execution.getResultThisId(), varStmt);
                 break;
             case MEMBER:
                 varStmt = (VarStmt) generateDefStmt(execution.getCalleeId(), testCase, true, true);
                 if (!details.getReturnType().equalsIgnoreCase("void")) {
-                    VarStmt varStmt1 = new VarStmt(details.getReturnType(), executionTrace.getVarDetailByID(execution.getReturnValId()).getType(), testCase.getNewVarID(), execution.getReturnValId());
-                    testCase.addStmt(new AssignStmt(varStmt1, invokeStmt));
+                    Class<?> actualType = executionTrace.getVarDetailByID(execution.getReturnValId()).getType();
+                    VarStmt varStmt1 = new VarStmt(actualType, testCase.getNewVarID(), execution.getReturnValId());
+                    testCase.addStmt(new AssignStmt(varStmt1, details.getReturnType().equals(actualType.getName())? invokeStmt : new CastStmt(execution.getReturnValId(), actualType, invokeStmt)));
                     testCase.addOrUpdateVar(execution.getReturnValId(), varStmt1);
                 } else
                     testCase.addStmt(invokeStmt);
+                testCase.removeVar(execution.getCalleeId(), varStmt);
+                testCase.addOrUpdateVar(execution.getResultThisId(), varStmt);
+
                 break;
         }
         return testCase.getExistingVar(varDetailID).get(0);

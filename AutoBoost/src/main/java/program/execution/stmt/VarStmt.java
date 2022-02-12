@@ -7,7 +7,26 @@ public class VarStmt extends Stmt{
     String varType;
     Class<?> actualType;
 
-    public VarStmt(String varType, Class<?> actualType,  int varID, int resultVarDetailID) {
+    public VarStmt(Class<?> actualType, int varID, int resultVarDetailID) {
+        this.varName = "var"+ varID;
+        this.varType = actualType.getSimpleName();
+        this.actualType = actualType;
+        this.resultVarDetailID = resultVarDetailID;
+        if(!ClassUtils.isPrimitiveOrWrapper(actualType) && !actualType.isArray()) {
+            if(!actualType.getName().contains("$"))
+                this.imports.add(actualType);
+        }
+        if(actualType.isArray()) {
+            Class<?> importType = actualType;
+            while(importType.isArray()) {
+                importType = importType.getComponentType();
+            }
+            if(!ClassUtils.isPrimitiveOrWrapper(importType))
+                this.imports.add(importType);
+        }
+    }
+
+    public VarStmt(String varType, Class<?> actualType, int varID, int resultVarDetailID) {
         this.varName = "var"+ varID;
         this.actualType = actualType;
         this.varType = varType;
