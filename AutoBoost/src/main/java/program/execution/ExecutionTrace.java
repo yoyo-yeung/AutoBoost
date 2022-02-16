@@ -94,7 +94,8 @@ public class ExecutionTrace {
             objValue = ((Enum) objValue).name();
         } else if (!type.isArray() && !type.equals(String.class) && !ClassUtils.isPrimitiveOrWrapper(type) && !(objValue instanceof Map) && !(objValue instanceof List) && !(objValue instanceof Set) && !(objValue instanceof Map.Entry)) {
             Object finalObjValue1 = objValue;
-            Optional<String> match = Arrays.stream(type.getDeclaredFields()).filter(f -> Modifier.isPublic(f.getModifiers()) && Modifier.isStatic(f.getModifiers()) && !Modifier.isTransient(f.getModifiers()) && f.isAccessible()).filter(f -> {
+            Class<?> finalType = type;
+            Optional<String> match = Arrays.stream(type.getDeclaredFields()).filter(f -> f.getType().equals(finalType)).filter(f -> Modifier.isPublic(f.getModifiers()) && Modifier.isStatic(f.getModifiers()) && !Modifier.isTransient(f.getModifiers()) ).filter(f -> {
                 try {
                     Object val = f.get(finalObjValue1);
                     return val != null && val.equals(finalObjValue1);
@@ -218,8 +219,11 @@ public class ExecutionTrace {
         int existingNullDefCount = getNullDefCount(existingDefEx);
         int currentNullDefCount = getNullDefCount(execution);
         if (existingNullDefCount > currentNullDefCount) return true;
-        else if (existingNullDefCount == currentNullDefCount)
-            return ((existingDef.getParameterCount() + (existingDef.getType().equals(METHOD_TYPE.CONSTRUCTOR) || existingDef.getType().equals(METHOD_TYPE.STATIC) ? 0 : 1)) > (details.getParameterCount() + (details.getType().equals(METHOD_TYPE.STATIC) || details.getType().equals(METHOD_TYPE.CONSTRUCTOR) ? 0 : 1)));
+        else if (existingNullDefCount == currentNullDefCount) {
+            if(!existingDef.getType().equals(METHOD_TYPE.CONSTRUCTOR) && !existingDef.getType().equals(METHOD_TYPE.STATIC) &&  (details.getType().equals(METHOD_TYPE.STATIC) || details.getType().equals(METHOD_TYPE.CONSTRUCTOR)))
+                return true;
+            return ((existingDef.getParameterTypes().stream().filter(t -> !(t instanceof soot.PrimType)).count() + (existingDef.getType().equals(METHOD_TYPE.CONSTRUCTOR) || existingDef.getType().equals(METHOD_TYPE.STATIC) ? 0 : 1)) > (details.getParameterTypes().stream().filter(t -> !(t instanceof soot.PrimType)).count() + (details.getType().equals(METHOD_TYPE.STATIC) || details.getType().equals(METHOD_TYPE.CONSTRUCTOR) ? 0 : 1)));
+        }
         return false;
     }
 
