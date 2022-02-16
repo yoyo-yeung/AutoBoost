@@ -11,7 +11,6 @@ import program.instrumentation.InstrumentResult;
 
 import java.lang.reflect.Array;
 import java.util.Stack;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class ExecutionLogger {
@@ -107,7 +106,7 @@ public class ExecutionLogger {
         return false;
     }
 
-    public static void log(int methodId, String process, String name, Object obj) throws ClassNotFoundException {
+    public static void log(int methodId, String process, Object obj) throws ClassNotFoundException {
         LOG_ITEM processItem = LOG_ITEM.valueOf(process);
         if (returnNow(methodId, process)) {
             return;
@@ -142,39 +141,39 @@ public class ExecutionLogger {
         setVarIDforExecutions(methodId, process, executionTrace.getVarDetailID(c, value, LOG_ITEM.valueOf(process)));
     }
 
-    public static void log(int methodId, String process, String name, byte value) throws ClassNotFoundException {
+    public static void log(int methodId, String process, byte value) throws ClassNotFoundException {
         logPrimitive(methodId, process, byte.class, value);
     }
 
-    public static void log(int methodId, String process, String name, short value) throws ClassNotFoundException {
+    public static void log(int methodId, String process, short value) throws ClassNotFoundException {
         logPrimitive(methodId, process, short.class, value);
     }
 
-    public static void log(int methodId, String process, String name, int value) throws ClassNotFoundException {
+    public static void log(int methodId, String process, int value) throws ClassNotFoundException {
         logPrimitive(methodId, process, int.class, value);
     }
 
-    public static void log(int methodId, String process, String name, long value) throws ClassNotFoundException {
+    public static void log(int methodId, String process, long value) throws ClassNotFoundException {
         logPrimitive(methodId, process, long.class, value);
     }
 
-    public static void log(int methodId, String process, String name, float value) throws ClassNotFoundException {
+    public static void log(int methodId, String process, float value) throws ClassNotFoundException {
         logPrimitive(methodId, process, float.class, value);
     }
 
-    public static void log(int methodId, String process, String name, double value) throws ClassNotFoundException {
+    public static void log(int methodId, String process, double value) throws ClassNotFoundException {
         logPrimitive(methodId, process, double.class, value);
     }
 
-    public static void log(int methodId, String process, String name, boolean value) throws ClassNotFoundException {
+    public static void log(int methodId, String process, boolean value) throws ClassNotFoundException {
         logPrimitive(methodId, process, boolean.class, value);
     }
 
-    public static void log(int methodId, String process, String name, char value) throws ClassNotFoundException {
+    public static void log(int methodId, String process, char value) throws ClassNotFoundException {
         logPrimitive(methodId, process, char.class, value);
     }
 
-    public static void log(int methodId, String process, String name, String value) throws ClassNotFoundException {
+    public static void log(int methodId, String process, String value) throws ClassNotFoundException {
         if (returnNow(methodId, process))
             return;
         if (LOG_ITEM.valueOf(process).equals(LOG_ITEM.RETURN_VOID)) {
@@ -226,7 +225,14 @@ public class ExecutionLogger {
                     endLogMethod(execution.getMethodInvokedId());
                     execution = getLatestExecution();
                 }
-            } else {
+            }
+            else if (instrumentResult.isLibMethod(execution.getMethodInvokedId())) {
+                while(instrumentResult.isLibMethod(execution.getMethodInvokedId())) {
+                    executing.pop();
+                    execution = getLatestExecution();
+                }
+            }
+            else {
                 throw new RuntimeException("Inconsistent method invoke");
             }
         }
