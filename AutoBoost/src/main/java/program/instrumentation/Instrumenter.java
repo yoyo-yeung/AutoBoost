@@ -43,6 +43,7 @@ public class Instrumenter extends BodyTransformer {
     private List<Unit> createArrForParams( LocalGenerator localGenerator, Local paramArrLocal,  SootMethod method, List<?> params) {
         if(params.size() <= 0 ) return new ArrayList<>();
         List<Unit> toInsert = new ArrayList<>();
+//        Local paramArrLocal = localGenerator.generateLocal(ArrayType.v(RefType.v(Object.class.getName()), params.size()));
         Unit defArrUnit = Jimple.v().newAssignStmt(paramArrLocal, Jimple.v().newNewArrayExpr(RefType.v(Object.class.getName()), IntConstant.v(params.size())));
         defArrUnit.addTag(NEWLY_ADDED_TAG);
         toInsert.add(defArrUnit);
@@ -197,6 +198,7 @@ public class Instrumenter extends BodyTransformer {
                     loggingStmt.addTag(NEWLY_ADDED_TAG);
                     units.insertAfter(loggingStmt, stmt);
                 }
+            }
         }
         result.addMethod(methodDetails);
         int finalEndLineNo = endLineNo;
