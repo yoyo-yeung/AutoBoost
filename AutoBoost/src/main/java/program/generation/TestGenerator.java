@@ -48,7 +48,7 @@ public class TestGenerator {
         snapshot.stream()
                 .filter(e -> {
                     MethodDetails details = instrumentResult.getMethodDetailByID(e.getMethodInvokedId());
-                    return Arrays.stream(skipMethods).noneMatch(s -> details.getName().equals(s)) || !details.getType().equals(METHOD_TYPE.MEMBER);
+                    return !instrumentResult.isLibMethod(e.getMethodInvokedId()) && (Arrays.stream(skipMethods).noneMatch(s -> details.getName().equals(s)) || !details.getType().equals(METHOD_TYPE.MEMBER));
                 })
                 .filter(e -> e.getTest() != null)
                 .filter(e -> e.getReturnValId() != -1 && (executionTrace.getDefExeList(e.getReturnValId()) == null || !executionTrace.getDefExeList(e.getReturnValId()).equals(e.getID())) && exeCanBeTested(e.getID(), 0, -1, new HashSet<>()))// prevent self checking
@@ -246,8 +246,7 @@ public class TestGenerator {
                 invokeStmt = new MethodInvStmt("", details.getId(), execution.getParams().stream().map(p -> generateDefStmt(p, testCase, true, true)).collect(Collectors.toList()));
                 break;
             case MEMBER:
-                varStmt = (VarStmt) generateDefStmt(execution.getCalleeId(), testCase, true, true);
-                invokeStmt = new MethodInvStmt(varStmt.getStmt(), details.getId(), execution.getParams().stream().map(p -> generateDefStmt(p, testCase, true, true)).collect(Collectors.toList()));
+                invokeStmt = new MethodInvStmt(generateDefStmt(execution.getCalleeId(), testCase, true, true).getStmt(), details.getId(), execution.getParams().stream().map(p -> generateDefStmt(p, testCase, true, true)).collect(Collectors.toList()));
 
                 break;
         }
@@ -281,7 +280,7 @@ public class TestGenerator {
                 testCase.addOrUpdateVar(execution.getResultThisId(), varStmt);
                 break;
             case MEMBER:
-                varStmt = (VarStmt) generateDefStmt(execution.getCalleeId(), testCase, true, true);
+                Stmt defStmt = generateDefStmt(execution.getCalleeId(), testCase, true, true);
                 if (!details.getReturnType().equalsIgnoreCase("void")) {
                     Class<?> actualType = executionTrace.getVarDetailByID(execution.getReturnValId()).getType();
                     VarStmt varStmt1 = new VarStmt(actualType, testCase.getNewVarID(), execution.getReturnValId());
@@ -291,6 +290,10 @@ public class TestGenerator {
                     testCase.addStmt(invokeStmt);
                 testCase.removeVar(execution.getCalleeId(), varStmt);
                 testCase.addOrUpdateVar(execution.getResultThisId(), varStmt);
+                if(defStmt instanceof VarStmt) {
+                    testCase.removeVar(execution.getCalleeId(), (VarStmt) defStmt);
+                    testCase.addOrUpdateVar(execution.getResultThisId(), (VarStmt) defStmt);
+                }
 
                 break;
         }
