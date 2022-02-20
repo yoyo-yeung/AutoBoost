@@ -90,15 +90,17 @@ public class ExecutionTrace {
      */
     public int getVarDetailID(Class<?> type, Object objValue, LOG_ITEM process) {
         boolean artificialEnum = false;
+        if(objValue == null ) return nullVar.getID();
         if (type.isEnum()) {
             objValue = ((Enum) objValue).name();
         } else if (!type.isArray() && !type.equals(String.class) && !ClassUtils.isPrimitiveOrWrapper(type) && !(objValue instanceof Map) && !(objValue instanceof List) && !(objValue instanceof Set) && !(objValue instanceof Map.Entry)) {
             Object finalObjValue1 = objValue;
+
             Class<?> finalType = type;
             Optional<String> match = Arrays.stream(type.getDeclaredFields()).filter(f -> f.getType().equals(finalType)).filter(f -> Modifier.isPublic(f.getModifiers()) && Modifier.isStatic(f.getModifiers()) && !Modifier.isTransient(f.getModifiers()) ).filter(f -> {
                 try {
                     Object val = f.get(finalObjValue1);
-                    return val != null && val.equals(finalObjValue1);
+                    return val != null && System.identityHashCode(val) == System.identityHashCode(finalObjValue1);
                 } catch (IllegalAccessException e) {
                     e.printStackTrace();
                     return false;
@@ -142,7 +144,7 @@ public class ExecutionTrace {
                 }
             }
         }
-        int varID = objValue == null ? nullVar.getID() : findExistingVarDetailID(type, objValue, process, artificialEnum);
+        int varID = findExistingVarDetailID(type, objValue, process, artificialEnum);
         VarDetail varDetail;
         MethodExecution latestExecution = ExecutionLogger.getLatestExecution();
         if (varID == -1) {
