@@ -1,6 +1,7 @@
 package program.execution.stmt;
 
 import helper.Properties;
+import org.apache.commons.lang3.ClassUtils;
 import org.junit.Assert;
 import program.execution.ExecutionTrace;
 import java.util.*;
@@ -20,14 +21,12 @@ public class AssertStmt extends Stmt{
     @Override
     public String getStmt() {
         Class<?> assertType = ExecutionTrace.getSingleton().getVarDetailByID(expected.resultVarDetailID).getType();
-        if(assertType.isArray()) {
-            return  (Properties.getSingleton().getJunitVer()==4? "Assert." : "") + "assertTrue(" + (assertType.getComponentType().isArray()? "Arrays.deepEquals(" : "Arrays.equals(") + expected.getStmt() + "," + actual.getStmt() + "));";
-        }
-//        if(assertType.isArray() && ExecutionTrace.getSingleton().getVarDetailByID(actual.resultVarDetailID).getType().isArray() && (!(expected instanceof VarStmt) || ((((VarStmt)expected).actualType.isArray()) && ((VarStmt)expected).varType.contains("[]"))) && (!(actual instanceof VarStmt) || (((VarStmt)actual).actualType.isArray())&& ((VarStmt)actual).varType.contains("[]")) )
-//            return getArrStmt(expected.getStmt(), actual.getStmt(), expected.getResultVarDetailID(), assertType);
-        return (Properties.getSingleton().getJunitVer()==4? "Assert." : "") + "assertEquals(" + expected.getStmt() + ", " + actual.getStmt() + (doubleChecking(assertType) && doubleChecking(ExecutionTrace.getSingleton().getVarDetailByID(actual.resultVarDetailID).getType())  && ((! (actual instanceof VarStmt) || ((VarStmt)actual).varType.equalsIgnoreCase("double")) ) && ((! (expected instanceof VarStmt) || ((VarStmt)expected).varType.equalsIgnoreCase("double")) )? ", " + MARGIN : "") + ")";
-    }
+        return (Properties.getSingleton().getJunitVer()==4? "Assert." : "") +
+                (assertType.isArray() ? "assertTrue(" + (assertType.getComponentType().isArray()? "Arrays.deepEquals(" : "Arrays.equals(") + expected.getStmt() + "," + actual.getStmt() + "));" :  "assertEquals(" + expected.getStmt() + ", " + actual.getStmt() +
+                        (doubleChecking(assertType)
+                                ? ", " + MARGIN : "") + ")") ;
 
+    }
 
     private boolean doubleChecking(Class<?> type){
         return type.equals(Double.class) || type.equals(double.class);
