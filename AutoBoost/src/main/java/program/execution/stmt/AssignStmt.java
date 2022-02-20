@@ -23,6 +23,6 @@ public class AssignStmt extends Stmt{
 
     @Override
     public Set<Class<?>> getImports() {
-        return Stream.of(this.imports, leftStmt.getImports(), rightStmt.getImports()).flatMap(Collection::stream).collect(Collectors.toSet());
+        return Stream.of(leftStmt.getImports(), rightStmt.getImports()).flatMap(Collection::stream).collect(Collectors.toSet());
     }
 }

@@ -1,45 +1,24 @@
 package program.execution.stmt;
 
-import org.apache.commons.lang3.ClassUtils;
+import java.util.HashSet;
+import java.util.Set;
 
 public class VarStmt extends Stmt{
     String varName;
-    String varType;
-    Class<?> actualType;
+    Class<?> varType;
 
     public VarStmt(Class<?> actualType, int varID, int resultVarDetailID) {
         this.varName = "var"+ varID;
-        this.varType = actualType.getSimpleName();
-        this.actualType = actualType;
+        this.varType = actualType;
         this.resultVarDetailID = resultVarDetailID;
-        if(!ClassUtils.isPrimitiveOrWrapper(actualType) && !actualType.isArray()) {
-            if(!actualType.getName().contains("$"))
-                this.imports.add(actualType);
-        }
-        if(actualType.isArray()) {
-            Class<?> importType = actualType;
-            while(importType.isArray()) {
-                importType = importType.getComponentType();
-            }
-            if(!ClassUtils.isPrimitiveOrWrapper(importType))
-                this.imports.add(importType);
-        }
     }
 
-    public VarStmt(String varType, Class<?> actualType, int varID, int resultVarDetailID) {
-        this.varName = "var"+ varID;
-        this.actualType = actualType;
-        this.varType = varType;
-        this.resultVarDetailID = resultVarDetailID;
-        if(!ClassUtils.isPrimitiveOrWrapper(actualType) && !actualType.isArray()) {
-            if(!actualType.getName().contains("$"))
-                this.imports.add(actualType);
-            try {
-                this.imports.add(Class.forName(varType.substring(varType.lastIndexOf(" ")+1)));
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
-            }
-        }
+    public String getVarName() {
+        return varName;
+    }
+
+    public Class<?> getVarType() {
+        return varType;
     }
 
     @Override
@@ -48,7 +27,14 @@ public class VarStmt extends Stmt{
     }
 
     public String getDeclarationStmt() {
-        return "final "+ varType.substring(varType.lastIndexOf(".")+1).replaceAll("\\$", ".") + " " + varName;
+        return "final "+ varType.getSimpleName() + " " + varName;
     }
 
+    @Override
+    public Set<Class<?>> getImports() {
+        Set<Class<?>> imports = new HashSet<>();
+        imports.add(getTypeToImport(varType));
+        imports.remove(null);
+        return imports;
+    }
 }

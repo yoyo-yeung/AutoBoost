@@ -25,6 +25,6 @@ public class PairStmt extends Stmt{
 
     @Override
     public Set<Class<?>> getImports() {
-        return Stream.of(this.imports, keyStmt.getImports(), valueStmt.getImports()).flatMap(Collection::stream).collect(Collectors.toSet());
+        return Stream.of(keyStmt.getImports(), valueStmt.getImports()).flatMap(Collection::stream).collect(Collectors.toSet());
     }
 }

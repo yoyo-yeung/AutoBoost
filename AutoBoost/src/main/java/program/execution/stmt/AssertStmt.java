@@ -15,10 +15,6 @@ public class AssertStmt extends Stmt{
     public AssertStmt(Stmt expected, Stmt actual) {
         this.expected = expected;
         this.actual = actual;
-        if(Properties.getSingleton().getJunitVer() == 4)
-            this.addImports(Assert.class);
-        if(ExecutionTrace.getSingleton().getVarDetailByID(expected.resultVarDetailID).getType().isArray())
-            this.addImports(Arrays.class);
     }
 
     @Override
@@ -38,6 +34,13 @@ public class AssertStmt extends Stmt{
     }
     @Override
     public Set<Class<?>> getImports() {
-        return Stream.of(this.imports, expected.getImports(), actual.getImports()).flatMap(Collection::stream).collect(Collectors.toSet());
+        Set<Class<?>> imports = new HashSet<>();
+        if(Properties.getSingleton().getJunitVer() == 4)
+            imports.add(Assert.class);
+        if(ExecutionTrace.getSingleton().getVarDetailByID(expected.resultVarDetailID).getType().isArray())
+            imports.add(Arrays.class);
+        imports.addAll(expected.getImports());
+        imports.addAll(actual.getImports());
+        return imports;
     }
 }

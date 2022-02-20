@@ -19,13 +19,6 @@ public class MethodInvStmt extends Stmt{
         this.callee = callee;
         this.methodInvID = methodInvID;
         this.paramStmts = paramStmts;
-        try {
-            Class<?> declaringClass = Class.forName(InstrumentResult.getSingleton().getMethodDetailByID(methodInvID).getDeclaringClass().getName());
-            if(!declaringClass.isArray() && !declaringClass.isPrimitive() && (InstrumentResult.getSingleton().getMethodDetailByID(methodInvID).getType().equals(METHOD_TYPE.CONSTRUCTOR) || InstrumentResult.getSingleton().getMethodDetailByID(methodInvID).getType().equals(METHOD_TYPE.STATIC) ))
-                this.addImports(declaringClass);
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }
     }
 
     @Override
@@ -36,7 +29,17 @@ public class MethodInvStmt extends Stmt{
 
     @Override
     public Set<Class<?>> getImports() {
-        Set<Class<?>> results = new HashSet<>(this.imports);
+        Set<Class<?>> results = new HashSet<>();
+        METHOD_TYPE methodType = InstrumentResult.getSingleton().getMethodDetailByID(methodInvID).getType();
+        if(methodType.equals(METHOD_TYPE.CONSTRUCTOR) || methodType.equals(METHOD_TYPE.STATIC)) {
+            try {
+                Class<?> declaringClass = Class.forName(InstrumentResult.getSingleton().getMethodDetailByID(methodInvID).getDeclaringClass().getName());
+                results.add(getTypeToImport(declaringClass));
+                results.remove(null);
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
         this.paramStmts.forEach(stmt -> results.addAll(stmt.getImports()));
         return results;
     }

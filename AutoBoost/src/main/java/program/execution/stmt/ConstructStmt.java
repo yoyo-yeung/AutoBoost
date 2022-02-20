@@ -2,7 +2,6 @@ package program.execution.stmt;
 
 import entity.CREATION_TYPE;
 import helper.Properties;
-import org.apache.commons.lang3.ClassUtils;
 import program.execution.ExecutionTrace;
 import program.execution.variable.ArrVarDetails;
 import program.execution.variable.MapVarDetails;
@@ -37,8 +36,6 @@ public class ConstructStmt extends Stmt{
             this.methodID = null;
         }
         this.paramStmts = paramStmtIDs == null ? new ArrayList<>() : paramStmtIDs;
-        if(!varDetail.getType().isArray())
-            this.addImports(varDetail.getType());
     }
 
     public Integer getMethodID() {
@@ -84,7 +81,9 @@ public class ConstructStmt extends Stmt{
 
     @Override
     public Set<Class<?>> getImports() {
-        Set<Class<?>> results = new HashSet<>(this.imports);
+        Set<Class<?>> results = new HashSet<>();
+        results.add(getTypeToImport(ExecutionTrace.getSingleton().getVarDetailByID(resultVarDetailID).getType()));
+        results.remove(null);
         this.paramStmts.forEach(stmt -> results.addAll(stmt.getImports()));
         return results;
     }
