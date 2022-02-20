@@ -111,6 +111,7 @@ public class ExecutionLogger {
         if (returnNow(methodId, process)) {
             return;
         }
+        MethodDetails details = InstrumentResult.getSingleton().getMethodDetailByID(methodId);
         switch (processItem) {
             case THREW_EXCEPTION:
                 getLatestExecution().setExceptionClass(obj.getClass());
@@ -119,7 +120,6 @@ public class ExecutionLogger {
                 setVarIDforExecutions(methodId, process, -1);
                 break;
             case CALL_PARAM:
-                MethodDetails details = InstrumentResult.getSingleton().getMethodDetailByID(getLatestExecution().getMethodInvokedId());
                 if (Array.getLength(obj) < details.getParameterCount())
                     throw new RuntimeException("Illegal parameter provided for logging");
                 IntStream.range(0, details.getParameterCount()).forEach(i -> {
@@ -129,60 +129,17 @@ public class ExecutionLogger {
                         setVarIDforExecutions(methodId, process, executionTrace.getVarDetailID(Array.get(obj, i) == null ? Object.class : Array.get(obj, i).getClass(), Array.get(obj, i), processItem));
                 });
                 break;
+            case RETURN_ITEM:
+                if(details.getReturnSootType() instanceof soot.PrimType) {
+                    setVarIDforExecutions(methodId, process, executionTrace.getVarDetailID(ClassUtils.wrapperToPrimitive(obj.getClass()), obj, processItem));
+                    break;
+                }
             default:
                 setVarIDforExecutions(methodId, process, executionTrace.getVarDetailID(obj == null ? Object.class : obj.getClass(), obj, processItem));
         }
 
     }
 
-    private static void logPrimitive(int methodId, String process, Class<?> c, Object value) throws ClassNotFoundException {
-        if (returnNow(methodId, process))
-            return;
-        setVarIDforExecutions(methodId, process, executionTrace.getVarDetailID(c, value, LOG_ITEM.valueOf(process)));
-    }
-
-    public static void log(int methodId, String process, byte value) throws ClassNotFoundException {
-        logPrimitive(methodId, process, byte.class, value);
-    }
-
-    public static void log(int methodId, String process, short value) throws ClassNotFoundException {
-        logPrimitive(methodId, process, short.class, value);
-    }
-
-    public static void log(int methodId, String process, int value) throws ClassNotFoundException {
-        logPrimitive(methodId, process, int.class, value);
-    }
-
-    public static void log(int methodId, String process, long value) throws ClassNotFoundException {
-        logPrimitive(methodId, process, long.class, value);
-    }
-
-    public static void log(int methodId, String process, float value) throws ClassNotFoundException {
-        logPrimitive(methodId, process, float.class, value);
-    }
-
-    public static void log(int methodId, String process, double value) throws ClassNotFoundException {
-        logPrimitive(methodId, process, double.class, value);
-    }
-
-    public static void log(int methodId, String process, boolean value) throws ClassNotFoundException {
-        logPrimitive(methodId, process, boolean.class, value);
-    }
-
-    public static void log(int methodId, String process, char value) throws ClassNotFoundException {
-        logPrimitive(methodId, process, char.class, value);
-    }
-
-    public static void log(int methodId, String process, String value) throws ClassNotFoundException {
-        if (returnNow(methodId, process))
-            return;
-        if (LOG_ITEM.valueOf(process).equals(LOG_ITEM.RETURN_VOID)) {
-            setVarIDforExecutions(methodId, process, -1);
-            return;
-        }
-        setVarIDforExecutions(methodId, process, executionTrace.getVarDetailID(String.class, value, LOG_ITEM.valueOf(process)));
-
-    }
 
     public static Stack<MethodExecution> getExecuting() {
         return executing;
@@ -272,7 +229,8 @@ public class ExecutionLogger {
         if(( executing.size() >  1 && executing.stream().limit(executing.size() - 1).filter(e -> e.getMethodInvokedId() == execution.getMethodInvokedId()).anyMatch(e -> e.getTest() != null && e.sameCalleeParamNMethod(execution)) )||  executionTrace.
                 getAllMethodExecs().values().stream()
                 .filter(e -> e.getMethodInvokedId() == execution.getMethodInvokedId())
-                .anyMatch(e -> e.getTest() != null && e.sameCalleeParamNMethod(execution)))
+                .anyMatch(e -> e.getTest() != null && e.sameCalleeParamNMethod(execution))) {
             skipping = true;
+        }
     }
 }
