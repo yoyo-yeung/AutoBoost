@@ -17,6 +17,7 @@ public class MethodDetails {
     private final int parameterCount;
     private final String name;
     private final String returnType;
+    private final Type returnSootType;
     private final ACCESS access;
     private final METHOD_TYPE type;
     private final SootClass declaringClass;
@@ -36,6 +37,7 @@ public class MethodDetails {
         else if(method.isConstructor())
             this.type = METHOD_TYPE.CONSTRUCTOR;
         else this.type = METHOD_TYPE.MEMBER;
+        this.returnSootType = method.getReturnType();
         this.access = method.isPrivate()? ACCESS.PRIVATE: (method.isPublic()? ACCESS.PUBLIC: ACCESS.PROTECTED);
         this.declaringClass = method.getDeclaringClass();
     }
@@ -79,6 +81,10 @@ public class MethodDetails {
 
     public int getParameterCount() {
         return parameterCount;
+    }
+
+    public Type getReturnSootType() {
+        return returnSootType;
     }
 
     @Override
