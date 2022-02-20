@@ -10,7 +10,7 @@ public class InstrumentResult {
     private static final InstrumentResult singleton = new InstrumentResult();
     private final Map<Integer, MethodDetails> methodDetailsMap = new ConcurrentHashMap<>();
     private final Map<String, ClassDetails> classDetailsMap = new HashMap<>();
-    private final Map<String, Integer> libMethSignToMethIDMap = new HashMap<>();
+    private final Map<String, Integer> libMethSignToMethIDMap = new ConcurrentHashMap<>();
 
     public static InstrumentResult getSingleton() {
         return singleton;
