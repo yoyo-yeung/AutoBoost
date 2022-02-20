@@ -3,6 +3,7 @@ package program.generation;
 import entity.ACCESS;
 import entity.METHOD_TYPE;
 import helper.Properties;
+import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -61,11 +62,16 @@ public class TestGenerator {
                     ValueTestCase testCase = new ValueTestCase();
                     MethodInvStmt invStmt = getMethodInvStmt(e, testCase);
                     Class<?> returnValType = executionTrace.getVarDetailByID(e.getReturnValId()).getType();
-                    VarStmt returnValStmt = new VarStmt(returnValType, testCase.getNewVarID(), e.getReturnValId());
+                    Stmt returnValStmt = new VarStmt(returnValType, testCase.getNewVarID(), e.getReturnValId());
                     MethodDetails methodDetails = instrumentResult.getMethodDetailByID(e.getMethodInvokedId());
 
                     testCase.addStmt(new AssignStmt(returnValStmt,( methodDetails.getReturnType().equals(returnValType.getName()) ? invStmt : new CastStmt(e.getReturnValId(), returnValType,  invStmt))));
-                    testCase.setAssertion(new AssertStmt(generateDefStmt(e.getReturnValId(), testCase, false, true), returnValStmt));
+                    Stmt expectedStmt = generateDefStmt(e.getReturnValId(), testCase, false, true);
+                    if(ClassUtils.isPrimitiveWrapper(returnValType)) {
+                        expectedStmt = new CastStmt(expectedStmt.getResultVarDetailID(), ClassUtils.wrapperToPrimitive(returnValType), expectedStmt);
+                        returnValStmt = new CastStmt(returnValStmt.getResultVarDetailID(), ClassUtils.wrapperToPrimitive(returnValType), returnValStmt);
+                    }
+                    testCase.setAssertion(new AssertStmt(expectedStmt, returnValStmt));
                     this.coveredExecutions.add(e);
                     return testCase;
                 }).forEach(testSuite::assignTestCase);
@@ -288,8 +294,6 @@ public class TestGenerator {
                     testCase.addOrUpdateVar(execution.getReturnValId(), varStmt1);
                 } else
                     testCase.addStmt(invokeStmt);
-                testCase.removeVar(execution.getCalleeId(), varStmt);
-                testCase.addOrUpdateVar(execution.getResultThisId(), varStmt);
                 if(defStmt instanceof VarStmt) {
                     testCase.removeVar(execution.getCalleeId(), (VarStmt) defStmt);
                     testCase.addOrUpdateVar(execution.getResultThisId(), (VarStmt) defStmt);
@@ -308,13 +312,13 @@ public class TestGenerator {
             packageDir.mkdirs();
         File file;
         FileOutputStream writeStream;
-        if (Properties.getSingleton().getJunitVer() != 3) {
-            file = new File(packageDir, testSuite.getTestSuiteName() + ".java");
-            file.createNewFile();
-            writeStream = new FileOutputStream(file);
-            writeStream.write(testSuite.output().getBytes(StandardCharsets.UTF_8));
-            writeStream.close();
-        }
+//        if (Properties.getSingleton().getJunitVer() != 3) {
+//            file = new File(packageDir, testSuite.getTestSuiteName() + ".java");
+//            file.createNewFile();
+//            writeStream = new FileOutputStream(file);
+//            writeStream.write(testSuite.output().getBytes(StandardCharsets.UTF_8));
+//            writeStream.close();
+//        }
         for (TestClass tc : testSuite.getTestClasses()) {
             file = new File(packageDir, tc.getClassName() + ".java");
             file.createNewFile();
