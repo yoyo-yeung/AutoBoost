@@ -1,0 +1,2 @@
+Method: <org.apache.commons.math.fraction.Fraction: double doubleValue()>, Callee: {denominator=3, numerator=1,}, Params: [], Related test: test4(org.apache.commons.math.fraction.Math91AB_1_Test)
+Method: <org.apache.commons.math.fraction.Fraction: double doubleValue()>, Callee: {denominator=2, numerator=1,}, Params: [], Related test: test3(org.apache.commons.math.fraction.Math91AB_1_Test)
