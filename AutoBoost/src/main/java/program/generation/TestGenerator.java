@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class TestGenerator {
     private static final Logger logger = LogManager.getLogger(TestGenerator.class);
@@ -244,16 +245,37 @@ public class TestGenerator {
         MethodDetails details = instrumentResult.getMethodDetailByID(execution.getMethodInvokedId());
         MethodInvStmt invokeStmt = null;
         VarStmt varStmt;
+        List<Stmt> paramStmt = IntStream.range(0, details.getParameterCount()).mapToObj(i -> {
+            Stmt returnStmt = generateDefStmt(execution.getParams().get(i), testCase, true, true);
+            VarDetail varDetail = ExecutionTrace.getSingleton().getVarDetailByID(returnStmt.getResultVarDetailID());
+            if(!details.getParameterTypes().get(i).toString().equals(varDetail.getType().getName()) && !details.getParameterTypes().get(i).toString().equals(varDetail.getType().getSimpleName())  ) {
+                try {
+                    returnStmt = new CastStmt(returnStmt.getResultVarDetailID(), Class.forName(details.getParameterTypes().get(i).toString()), returnStmt);
+                } catch (ClassNotFoundException e) {
+                    e.printStackTrace();
+                }
+            }
+            return returnStmt;
+        }).collect(Collectors.toList());
         switch (details.getType()) {
             case STATIC:
-                invokeStmt = new MethodInvStmt(details.getDeclaringClass().getShortName(), details.getId(), execution.getParams().stream().map(p -> generateDefStmt(p, testCase, true, true)).collect(Collectors.toList()));
+                invokeStmt = new MethodInvStmt(details.getDeclaringClass().getShortName(), details.getId(), paramStmt);
                 break;
             case CONSTRUCTOR:
-                invokeStmt = new MethodInvStmt("", details.getId(), execution.getParams().stream().map(p -> generateDefStmt(p, testCase, true, true)).collect(Collectors.toList()));
+                invokeStmt = new MethodInvStmt("", details.getId(), paramStmt);
                 break;
             case MEMBER:
-                invokeStmt = new MethodInvStmt(generateDefStmt(execution.getCalleeId(), testCase, true, true).getStmt(), details.getId(), execution.getParams().stream().map(p -> generateDefStmt(p, testCase, true, true)).collect(Collectors.toList()));
-
+                Stmt callee = generateDefStmt(execution.getCalleeId(), testCase, true, true);
+                if(!details.getDeclaringClass().getName().equals(ExecutionTrace.getSingleton().getVarDetailByID(callee.getResultVarDetailID()).getType().getName())) {
+                    try {
+                        callee = new CastStmt(callee.getResultVarDetailID(), Class.forName(details.getDeclaringClass().getName()), callee);
+                    } catch (ClassNotFoundException e) {
+                        e.printStackTrace();
+                    }
+                }
+                invokeStmt = new MethodInvStmt(callee instanceof CastStmt ? "("+callee.getStmt() +")" : callee.getStmt(), details.getId(), paramStmt);
+                if(callee instanceof CastStmt)
+                    logger.debug(details.toString()  +"\n" + callee.getStmt());
                 break;
         }
         return invokeStmt;

@@ -30,16 +30,14 @@ public class MethodInvStmt extends Stmt{
     @Override
     public Set<Class<?>> getImports() {
         Set<Class<?>> results = new HashSet<>();
-        METHOD_TYPE methodType = InstrumentResult.getSingleton().getMethodDetailByID(methodInvID).getType();
-        if(methodType.equals(METHOD_TYPE.CONSTRUCTOR) || methodType.equals(METHOD_TYPE.STATIC)) {
-            try {
-                Class<?> declaringClass = Class.forName(InstrumentResult.getSingleton().getMethodDetailByID(methodInvID).getDeclaringClass().getName());
-                results.add(getTypeToImport(declaringClass));
-                results.remove(null);
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
-            }
+        try {
+            Class<?> declaringClass = Class.forName(InstrumentResult.getSingleton().getMethodDetailByID(methodInvID).getDeclaringClass().getName());
+            results.add(getTypeToImport(declaringClass));
+            results.remove(null);
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
         }
+
         this.paramStmts.forEach(stmt -> results.addAll(stmt.getImports()));
         return results;
     }

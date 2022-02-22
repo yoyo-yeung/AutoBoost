@@ -2,6 +2,8 @@ package program.execution.stmt;
 
 import program.execution.ExecutionTrace;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -25,6 +27,6 @@ public class CastStmt extends Stmt{
 
     @Override
     public Set<Class<?>> getImports() {
-        return Stream.of(newType, ExecutionTrace.getSingleton().getVarDetailByID(resultVarDetailID).getType()).map(Stmt::getTypeToImport).filter(Objects::nonNull).collect(Collectors.toSet());
+        return Stream.of(Collections.singleton(newType), enclosedStmt.getImports()).flatMap(Collection::stream).map(Stmt::getTypeToImport).filter(Objects::nonNull).collect(Collectors.toSet());
     }
 }
