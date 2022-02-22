@@ -468,4 +468,8 @@ public class ExecutionTrace {
         result.deleteCharAt(result.length() - 1);
         result.append("}");
     }
+    public void clear() {
+        allMethodExecs.clear();
+        varToDefMap.clear();
+    }
 }

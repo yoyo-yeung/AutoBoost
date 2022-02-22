@@ -27,6 +27,7 @@ import soot.options.Options;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class AutoBoost {
     private static final Logger logger = LogManager.getLogger(AutoBoost.class);
@@ -108,10 +109,19 @@ public class AutoBoost {
         TestGenerator testGenerator = TestGenerator.getSingleton();
         logger.debug("generating");
         List<MethodExecution> snapshot = new ArrayList<>(ExecutionTrace.getSingleton().getAllMethodExecs().values());
-        testGenerator.generateResultCheckingTests(snapshot);
-        if(Properties.getSingleton().getJunitVer()==4)
-            testGenerator.generateExceptionTests(snapshot);
-        testGenerator.output();
+        try {
+            testGenerator.generateResultCheckingTests(snapshot);
+            if (Properties.getSingleton().getJunitVer() == 4)
+                testGenerator.generateExceptionTests(snapshot);
+        }catch(Exception | Error e) {
+            logger.error(e.getMessage());
+            logger.error(Arrays.stream(e.getStackTrace()).map(StackTraceElement::toString).collect(Collectors.joining("\n")));
+        }
+        finally {
+            ExecutionTrace.getSingleton().clear();
+            testGenerator.output();
+        }
+
     }
 
     public static String getExecutingTest() {
