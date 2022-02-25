@@ -231,6 +231,7 @@ public class ExecutionLogger {
                 .filter(e -> e.getMethodInvokedId() == execution.getMethodInvokedId())
                 .anyMatch(e -> e.getTest() != null && e.sameCalleeParamNMethod(execution))) {
             skipping = true;
+            logger.debug("setting skipping as true since " + execution.toDetailedString());
         }
     }
 }
