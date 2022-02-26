@@ -30,13 +30,8 @@ public class MethodInvStmt extends Stmt{
     @Override
     public Set<Class<?>> getImports() {
         Set<Class<?>> results = new HashSet<>();
-        try {
-            Class<?> declaringClass = Class.forName(InstrumentResult.getSingleton().getMethodDetailByID(methodInvID).getDeclaringClass().getName());
-            results.add(getTypeToImport(declaringClass));
-            results.remove(null);
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }
+        results.add(getTypeToImport(InstrumentResult.getSingleton().getMethodDetailByID(methodInvID).getdClass()));
+        results.remove(null);
 
         this.paramStmts.forEach(stmt -> results.addAll(stmt.getImports()));
         return results;

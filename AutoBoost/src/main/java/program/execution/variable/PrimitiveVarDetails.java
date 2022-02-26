@@ -35,9 +35,6 @@ public class PrimitiveVarDetails extends VarDetail{
         field.set(this, wrappedValue);
     }
 
-    public PrimitiveVarDetails(int ID, String type, Object wrappedValue) throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException {
-        this(ID, Class.forName(type), wrappedValue);
-    }
 
     @Override
     public Class<?> getType() {

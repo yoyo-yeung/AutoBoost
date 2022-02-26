@@ -15,9 +15,6 @@ public class WrapperVarDetails extends VarDetail{
         this.type = type;
         this.value = value;
     }
-    public WrapperVarDetails(int ID, String typeName, Object value) throws ClassNotFoundException {
-        this(ID, Class.forName(typeName), value);
-    }
 
     public CREATION_TYPE getCreatedBy() {
         return createdBy;
