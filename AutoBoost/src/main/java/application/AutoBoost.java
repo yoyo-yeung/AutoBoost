@@ -3,6 +3,7 @@ package application;
 import helper.CommandLineParameter;
 import helper.Help;
 import helper.Properties;
+import org.apache.commons.lang3.ClassUtils;
 import org.junit.runner.Description;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.Request;
@@ -38,6 +39,7 @@ public class AutoBoost {
         autoBoost.processCommand(args);
         autoBoost.setUpSoot();
         properties.logFaultyFunc();
+        autoBoost.updateDClasses();
         autoBoost.executeTests();
         autoBoost.clearRuntimeOnlyInfo();
         autoBoost.generateTestCases();
@@ -123,7 +125,15 @@ public class AutoBoost {
         }
 
     }
-
+    public void updateDClasses() {
+        InstrumentResult.getSingleton().getMethodDetailsMap().values().forEach(v -> {
+            try {
+                v.setdClass(ClassUtils.getClass(v.getDeclaringClass().getName()));
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+        });
+    }
     public static String getExecutingTest() {
         return executingTest;
     }

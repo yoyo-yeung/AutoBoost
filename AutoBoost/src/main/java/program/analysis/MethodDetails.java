@@ -8,7 +8,6 @@ import soot.Type;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 public class MethodDetails {
     private static final AtomicInteger methodIdGenerator = new AtomicInteger(0);
@@ -21,7 +20,9 @@ public class MethodDetails {
     private final ACCESS access;
     private final METHOD_TYPE type;
     private final SootClass declaringClass;
+    private Class<?> dClass;
     private final String signature;
+    private final String subSignature;
 
     public MethodDetails(SootMethod method) {
         this.id = methodIdGenerator.incrementAndGet();
@@ -40,6 +41,7 @@ public class MethodDetails {
         this.returnSootType = method.getReturnType();
         this.access = method.isPrivate()? ACCESS.PRIVATE: (method.isPublic()? ACCESS.PUBLIC: ACCESS.PROTECTED);
         this.declaringClass = method.getDeclaringClass();
+        this.subSignature = method.getSubSignature();
     }
 
     public int getId() {
@@ -85,6 +87,18 @@ public class MethodDetails {
 
     public Type getReturnSootType() {
         return returnSootType;
+    }
+
+    public Class<?> getdClass() {
+        return dClass;
+    }
+
+    public void setdClass(Class<?> dClass) {
+        this.dClass = dClass;
+    }
+
+    public String getSubSignature() {
+        return subSignature;
     }
 
     @Override
