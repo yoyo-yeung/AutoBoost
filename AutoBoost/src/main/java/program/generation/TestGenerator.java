@@ -84,8 +84,13 @@ public class TestGenerator {
                     Class<?> returnValType = executionTrace.getVarDetailByID(e.getReturnValId()).getType();
                     Stmt returnValStmt = new VarStmt(returnValType, testCase.getNewVarID(), e.getReturnValId());
                     MethodDetails methodDetails = instrumentResult.getMethodDetailByID(e.getMethodInvokedId());
-
-                    testCase.addStmt(new AssignStmt(returnValStmt,( methodDetails.getReturnType().equals(returnValType.getName()) ? invStmt : new CastStmt(e.getReturnValId(), returnValType,  invStmt))));
+                    Class<?> detailsType = null;
+                    try {
+                        detailsType = ClassUtils.getClass(methodDetails.getReturnType());
+                    } catch (ClassNotFoundException classNotFoundException) {
+                        classNotFoundException.printStackTrace();
+                    }
+                    testCase.addStmt(new AssignStmt(returnValStmt,(detailsType!=null && detailsType.equals(returnValType)) ? invStmt : new CastStmt(e.getReturnValId(), returnValType,  invStmt)));
                     Stmt expectedStmt = generateDefStmt(e.getReturnValId(), testCase, false, true);
                     if(ClassUtils.isPrimitiveWrapper(returnValType)) {
                         expectedStmt = new CastStmt(expectedStmt.getResultVarDetailID(), ClassUtils.wrapperToPrimitive(returnValType), expectedStmt);
@@ -267,12 +272,13 @@ public class TestGenerator {
         List<Stmt> paramStmt = IntStream.range(0, details.getParameterCount()).mapToObj(i -> {
             Stmt returnStmt = generateDefStmt(execution.getParams().get(i), testCase, true, true);
             VarDetail varDetail = ExecutionTrace.getSingleton().getVarDetailByID(returnStmt.getResultVarDetailID());
-            if(!details.getParameterTypes().get(i).toString().equals(varDetail.getType().getName()) && !details.getParameterTypes().get(i).toString().equals(varDetail.getType().getSimpleName())  ) {
-                try {
-                    returnStmt = new CastStmt(returnStmt.getResultVarDetailID(), Class.forName(details.getParameterTypes().get(i).toString()), returnStmt);
-                } catch (ClassNotFoundException e) {
-                    e.printStackTrace();
+            try {
+                Class<?> requiredType = ClassUtils.getClass(details.getParameterTypes().get(i).toString());
+                if(!requiredType.equals(varDetail.getType())) {
+                    returnStmt = new CastStmt(returnStmt.getResultVarDetailID(), requiredType, returnStmt);
                 }
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
             }
             return returnStmt;
         }).collect(Collectors.toList());
@@ -285,16 +291,7 @@ public class TestGenerator {
                 break;
             case MEMBER:
                 Stmt callee = generateDefStmt(execution.getCalleeId(), testCase, true, true);
-                if(!details.getDeclaringClass().getName().equals(ExecutionTrace.getSingleton().getVarDetailByID(callee.getResultVarDetailID()).getType().getName())) {
-                    try {
-                        callee = new CastStmt(callee.getResultVarDetailID(), Class.forName(details.getDeclaringClass().getName()), callee);
-                    } catch (ClassNotFoundException e) {
-                        e.printStackTrace();
-                    }
-                }
-                invokeStmt = new MethodInvStmt(callee instanceof CastStmt ? "("+callee.getStmt() +")" : callee.getStmt(), details.getId(), paramStmt);
-                if(callee instanceof CastStmt)
-                    logger.debug(details.toString()  +"\n" + callee.getStmt());
+                invokeStmt = new MethodInvStmt(callee.getStmt(), details.getId(), paramStmt);
                 break;
         }
         return invokeStmt;
