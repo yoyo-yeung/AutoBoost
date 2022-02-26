@@ -8,12 +8,8 @@ import program.analysis.MethodDetails;
 import program.execution.variable.VarDetail;
 import program.instrumentation.InstrumentResult;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public class MethodExecution {
     private final int ID;
@@ -197,5 +193,20 @@ public class MethodExecution {
 
     public void setTest(String test) {
         this.test = test;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        MethodExecution execution = (MethodExecution) o;
+        MethodDetails thisDetails = InstrumentResult.getSingleton().getMethodDetailByID(execution.methodInvokedId);
+        MethodDetails oDetails = InstrumentResult.getSingleton().getMethodDetailByID(execution.methodInvokedId);
+        return thisDetails.getSubSignature().equals(oDetails.getSubSignature()) && (thisDetails.getdClass().isAssignableFrom(oDetails.getdClass()) || oDetails.getdClass().isAssignableFrom(thisDetails.getdClass())) && calleeId == execution.calleeId && returnValId == execution.returnValId && resultThisId == execution.resultThisId && Objects.equals(params, execution.params) && Objects.equals(exceptionClass, execution.exceptionClass) ;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(calleeId, params, returnValId, resultThisId, exceptionClass);
     }
 }
