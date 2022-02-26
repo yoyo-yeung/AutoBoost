@@ -19,6 +19,7 @@ import soot.Modifier;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -53,7 +54,25 @@ public class TestGenerator {
                     return !instrumentResult.isLibMethod(e.getMethodInvokedId()) && (Arrays.stream(skipMethods).noneMatch(s -> details.getName().equals(s)) || !details.getType().equals(METHOD_TYPE.MEMBER));
                 })
                 .filter(e -> e.getTest() != null)
+                .distinct()
                 .filter(e -> e.getReturnValId() != -1 && (executionTrace.getDefExeList(e.getReturnValId()) == null || !executionTrace.getDefExeList(e.getReturnValId()).equals(e.getID())) && exeCanBeTested(e.getID(), 0, -1, new HashSet<>()))// prevent self checking
+                .filter(e -> {
+                    try {
+                        MethodDetails details = instrumentResult.getMethodDetailByID(e.getMethodInvokedId());
+                        Method method = details.getdClass().getMethod(details.getName(), details.getParameterTypes().stream().map(t -> {
+                            try {
+                                return ClassUtils.getClass(t.toQuotedString());
+                            } catch (ClassNotFoundException classNotFoundException) {
+                                classNotFoundException.printStackTrace();
+                                return null;
+                            }
+                        }).toArray(Class<?>[]::new));
+                        if(method.isBridge()) return false;
+                    } catch (NoSuchMethodException noSuchMethodException) {
+                        noSuchMethodException.printStackTrace();
+                    }
+                    return true;
+                })
                 .filter(e -> {
                     VarDetail returnVarDetail = executionTrace.getVarDetailByID(e.getReturnValId());
                     return (!(returnVarDetail instanceof ObjVarDetails) || returnVarDetail.equals(executionTrace.getNullVar())) && (!returnVarDetail.getType().isArray() || StringUtils.countMatches(instrumentResult.getMethodDetailByID(e.getMethodInvokedId()).getReturnType(), "[]") == StringUtils.countMatches(returnVarDetail.getType().getSimpleName(), "[]"));
