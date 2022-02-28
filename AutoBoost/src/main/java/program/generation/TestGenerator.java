@@ -68,6 +68,16 @@ public class TestGenerator {
                             }
                         }).toArray(Class<?>[]::new));
                         if(method.isBridge()) return false;
+                        if(e.getCalleeId()==-1) return true;
+                        VarDetail callee = executionTrace.getVarDetailByID(e.getCalleeId());
+                        // prevent incorrect method call
+                        if(!callee.getType().equals(method.getDeclaringClass()) && method.getDeclaringClass().isAssignableFrom(callee.getType()))
+                            try{
+                                return callee.getType().getMethod(method.getName(), method.getParameterTypes()).equals(method);
+                            }
+                            catch (NoSuchMethodException noSuchMethodException) {
+                                return true;
+                            }
                     } catch (NoSuchMethodException noSuchMethodException) {
                         noSuchMethodException.printStackTrace();
                     }

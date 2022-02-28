@@ -200,9 +200,7 @@ public class MethodExecution {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         MethodExecution execution = (MethodExecution) o;
-        MethodDetails thisDetails = InstrumentResult.getSingleton().getMethodDetailByID(execution.methodInvokedId);
-        MethodDetails oDetails = InstrumentResult.getSingleton().getMethodDetailByID(execution.methodInvokedId);
-        return thisDetails.getSubSignature().equals(oDetails.getSubSignature()) && (thisDetails.getdClass().isAssignableFrom(oDetails.getdClass()) || oDetails.getdClass().isAssignableFrom(thisDetails.getdClass())) && calleeId == execution.calleeId && returnValId == execution.returnValId && resultThisId == execution.resultThisId && Objects.equals(params, execution.params) && Objects.equals(exceptionClass, execution.exceptionClass) ;
+        return this.calleeId == execution.calleeId && this.params.equals(execution.params) && this.methodInvokedId == execution.methodInvokedId;
     }
 
     @Override
