@@ -40,7 +40,7 @@ public abstract class Stmt {
     }
 
     protected static Class<?> getTypeToImport(Class<?> type) {
-        if (type.getName().contains("$")) return null;
+        if(type.isAnonymousClass()) return null;
         if (type.isArray()) {
             while (type.isArray())
                 type = type.getComponentType();
