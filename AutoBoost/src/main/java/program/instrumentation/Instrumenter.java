@@ -241,7 +241,7 @@ public class Instrumenter extends BodyTransformer {
     }
     private boolean isLoggingInvokedLibMethod(InvokeExpr invokedExpr, SootMethod currentMethod, SootMethod invokedMethod) {
         if(!invokedMethod.isJavaLibraryMethod()) return false;
-        if(invokedMethod.getName().equals("equals") ||  invokedMethod.getName().equals("hashCode") || invokedMethod.getName().equals("toString")) return false;
+        if((invokedMethod.getName().equals("equals") ||  invokedMethod.getName().equals("hashCode") || invokedMethod.getName().equals("toString")) && !invokedMethod.isStatic()) return false;
         if(invokedMethod.isConstructor() && invokedMethod.getDeclaringClass().isInterface()) return false;
         if(!invokedMethod.isPublic()) return false;
         if(currentMethod.isConstructor() && currentMethod.getDeclaringClass().getSuperclass().equals(invokedMethod.getDeclaringClass()) && invokedMethod.isConstructor()) return false;
