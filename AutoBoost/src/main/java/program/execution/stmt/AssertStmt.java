@@ -1,12 +1,9 @@
 package program.execution.stmt;
 
 import helper.Properties;
-import org.apache.commons.lang3.ClassUtils;
 import org.junit.Assert;
 import program.execution.ExecutionTrace;
 import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class AssertStmt extends Stmt{
     private final Stmt expected;
@@ -23,13 +20,13 @@ public class AssertStmt extends Stmt{
         Class<?> assertType = ExecutionTrace.getSingleton().getVarDetailByID(expected.resultVarDetailID).getType();
         return (Properties.getSingleton().getJunitVer()==4? "Assert." : "") +
                 (assertType.isArray() ? "assertTrue(" + (assertType.getComponentType().isArray()? "Arrays.deepEquals(" : "Arrays.equals(") + expected.getStmt() + "," + actual.getStmt() + "));" :  "assertEquals(" + expected.getStmt() + ", " + actual.getStmt() +
-                        (doubleChecking(assertType)
+                        (deltaChecking(assertType)
                                 ? ", " + MARGIN : "") + ")") ;
 
     }
 
-    private boolean doubleChecking(Class<?> type){
-        return type.equals(Double.class) || type.equals(double.class);
+    private boolean deltaChecking(Class<?> type){
+        return type.equals(Double.class) || type.equals(double.class) || type.equals(Float.class) || type.equals(float.class);
     }
     @Override
     public Set<Class<?>> getImports() {
