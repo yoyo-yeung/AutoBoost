@@ -60,7 +60,7 @@ public class PrimitiveVarDetails extends VarDetail{
             case "double":
                 return this.doubleValue;
             case "char":
-                return this.charValue;
+                return "'" + this.charValue + "'";
             case "boolean":
                 return this.booleanValue;
             default:

@@ -32,7 +32,8 @@ public class WrapperVarDetails extends VarDetail{
 
     @Override
     public Object getValue() {
-        return type.equals(Long.class)? value + "L" : value;
+        return
+                type.equals(Long.class)? value + "L" : (type.equals(Character.class )? "'"+value +"'" : value);
     }
 
     @Override
