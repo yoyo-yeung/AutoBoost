@@ -1,4 +1,0 @@
-Method: <org.apache.commons.math.util.MathUtils: int hash(double)>, Callee: null, Params: [-0.0], Related test: test8(org.apache.commons.math.complex.Math96AB_1_Test)
-Method: <org.apache.commons.math.util.MathUtils: int hash(double)>, Callee: null, Params: [-1.0], Related test: test6(org.apache.commons.math.complex.Math96AB_1_Test)
-Method: <org.apache.commons.math.complex.Complex: boolean isNaN()>, Callee: {imaginary=-1.0, real=0.0,}, Params: [], Related test: test5(org.apache.commons.math.complex.Math96AB_1_Test)
-Method: <org.apache.commons.math.util.MathUtils: int hash(double)>, Callee: null, Params: [0.0], Related test: test7(org.apache.commons.math.complex.Math96AB_1_Test)

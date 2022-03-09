@@ -1,0 +1,1 @@
+Method: <org.apache.commons.math.complex.Complex: boolean equals(java.lang.Object)>, Callee: {imaginary=NaN, real=NaN, isNaN=true, isInfinite=false,}, Params: [{imaginary=NaN, real=NaN, isNaN=true, isInfinite=false,}], Related test: test123(org.apache.commons.math.complex.Math47AB_1_Test)
