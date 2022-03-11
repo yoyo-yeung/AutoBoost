@@ -73,10 +73,10 @@ public class ConstructStmt extends Stmt{
         return "{" + paramStmts.stream().map(s-> s.getStmt(fullCNameNeeded)).collect(Collectors.joining(Properties.getDELIMITER())) + "}";
     }
     private String getListSetString(Set<Class<?>> fullCNameNeeded) {
-        return "(){{" + paramStmts.stream().map(s -> "add("+s.getStmt(fullCNameNeeded)+")").collect(Collectors.joining(";"+Properties.getNewLine())) + ";}}";
+        return "()" + (paramStmts.size()>0 ? "{{" + paramStmts.stream().map(s -> "add("+s.getStmt(fullCNameNeeded)+")").collect(Collectors.joining(";"+Properties.getNewLine())) + ";}}" : "");
     }
     private String getMapStmtString(Set<Class<?>> fullCNameNeeded){
-        return "(){{" + paramStmts.stream().map(s-> "put("+s.getStmt(fullCNameNeeded)+")").collect(Collectors.joining(";" + Properties.getNewLine())) + ";}}";
+        return "()" + (paramStmts.size()> 0 ? "{{" + paramStmts.stream().map(s-> "put("+s.getStmt(fullCNameNeeded)+")").collect(Collectors.joining(";" + Properties.getNewLine())) + ";}}" :"");
     }
 
     @Override
