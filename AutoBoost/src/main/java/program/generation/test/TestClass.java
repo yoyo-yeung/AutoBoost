@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class TestClass {
     private static AtomicInteger classIDGenerator = new AtomicInteger(0);
@@ -81,13 +82,15 @@ public class TestClass {
     }
 
     public String output() {
+        Set<Class<?>> fullCNameNeeded= this.imports.stream().collect(Collectors.groupingBy(Class::getSimpleName, Collectors.toSet())).entrySet().stream().filter(e -> e.getValue().size() > 1 )
+                .flatMap(e -> e.getValue().stream()).collect(Collectors.toSet());
         StringBuilder result = new StringBuilder();
         result.append("package " + Properties.getSingleton().getGeneratedPackage()).append(";").append(Properties.getNewLine());
-        this.imports.stream().map(i -> {
+        this.imports.stream().filter(i -> !fullCNameNeeded.contains(i)).filter(i -> !i.getPackage().getName().equals(Properties.getSingleton().getGeneratedPackage())).map(i -> {
             return "import " + i.getName().replaceAll("\\$", ".") + ";" + Properties.getNewLine();
         }).forEach(result::append);
         result.append("public class ").append(this.className).append(Properties.getSingleton().getJunitVer()==3? " extends TestCase" : "").append("{").append(Properties.getNewLine());
-        this.getEnclosedTestCases().stream().map(t-> t.output()+Properties.getNewLine()).forEach(result::append);
+        this.getEnclosedTestCases().stream().map(t-> t.output(fullCNameNeeded)+Properties.getNewLine()).forEach(result::append);
         result.append("}").append(Properties.getNewLine());
         return result.toString();
     }

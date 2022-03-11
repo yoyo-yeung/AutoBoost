@@ -22,12 +22,12 @@ public class VarStmt extends Stmt{
     }
 
     @Override
-    public String getStmt() {
+    public String getStmt(Set<Class<?>> fullCNameNeeded) {
         return varName;
     }
 
-    public String getDeclarationStmt() {
-        return "final "+ varType.getSimpleName() + " " + varName;
+    public String getDeclarationStmt(Set<Class<?>> fullCNameNeeded) {
+        return "final "+ (fullCNameNeeded.contains(varType)? varType.getName() : varType.getSimpleName()) + " " + varName;
     }
 
     @Override

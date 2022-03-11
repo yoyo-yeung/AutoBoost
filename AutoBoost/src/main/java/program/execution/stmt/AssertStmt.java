@@ -16,10 +16,10 @@ public class AssertStmt extends Stmt{
     }
 
     @Override
-    public String getStmt() {
+    public String getStmt(Set<Class<?>>fullCNameNeeded) {
         Class<?> assertType = ExecutionTrace.getSingleton().getVarDetailByID(expected.resultVarDetailID).getType();
         return (Properties.getSingleton().getJunitVer()==4? "Assert." : "") +
-                (assertType.isArray() ? "assertTrue(" + (assertType.getComponentType().isArray()? "Arrays.deepEquals(" : "Arrays.equals(") + expected.getStmt() + "," + actual.getStmt() + "));" :  "assertEquals(" + expected.getStmt() + ", " + actual.getStmt() +
+                (assertType.isArray() ? "assertTrue(" + (assertType.getComponentType().isArray()? "Arrays.deepEquals(" : "Arrays.equals(") + expected.getStmt(fullCNameNeeded) + "," + actual.getStmt(fullCNameNeeded) + "));" :  "assertEquals(" + expected.getStmt(fullCNameNeeded) + ", " + actual.getStmt(fullCNameNeeded) +
                         (deltaChecking(assertType)
                                 ? ", " + MARGIN : "") + ")") ;
 

@@ -31,7 +31,7 @@ public abstract class Stmt {
         return resultVarDetailID;
     }
 
-    public abstract String getStmt();
+    public abstract String getStmt(Set<Class<?>> fullCNameNeeded);
 
     public abstract Set<Class<?>> getImports();
 
@@ -45,8 +45,8 @@ public abstract class Stmt {
             while (type.isArray())
                 type = type.getComponentType();
         }
-        if (!ClassUtils.isPrimitiveOrWrapper(type))
-            return type;
-        return null;
+        if(ClassUtils.isPrimitiveOrWrapper(type) || type.equals(Object.class))
+            return null;
+        else return type;
     }
 }

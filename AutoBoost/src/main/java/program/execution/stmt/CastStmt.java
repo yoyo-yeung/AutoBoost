@@ -21,8 +21,8 @@ public class CastStmt extends Stmt{
     }
 
     @Override
-    public String getStmt() {
-        return "(" + newType.getSimpleName()+")" + enclosedStmt.getStmt();
+    public String getStmt(Set<Class<?>>fullCNameNeeded) {
+        return "(" + (fullCNameNeeded.contains(newType) ? newType.getName() : newType.getSimpleName())+")" + enclosedStmt.getStmt(fullCNameNeeded);
     }
 
     @Override

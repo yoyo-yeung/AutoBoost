@@ -19,8 +19,8 @@ public class PairStmt extends Stmt{
     }
 
     @Override
-    public String getStmt() {
-        return keyStmt.getStmt() + Properties.getDELIMITER() + valueStmt.getStmt();
+    public String getStmt(Set<Class<?>>fullCNameNeeded) {
+        return keyStmt.getStmt(fullCNameNeeded) + Properties.getDELIMITER() + valueStmt.getStmt(fullCNameNeeded);
     }
 
     @Override

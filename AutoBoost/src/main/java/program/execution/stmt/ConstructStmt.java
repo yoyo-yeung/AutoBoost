@@ -47,7 +47,7 @@ public class ConstructStmt extends Stmt{
     }
 
     @Override
-    public String getStmt() {
+    public String getStmt(Set<Class<?>>fullCNameNeeded) {
         ExecutionTrace trace = ExecutionTrace.getSingleton();
         VarDetail resultVarDetail = trace.getVarDetailByID(resultVarDetailID);
 
@@ -55,28 +55,28 @@ public class ConstructStmt extends Stmt{
         result.append("new ").append(trace.getVarDetailByID(resultVarDetailID).getTypeSimpleName());
         if(resultVarDetail instanceof ArrVarDetails) {
             if(resultVarDetail.getType().isArray())
-                result.append(getArrString());
+                result.append(getArrString(fullCNameNeeded));
             else if(List.class.isAssignableFrom(resultVarDetail.getType()) || Set.class.isAssignableFrom(resultVarDetail.getType())){
-                result.append(getListSetString());
+                result.append(getListSetString(fullCNameNeeded));
             }
         }
         else if (resultVarDetail instanceof MapVarDetails) {
-            result.append(getMapStmtString());
+            result.append(getMapStmtString(fullCNameNeeded));
         }
         else {
-            result.append("(").append(paramStmts.stream().map(Stmt::getStmt).collect(Collectors.joining(Properties.getDELIMITER()))).append(")");
+            result.append("(").append(paramStmts.stream().map(s -> s.getStmt(fullCNameNeeded)).collect(Collectors.joining(Properties.getDELIMITER()))).append(")");
         }
         return result.toString();
     }
 
-    private String getArrString(){
-        return "{" + paramStmts.stream().map(Stmt::getStmt).collect(Collectors.joining(Properties.getDELIMITER())) + "}";
+    private String getArrString(Set<Class<?>> fullCNameNeeded){
+        return "{" + paramStmts.stream().map(s-> s.getStmt(fullCNameNeeded)).collect(Collectors.joining(Properties.getDELIMITER())) + "}";
     }
-    private String getListSetString() {
-        return "(){{" + paramStmts.stream().map(s -> "add("+s.getStmt()+")").collect(Collectors.joining(";"+Properties.getNewLine())) + ";}}";
+    private String getListSetString(Set<Class<?>> fullCNameNeeded) {
+        return "(){{" + paramStmts.stream().map(s -> "add("+s.getStmt(fullCNameNeeded)+")").collect(Collectors.joining(";"+Properties.getNewLine())) + ";}}";
     }
-    private String getMapStmtString(){
-        return "(){{" + paramStmts.stream().map(s-> "put("+s.getStmt()+")").collect(Collectors.joining(";" + Properties.getNewLine())) + ";}}";
+    private String getMapStmtString(Set<Class<?>> fullCNameNeeded){
+        return "(){{" + paramStmts.stream().map(s-> "put("+s.getStmt(fullCNameNeeded)+")").collect(Collectors.joining(";" + Properties.getNewLine())) + ";}}";
     }
 
     @Override

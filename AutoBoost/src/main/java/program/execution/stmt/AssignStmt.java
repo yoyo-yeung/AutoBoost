@@ -17,8 +17,8 @@ public class AssignStmt extends Stmt{
     }
 
     @Override
-    public String getStmt() {
-        return (leftStmt instanceof VarStmt ? ((VarStmt) leftStmt).getDeclarationStmt() : leftStmt.getStmt()) + " = " + rightStmt.getStmt();
+    public String getStmt(Set<Class<?>>fullCNameNeeded) {
+        return (leftStmt instanceof VarStmt ? ((VarStmt) leftStmt).getDeclarationStmt(fullCNameNeeded) : leftStmt.getStmt(fullCNameNeeded)) + " = " + rightStmt.getStmt(fullCNameNeeded);
     }
 
     @Override

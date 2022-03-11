@@ -22,18 +22,19 @@ public class MethodInvStmt extends Stmt{
     }
 
     @Override
-    public String getStmt() {
+    public String getStmt(Set<Class<?>> fullCNameNeeded) {
         MethodDetails details  = InstrumentResult.getSingleton().getMethodDetailByID(methodInvID);
-        return (callee == null ? "" : callee) + (details.getType().equals(METHOD_TYPE.CONSTRUCTOR) ? ("new " + details.getDeclaringClass().getShortName().replaceAll("\\$", ".")): (callee == null ? "" : ".") + details.getName()) + "(" + paramStmts.stream().map(Stmt::getStmt).collect(Collectors.joining(Properties.getDELIMITER())) + ")";
+        return (callee == null ? "" : callee) + (details.getType().equals(METHOD_TYPE.CONSTRUCTOR) ? ("new " + (fullCNameNeeded.contains(details.getdClass()) ? details.getdClass().getName() : details.getdClass().getSimpleName().replaceAll("\\$", "."))): (callee == null ? "" : ".") + details.getName()) + "(" + paramStmts.stream().map(s-> s.getStmt(fullCNameNeeded)).collect(Collectors.joining(Properties.getDELIMITER())) + ")";
     }
 
     @Override
     public Set<Class<?>> getImports() {
         Set<Class<?>> results = new HashSet<>();
-        results.add(getTypeToImport(InstrumentResult.getSingleton().getMethodDetailByID(methodInvID).getdClass()));
-        results.remove(null);
-
+        METHOD_TYPE methodType = InstrumentResult.getSingleton().getMethodDetailByID(methodInvID).getType();
+        if(methodType.equals(METHOD_TYPE.CONSTRUCTOR) || methodType.equals(METHOD_TYPE.STATIC))
+            results.add(getTypeToImport(InstrumentResult.getSingleton().getMethodDetailByID(methodInvID).getdClass()));
         this.paramStmts.forEach(stmt -> results.addAll(stmt.getImports()));
+        results.remove(null);
         return results;
     }
 }

@@ -94,9 +94,9 @@ public abstract class TestCase {
     }
 
 
-    public abstract String output();
+    public abstract String output(Set<Class<?>>fullCNameNeeded);
 
-    protected String outputStmts(String indentation) {
-        return indentation + this.getStmtList().stream().map(Stmt::getStmt).collect(Collectors.joining(";\n" + indentation)) + ";\n";
+    protected String outputStmts(String indentation, Set<Class<?>>fullCNameNeeded) {
+        return indentation + this.getStmtList().stream().map(s ->  s.getStmt(fullCNameNeeded)).collect(Collectors.joining(";\n" + indentation)) + ";\n";
     }
 }
