@@ -85,7 +85,12 @@ public class TestGenerator {
                 })
                 .filter(e -> {
                     VarDetail returnVarDetail = executionTrace.getVarDetailByID(e.getReturnValId());
-                    return (!(returnVarDetail instanceof ObjVarDetails) || returnVarDetail.equals(executionTrace.getNullVar())) && (!returnVarDetail.getType().isArray() || StringUtils.countMatches(instrumentResult.getMethodDetailByID(e.getMethodInvokedId()).getReturnType(), "[]") == StringUtils.countMatches(returnVarDetail.getType().getSimpleName(), "[]"));
+                    if(returnVarDetail instanceof ObjVarDetails) return returnVarDetail.equals(executionTrace.getNullVar());
+                    if(returnVarDetail instanceof ArrVarDetails) {
+                        if(((ArrVarDetails) returnVarDetail).getComponents().size() == 0) return true;
+                        return StringUtils.countMatches(instrumentResult.getMethodDetailByID(e.getMethodInvokedId()).getReturnType(), "[]") == StringUtils.countMatches(returnVarDetail.getType().getSimpleName(), "[]") && ((ArrVarDetails) returnVarDetail).getLeaveType().stream().allMatch(ClassUtils::isPrimitiveOrWrapper);
+                    }
+                    return  true;
                 })
                 .map(e ->
                 {

@@ -5,10 +5,12 @@ import helper.Properties;
 import org.apache.commons.lang3.ClassUtils;
 import program.execution.ExecutionTrace;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class ArrVarDetails extends VarDetail{
     private static final CREATION_TYPE createdBy = CREATION_TYPE.CONSTRUCTOR;
@@ -35,6 +37,17 @@ public class ArrVarDetails extends VarDetail{
 
     public List<Integer> getComponents() {
         return components;
+    }
+
+    public Set<Class<?>> getLeaveType() {
+        Set<Class<?>> types = new HashSet<>();
+        types = components.stream().flatMap(id -> {
+            VarDetail component = ExecutionTrace.getSingleton().getVarDetailByID(id);
+            if(component instanceof  ArrVarDetails) return ((ArrVarDetails) component).getLeaveType().stream();
+            else return Stream.of(component.getType());
+        }).collect(Collectors.toSet());
+
+        return types;
     }
 
     @Override
