@@ -126,7 +126,6 @@ public class TestGenerator {
                     MethodInvStmt invStmt = getMethodInvStmt(e, testCase);
                     testCase.addStmt(invStmt);
                     testCase.setExceptionClass(e.getExceptionClass());
-                    testCase.output();
                     return testCase;
                 }).forEach(testSuite::assignTestCase);
     }
@@ -306,7 +305,7 @@ public class TestGenerator {
                 break;
             case MEMBER:
                 Stmt callee = generateDefStmt(execution.getCalleeId(), testCase, true, true);
-                invokeStmt = new MethodInvStmt(callee.getStmt(), details.getId(), paramStmt);
+                invokeStmt = new MethodInvStmt(callee.getStmt(new HashSet<>()), details.getId(), paramStmt);
                 break;
         }
         return invokeStmt;
