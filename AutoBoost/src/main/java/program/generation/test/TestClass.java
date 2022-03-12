@@ -87,7 +87,7 @@ public class TestClass {
         StringBuilder result = new StringBuilder();
         result.append("package " + Properties.getSingleton().getGeneratedPackage()).append(";").append(Properties.getNewLine());
         this.imports.stream().filter(i -> !fullCNameNeeded.contains(i)).filter(i -> !i.getPackage().getName().equals(Properties.getSingleton().getGeneratedPackage())).map(i -> {
-            return "import " + i.getName().replaceAll("\\$", ".") + ";" + Properties.getNewLine();
+            return "import " + i.getName().replace("$", ".") + ";" + Properties.getNewLine();
         }).forEach(result::append);
         result.append("public class ").append(this.className).append(Properties.getSingleton().getJunitVer()==3? " extends TestCase" : "").append("{").append(Properties.getNewLine());
         this.getEnclosedTestCases().stream().map(t-> t.output(fullCNameNeeded)+Properties.getNewLine()).forEach(result::append);
