@@ -41,7 +41,7 @@ public class Instrumenter extends BodyTransformer {
         logExceptionMethod = loggerClass.getMethod("void logException(java.lang.Object)");
     }
     private List<Unit> createArrForParams( LocalGenerator localGenerator, Local paramArrLocal,  List<Type> paramTypes, List<?> params) {
-        if(params.size() <= 0 ) return new ArrayList<>();
+        if(params.size() == 0 ) return new ArrayList<>();
         List<Unit> toInsert = new ArrayList<>();
 //        Local paramArrLocal = localGenerator.generateLocal(ArrayType.v(RefType.v(Object.class.getName()), params.size()));
         Unit defArrUnit = Jimple.v().newAssignStmt(paramArrLocal, Jimple.v().newNewArrayExpr(RefType.v(Object.class.getName()), IntConstant.v(params.size())));
