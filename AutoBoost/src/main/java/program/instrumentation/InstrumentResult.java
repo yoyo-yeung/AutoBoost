@@ -29,7 +29,7 @@ public class InstrumentResult {
         return methodDetailsMap;
     }
 
-    public MethodDetails getMethodDetailByID(Integer methodID) {
+    public MethodDetails getMethodDetailByID(int methodID) {
         if(!this.methodDetailsMap.containsKey(methodID))
             throw new IllegalArgumentException("MethodDetails for " + methodID + " does not exist");
         else return this.getMethodDetailsMap().get(methodID);

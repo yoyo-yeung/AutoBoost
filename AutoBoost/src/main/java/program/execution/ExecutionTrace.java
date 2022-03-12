@@ -368,13 +368,13 @@ public class ExecutionTrace {
         return results;
     }
 
-    public VarDetail getVarDetailByID(Integer varID) {
+    public VarDetail getVarDetailByID(int varID) {
         if (!this.allVars.containsKey(varID))
             throw new IllegalArgumentException("VarDetail with ID" + varID + " does not exist.");
         return this.allVars.get(varID);
     }
 
-    public MethodExecution getMethodExecutionByID(Integer exeID) {
+    public MethodExecution getMethodExecutionByID(int exeID) {
         if (this.allMethodExecs.containsKey(exeID)) return this.allMethodExecs.get(exeID);
         Optional<MethodExecution> result = ExecutionLogger.getExecuting().stream().filter(e -> e.getID() == exeID).findAny();
         if (result.isPresent()) return result.get();
