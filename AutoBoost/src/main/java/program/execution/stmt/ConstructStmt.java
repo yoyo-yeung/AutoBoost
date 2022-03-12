@@ -50,17 +50,18 @@ public class ConstructStmt extends Stmt{
     public String getStmt(Set<Class<?>>fullCNameNeeded) {
         ExecutionTrace trace = ExecutionTrace.getSingleton();
         VarDetail resultVarDetail = trace.getVarDetailByID(resultVarDetailID);
+        Class<?> varDetailClass = resultVarDetail.getClass();
 
         StringBuilder result = new StringBuilder();
         result.append("new ").append(trace.getVarDetailByID(resultVarDetailID).getTypeSimpleName());
-        if(resultVarDetail instanceof ArrVarDetails) {
+        if(varDetailClass.equals(ArrVarDetails.class)) {
             if(resultVarDetail.getType().isArray())
                 result.append(getArrString(fullCNameNeeded));
             else if(List.class.isAssignableFrom(resultVarDetail.getType()) || Set.class.isAssignableFrom(resultVarDetail.getType())){
                 result.append(getListSetString(fullCNameNeeded));
             }
         }
-        else if (resultVarDetail instanceof MapVarDetails) {
+        else if (varDetailClass.equals(MapVarDetails.class)) {
             result.append(getMapStmtString(fullCNameNeeded));
         }
         else {

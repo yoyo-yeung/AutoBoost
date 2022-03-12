@@ -86,8 +86,9 @@ public class TestGenerator {
                 })
                 .filter(e -> {
                     VarDetail returnVarDetail = executionTrace.getVarDetailByID(e.getReturnValId());
-                    if(returnVarDetail instanceof ObjVarDetails) return returnVarDetail.equals(executionTrace.getNullVar());
-                    if(returnVarDetail instanceof ArrVarDetails) {
+                    Class<?> varDetailClass = returnVarDetail.getClass();
+                    if(varDetailClass.equals(ObjVarDetails.class)) return returnVarDetail.equals(executionTrace.getNullVar());
+                    if(varDetailClass.equals(ArrVarDetails.class)) {
                         if(((ArrVarDetails) returnVarDetail).getComponents().size() == 0) return true;
                         return StringUtils.countMatches(instrumentResult.getMethodDetailByID(e.getMethodInvokedId()).getReturnSootType().toString(), "[]") == StringUtils.countMatches(returnVarDetail.getType().getSimpleName(), "[]") && ((ArrVarDetails) returnVarDetail).getLeaveType().stream().allMatch(ClassUtils::isPrimitiveOrWrapper);
                     }
@@ -209,12 +210,14 @@ public class TestGenerator {
 
     private boolean varCanBeTested(Integer varID, int lv, Set<Integer> exeUnderCheck) {
         VarDetail varDetail = executionTrace.getVarDetailByID(varID);
-
+        Class<?> varDetailClass = varDetail.getClass();
         if (passedVar.contains(varID)) return true;
-        if (varDetail instanceof PrimitiveVarDetails || varDetail instanceof WrapperVarDetails || varDetail instanceof StringVarDetails || varDetail instanceof EnumVarDetails || varDetail.equals(executionTrace.getNullVar())) {
+
+
+        if (varDetailClass.equals(PrimitiveVarDetails.class) || varDetailClass.equals(WrapperVarDetails.class) || varDetailClass.equals(StringVarDetails.class) || varDetailClass.equals(EnumVarDetails.class) || varDetail.equals(executionTrace.getNullVar())) {
             passedVar.add(varID);
             return true;
-        } else if (varDetail instanceof MapVarDetails) {
+        } else if (varDetail.getClass().equals(MapVarDetails.class)) {
             if (((MapVarDetails) varDetail).getKeyValuePairs().entrySet().stream().allMatch(e -> varCanBeTested(e.getKey(), lv + 1, exeUnderCheck) && varCanBeTested(e.getValue(), lv + 1, exeUnderCheck))) {
                 passedVar.add(varID);
                 passedVar.addAll(((MapVarDetails) varDetail).getKeyValuePairs().keySet());
@@ -222,7 +225,7 @@ public class TestGenerator {
                 return true;
             }
             return false;
-        } else if (varDetail instanceof ArrVarDetails) {
+        } else if (varDetail.getClass().equals(ArrVarDetails.class)) {
             if (((ArrVarDetails) varDetail).getComponents().stream().allMatch(varID1 -> varCanBeTested(varID1, lv + 1, exeUnderCheck))) {
                 passedVar.add(varID);
                 passedVar.addAll(((ArrVarDetails) varDetail).getComponents());
@@ -243,11 +246,12 @@ public class TestGenerator {
 
     public Stmt generateDefStmt(Integer varDetailsID, TestCase testCase, boolean checkExisting, boolean store) throws IllegalArgumentException {
         VarDetail varDetail = executionTrace.getVarDetailByID(varDetailsID);
+        Class<?> varDetailClass = varDetail.getClass();
         if (checkExisting && testCase.getExistingVar(varDetailsID) != null && testCase.getExistingVar(varDetailsID).size() > 0)
             return testCase.getExistingVar(varDetailsID).get(0);
         if (varDetail.equals(executionTrace.getNullVar()))
             return new ConstantStmt(varDetailsID);
-        if (varDetail instanceof PrimitiveVarDetails || varDetail instanceof WrapperVarDetails || varDetail instanceof StringVarDetails || varDetail instanceof MapVarDetails || varDetail instanceof ArrVarDetails || varDetail instanceof EnumVarDetails)
+        if (varDetailClass.equals(PrimitiveVarDetails.class) || varDetailClass.equals(WrapperVarDetails.class) || varDetailClass.equals(StringVarDetails.class) || varDetailClass.equals(MapVarDetails.class) || varDetailClass.equals(ArrVarDetails.class) || varDetailClass.equals(EnumVarDetails.class))
             return getSingleDefStmt(varDetail, testCase);
         else if (executionTrace.getDefExeList(varDetail.getID()) == null) {
             logger.debug(varDetail.toDetailedString());
@@ -256,12 +260,13 @@ public class TestGenerator {
     }
 
     private Stmt getSingleDefStmt(VarDetail varDetail, TestCase testCase) {
-        if (executionTrace.getDefExeList(varDetail.getID()) != null || !(varDetail instanceof PrimitiveVarDetails || varDetail instanceof WrapperVarDetails || varDetail instanceof StringVarDetails || varDetail instanceof MapVarDetails || varDetail instanceof ArrVarDetails || varDetail instanceof EnumVarDetails))
+        Class<?> varDetailClass = varDetail.getClass();
+        if (executionTrace.getDefExeList(varDetail.getID()) != null || !(varDetailClass.equals(PrimitiveVarDetails.class) || varDetailClass.equals(WrapperVarDetails.class) || varDetailClass.equals(StringVarDetails.class) || varDetailClass.equals(MapVarDetails.class) || varDetailClass.equals(ArrVarDetails.class) || varDetailClass.equals(EnumVarDetails.class)))
             throw new IllegalArgumentException("Provided VarDetail cannot be assigned with single stmt");
-        if (varDetail instanceof PrimitiveVarDetails || varDetail instanceof WrapperVarDetails || varDetail instanceof StringVarDetails || varDetail instanceof EnumVarDetails)
+        if (varDetailClass.equals(PrimitiveVarDetails.class) || varDetailClass.equals(WrapperVarDetails.class) || varDetailClass.equals(StringVarDetails.class) || varDetailClass.equals(EnumVarDetails.class))
             return new ConstantStmt(varDetail.getID());
         List<Stmt> params;
-        if (varDetail instanceof MapVarDetails) {
+        if (varDetailClass.equals(MapVarDetails.class)) {
             params = ((MapVarDetails) varDetail).getKeyValuePairs().entrySet().stream().map(e -> new PairStmt(generateDefStmt(e.getKey(), testCase, true, true), generateDefStmt(e.getValue(), testCase, true, true))).collect(Collectors.toList());
         } else {
             params = ((ArrVarDetails) varDetail).getComponents().stream().map(e -> generateDefStmt(e, testCase, true, true)).collect(Collectors.toList());
@@ -309,6 +314,7 @@ public class TestGenerator {
                 invokeStmt = new MethodInvStmt(callee.getStmt(new HashSet<>()), details.getId(), paramStmt);
                 break;
         }
+
         return invokeStmt;
     }
 
@@ -343,7 +349,9 @@ public class TestGenerator {
                 if (!details.getReturnSootType().equals(VoidType.v())) {
                     Class<?> actualType = executionTrace.getVarDetailByID(execution.getReturnValId()).getType();
                     VarStmt varStmt1 = new VarStmt(actualType, testCase.getNewVarID(), execution.getReturnValId());
+//                        logger.debug(varStmt1.getImports());
                     testCase.addStmt(new AssignStmt(varStmt1, details.getReturnSootType().toString().equals(actualType.getName())? invokeStmt : new CastStmt(execution.getReturnValId(), actualType, invokeStmt)));
+
                     testCase.addOrUpdateVar(execution.getReturnValId(), varStmt1);
                 } else
                     testCase.addStmt(invokeStmt);
@@ -354,6 +362,7 @@ public class TestGenerator {
 
                 break;
         }
+
         return testCase.getExistingVar(varDetailID).get(0);
     }
 
