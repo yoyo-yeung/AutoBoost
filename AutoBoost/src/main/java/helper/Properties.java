@@ -82,8 +82,8 @@ public class Properties {
         return faultyFunc;
     }
 
-    public void setFaultyFunc(String[] faultyFunc) {
-        this.faultyFunc = Arrays.asList(faultyFunc);
+    public void setFaultyFunc(List<String> faultyFunc) {
+        this.faultyFunc = faultyFunc;
     }
     public void addFaultyFunc(String faultyFunc) {
         this.faultyFunc.add(faultyFunc);

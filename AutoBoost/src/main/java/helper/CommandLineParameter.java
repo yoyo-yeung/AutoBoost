@@ -58,7 +58,7 @@ public class CommandLineParameter {
         if(!line.hasOption("faultyFunc") && !line.hasOption("faultyClassLine"))
             throw new MissingArgumentException("Missing argument for faultyFunc");
         if(line.hasOption("faultyFunc"))
-            properties.setFaultyFunc(line.getOptionValue("faultyFunc").split(Properties.getClassMethSep()));
+            properties.setFaultyFunc(Arrays.asList(line.getOptionValue("faultyFunc").split(Properties.getClassMethSep())));
         if(line.hasOption("faultyClassLine")) {
             Arrays.stream(line.getOptionValue("faultyClassLine").split(",")).forEach(i -> {
                 logger.debug(i);
