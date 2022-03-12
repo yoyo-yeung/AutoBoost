@@ -14,7 +14,7 @@ public class EnumVarDetails extends VarDetail{
     }
 
     @Override
-    public Object getValue() {
+    public Object getGenValue() {
         return type.getSimpleName() + "." + value;
     }
 

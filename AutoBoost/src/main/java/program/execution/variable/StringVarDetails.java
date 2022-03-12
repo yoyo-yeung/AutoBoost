@@ -27,7 +27,7 @@ public class StringVarDetails extends VarDetail{
     public String getTypeSimpleName() {return String.class.getSimpleName();}
 
     @Override
-    public Object getValue() {
+    public Object getGenValue() {
         return "\""+ StringEscapeUtils.escapeJava(value) + "\""; // get escaped text WITH ""
     }
 

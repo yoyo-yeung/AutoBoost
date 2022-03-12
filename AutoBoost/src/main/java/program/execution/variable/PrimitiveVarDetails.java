@@ -45,7 +45,7 @@ public class PrimitiveVarDetails extends VarDetail{
     public String getTypeSimpleName() {return type.getSimpleName();}
 
     @Override
-    public Object getValue()  {
+    public Object getGenValue()  {
         switch(type.getName()) {
             case "byte":
                 return this.byteValue;
@@ -77,7 +77,7 @@ public class PrimitiveVarDetails extends VarDetail{
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         PrimitiveVarDetails that = (PrimitiveVarDetails) o;
-        return that.type.equals(this.type) && that.getValue().equals(this.getValue());
+        return that.type.equals(this.type) && that.getGenValue().equals(this.getGenValue());
     }
 
     @Override

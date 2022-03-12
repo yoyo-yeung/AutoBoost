@@ -272,7 +272,7 @@ public class ExecutionTrace {
         // high chance of having the same value
         if (process.equals(LOG_ITEM.RETURN_THIS) && ExecutionLogger.getLatestExecution().getCalleeId() != -1) {
             VarDetail calleeDetails = getVarDetailByID(ExecutionLogger.getLatestExecution().getCalleeId());
-            if (calleeDetails.getType().equals(type) && calleeDetails.getValue().equals(objValue))
+            if (calleeDetails.getType().equals(type) && calleeDetails.getGenValue().equals(objValue))
                 return calleeDetails.getID();
         }
         Object finalObjValue1 = type.equals(long.class) || type.equals(Long.class) ? objValue + "L" : objValue;
@@ -286,7 +286,7 @@ public class ExecutionTrace {
                     else if (ClassUtils.isPrimitiveOrWrapper(type)) return v instanceof WrapperVarDetails;
                     else return v instanceof ObjVarDetails;
                 })
-                .filter(v -> v.getType().equals(type) && v.getValue().equals(finalObjValue1))
+                .filter(v -> v.getType().equals(type) && v.getGenValue().equals(finalObjValue1))
                 .findAny();
         return result.map(VarDetail::getID).orElse(-1);
     }

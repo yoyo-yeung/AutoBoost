@@ -28,7 +28,7 @@ public class MapVarDetails extends VarDetail{
     }
 
     @Override
-    public Object getValue() {
+    public Object getGenValue() {
         return this.keyValuePairValue;
     }
 

@@ -19,7 +19,7 @@ public class ConstantStmt extends Stmt{
 
     @Override
     public String getStmt(Set<Class<?>>fullCNameNeeded) {
-        return ExecutionTrace.getSingleton().getVarDetailByID(resultVarDetailID).getValue().toString();
+        return ExecutionTrace.getSingleton().getVarDetailByID(resultVarDetailID).getGenValue().toString();
     }
 
     @Override

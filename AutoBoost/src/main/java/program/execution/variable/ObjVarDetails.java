@@ -17,7 +17,7 @@ public class ObjVarDetails extends VarDetail{
     }
 
     @Override
-    public Object getValue() {
+    public Object getGenValue() {
         return value;
     }
 

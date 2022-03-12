@@ -51,7 +51,7 @@ public class ArrVarDetails extends VarDetail{
     }
 
     @Override
-    public Object getValue() {
+    public Object getGenValue() {
         return componentValue;
     }
 

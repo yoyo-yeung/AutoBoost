@@ -2,8 +2,6 @@ package program.execution.variable;
 
 import entity.CREATION_TYPE;
 
-import java.util.List;
-
 public abstract class VarDetail{
     private final int ID;
 
@@ -15,7 +13,7 @@ public abstract class VarDetail{
         return ID;
     }
 
-    public abstract Object getValue();
+    public abstract Object getGenValue();
 
     public abstract Class<?> getType();
 
