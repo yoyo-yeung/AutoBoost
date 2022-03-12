@@ -15,7 +15,6 @@ public class MethodDetails {
     private final List<Type> parameterTypes;
     private final int parameterCount;
     private final String name;
-    private final String returnType;
     private final Type returnSootType;
     private final ACCESS access;
     private final METHOD_TYPE type;
@@ -29,7 +28,6 @@ public class MethodDetails {
         this.parameterTypes = method.getParameterTypes();
         this.parameterCount = method.getParameterCount();
         this.name = method.getName();
-        this.returnType = method.getReturnType().toString();
         this.signature = method.getSignature();
         if(method.isStaticInitializer())
             this.type = METHOD_TYPE.STATIC_INITIALIZER;
@@ -58,10 +56,6 @@ public class MethodDetails {
 
     public String getName() {
         return name;
-    }
-
-    public String getReturnType() {
-        return returnType;
     }
 
     public ACCESS getAccess() {
@@ -108,7 +102,6 @@ public class MethodDetails {
                 ", parameterTypes=" + parameterTypes +
                 ", parameterCount=" + parameterCount +
                 ", name='" + name + '\'' +
-                ", returnType='" + returnType + '\'' +
                 ", access=" + access +
                 ", type=" + type +
                 ", declaringClass=" + declaringClass +

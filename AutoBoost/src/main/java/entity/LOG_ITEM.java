@@ -1,11 +1,10 @@
 package entity;
 
 public enum LOG_ITEM {
-        START_CALL,
+        START,
         CALL_THIS,
         CALL_PARAM,
+        RETURN,
         RETURN_ITEM,
-        RETURN_THIS,
-        RETURN_VOID,
-        THREW_EXCEPTION
+        RETURN_THIS
 }

@@ -8,6 +8,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import program.analysis.MethodDetails;
 import program.instrumentation.InstrumentResult;
+import soot.VoidType;
 
 import java.lang.reflect.Array;
 import java.util.Stack;
@@ -22,27 +23,6 @@ public class ExecutionLogger {
     private static boolean skipping = false;
 
 
-    /**
-     * Invoked when a method has started its execution. the method would be added to stack for further processing
-     *
-     * @param methodId ID of method currently being invoked
-     * @param process  LOG_ITEM value representing status of method call
-     */
-    public static void start(int methodId, String process) throws ClassNotFoundException {
-        if (!LOG_ITEM.START_CALL.equals(LOG_ITEM.valueOf(process)))
-            throw new IllegalArgumentException("Unacceptable process for current operation ");
-        // skip logging of method if it is a method call enclosed
-        if (returnNow(methodId, process))
-            return;
-        MethodExecution newExecution = new MethodExecution(executionTrace.getNewExeID(), methodId);
-        MethodDetails details = instrumentResult.getMethodDetailByID(methodId);
-        if (details.getType().equals(METHOD_TYPE.STATIC_INITIALIZER) || (executing.size() > 0 && executing.peek().getTest() == null))
-            newExecution.setTest(null);
-        executing.add(newExecution);
-        if((details.getType().equals(METHOD_TYPE.CONSTRUCTOR) || details.getType().equals(METHOD_TYPE.STATIC)) && details.getParameterCount() == 0 )
-            setSkipping(newExecution);
-
-    }
 
     /**
      * Method checking if the current operation and their corresponding values for the method should be stored.
@@ -52,14 +32,12 @@ public class ExecutionLogger {
      * @param process  value of LOG_ITEM type, representing the status of method execution and the item being stored
      * @return true if the current operation and value should not be logged, false if they should
      */
-    private static boolean returnNow(int methodId, String process) throws ClassNotFoundException {
+    private static boolean returnNow(int methodId, LOG_ITEM process) throws ClassNotFoundException {
         if (executing.size() == 0 ) {
             skipping = false;
             return false;
         }
         if(Properties.getSingleton().getFaultyFuncIds().contains(methodId)) return false;
-        LOG_ITEM processItem = LOG_ITEM.valueOf(process);
-        if (processItem.equals(LOG_ITEM.THREW_EXCEPTION)) return false;
         MethodExecution latestExecution = getLatestExecution();
         if (latestExecution == null) {
             skipping = false;
@@ -69,18 +47,17 @@ public class ExecutionLogger {
         MethodDetails latestDetails = instrumentResult.getMethodDetailByID(latestID);
         if(!skipping && !latestDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR))
             return skipping;
-        if (skipping && !(processItem.equals(LOG_ITEM.START_CALL) && methodId == latestID) && !(processItem.equals(LOG_ITEM.RETURN_ITEM) && methodId == latestID) && !(processItem.equals(LOG_ITEM.RETURN_VOID) && methodId == latestID))
-            return skipping;
+        if (skipping && !((process.equals(LOG_ITEM.START)) && methodId == latestID) && !(process.equals(LOG_ITEM.RETURN) && methodId == latestID))
+            return true;
 
         if(skipping) {
-            switch (processItem) {
+            switch (process) {
                 // if the current method to be logged is same as the latest one, add to count to prevent inconsistent popping
-                case START_CALL:
+                case START:
                     sameMethodCount++;
                     break;
                 // if the current method trying to be logged is the one to be skipped + it is "return-ing", then remove it from stack and go back to logging as expected
-                case RETURN_VOID:
-                case RETURN_ITEM:
+                case RETURN:
                     if (sameMethodCount == 0) {
                         skipping = false;
                         executing.pop();
@@ -90,7 +67,6 @@ public class ExecutionLogger {
                         return true;
                     } else sameMethodCount--;
             }
-            skipping = true;
             return true;
         }
         if (latestDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR)) {
@@ -106,41 +82,73 @@ public class ExecutionLogger {
         return false;
     }
 
-    public static void log(int methodId, String process, Object obj) throws ClassNotFoundException {
-        LOG_ITEM processItem = LOG_ITEM.valueOf(process);
-        if (returnNow(methodId, process)) {
-            return;
-        }
-        MethodDetails details = InstrumentResult.getSingleton().getMethodDetailByID(methodId);
-        switch (processItem) {
-            case THREW_EXCEPTION:
-                getLatestExecution().setExceptionClass(obj.getClass());
-                break;
-            case RETURN_VOID:
-                setVarIDforExecutions(methodId, process, -1);
-                break;
-            case CALL_PARAM:
-                if (Array.getLength(obj) < details.getParameterCount())
-                    throw new RuntimeException("Illegal parameter provided for logging");
-                IntStream.range(0, details.getParameterCount()).forEach(i -> {
-                    if (details.getParameterTypes().get(i) instanceof soot.PrimType)
-                        setVarIDforExecutions(methodId, process, executionTrace.getVarDetailID(ClassUtils.wrapperToPrimitive(Array.get(obj, i).getClass()), Array.get(obj, i), processItem));
-                    else
-                        setVarIDforExecutions(methodId, process, executionTrace.getVarDetailID(Array.get(obj, i) == null ? Object.class : Array.get(obj, i).getClass(), Array.get(obj, i), processItem));
-                });
-                break;
-            case RETURN_ITEM:
-                if(details.getReturnSootType() instanceof soot.PrimType) {
-                    setVarIDforExecutions(methodId, process, executionTrace.getVarDetailID(ClassUtils.wrapperToPrimitive(obj.getClass()), obj, processItem));
-                    break;
-                }
-            default:
-                setVarIDforExecutions(methodId, process, executionTrace.getVarDetailID(obj == null ? Object.class : obj.getClass(), obj, processItem));
-        }
 
+    public static void logStart(int methodId, Object callee, Object params) throws ClassNotFoundException {
+         if(returnNow(methodId, LOG_ITEM.START)) return;
+        MethodExecution newExecution = new MethodExecution(executionTrace.getNewExeID(), methodId);
+        MethodDetails details = instrumentResult.getMethodDetailByID(methodId);
+        if (details.getType().equals(METHOD_TYPE.STATIC_INITIALIZER) || (executing.size() > 0 && executing.peek().getTest() == null))
+            newExecution.setTest(null);
+        executing.add(newExecution);
+        if(details.getType().equals(METHOD_TYPE.MEMBER)) // i.e. have callee
+            setVarIDForExecution(methodId, newExecution, LOG_ITEM.CALL_THIS, executionTrace.getVarDetailID(callee == null ? Object.class : callee.getClass(), callee, LOG_ITEM.CALL_THIS));
+        if(details.getParameterCount() > 0 ) {
+            if (Array.getLength(params) < details.getParameterCount())
+                throw new RuntimeException("Illegal parameter provided for logging");
+            IntStream.range(0, details.getParameterCount()).forEach(i -> {
+                Object paramVal = Array.get(params, i);
+                if (details.getParameterTypes().get(i) instanceof soot.PrimType)
+                    setVarIDForExecution(methodId, newExecution, LOG_ITEM.CALL_PARAM, executionTrace.getVarDetailID(ClassUtils.wrapperToPrimitive(paramVal.getClass()), paramVal, LOG_ITEM.CALL_PARAM));
+                else
+                    setVarIDForExecution(methodId, newExecution,  LOG_ITEM.CALL_PARAM, executionTrace.getVarDetailID(paramVal == null ? Object.class : paramVal.getClass(), paramVal, LOG_ITEM.CALL_PARAM));
+            });
+
+        }
+        setSkipping(newExecution);
     }
 
 
+    public static void logEnd(int methodId, Object callee, Object returnVal) throws ClassNotFoundException {
+        if(returnNow(methodId, LOG_ITEM.RETURN))
+            return;
+        MethodExecution execution = getLatestExecution();
+        if (methodId != execution.getMethodInvokedId()) {
+            logger.debug(execution.toDetailedString());
+            logger.debug(instrumentResult.getMethodDetailByID(methodId).toString());
+            if (execution.getExceptionClass() != null) {
+                Class<?> exceptionClass = execution.getExceptionClass();
+                while (execution.getMethodInvokedId() != methodId) {
+                    execution.setExceptionClass(exceptionClass);
+                    endLogMethod(execution.getMethodInvokedId());
+                    execution = getLatestExecution();
+                }
+            }
+            else if (instrumentResult.isLibMethod(execution.getMethodInvokedId())) {
+                while(instrumentResult.isLibMethod(execution.getMethodInvokedId()) && execution.getMethodInvokedId() != methodId) {
+                    executing.pop();
+                    execution = getLatestExecution();
+                }
+            }
+            else {
+                throw new RuntimeException("Inconsistent method invoke");
+            }
+        }
+        MethodDetails details = instrumentResult.getMethodDetailByID(methodId);
+        if (!details.getReturnSootType().equals(VoidType.v()) && !(instrumentResult.isLibMethod(methodId) && returnVal == null)) {
+            if(details.getReturnSootType() instanceof soot.PrimType)
+                setVarIDForExecution(methodId, execution, LOG_ITEM.RETURN_ITEM, executionTrace.getVarDetailID(ClassUtils.wrapperToPrimitive(returnVal.getClass()), returnVal, LOG_ITEM.RETURN_ITEM));
+            else
+                setVarIDForExecution(methodId, execution, LOG_ITEM.RETURN_ITEM, executionTrace.getVarDetailID(returnVal == null ? Object.class: returnVal.getClass(), returnVal, LOG_ITEM.RETURN_ITEM));
+        }
+        if(details.getType().equals(METHOD_TYPE.CONSTRUCTOR) || details.getType().equals(METHOD_TYPE.MEMBER))
+            setVarIDForExecution(methodId, execution, LOG_ITEM.RETURN_THIS, executionTrace.getVarDetailID(callee ==null? Object.class : callee.getClass(), callee, LOG_ITEM.RETURN_THIS));
+        endLogMethod(methodId);
+
+    }
+
+    public static void logException(Object exception) {
+        getLatestExecution().setExceptionClass(exception.getClass());
+    }
     public static Stack<MethodExecution> getExecuting() {
         return executing;
     }
@@ -153,9 +161,11 @@ public class ExecutionLogger {
      * called when method has finished logging
      */
     private static void endLogMethod(int methodId) {
+        logger.debug(executing.peek().toDetailedString());
         if (methodId != executing.peek().getMethodInvokedId())
             throw new RuntimeException("Method finishing logging does not match stored method");
         MethodExecution finishedMethod = executing.pop();
+        logger.debug("ended method " + finishedMethod.toSimpleString());
 //        if(!finishedMethod.relationshipCheck())
 //            throw new RuntimeException("Method finished incorrect. ");
         executionTrace.addMethodExecution(finishedMethod, methodId);
@@ -164,6 +174,24 @@ public class ExecutionLogger {
             executionTrace.addMethodRelationship(executing.peek().getID(), finishedMethod.getID());
     }
 
+    private static void setVarIDForExecution(int methodID, MethodExecution execution, LOG_ITEM process, int ID) {
+        switch (process) {
+            case CALL_THIS:
+                execution.setCalleeId(ID);
+                break;
+            case CALL_PARAM:
+                execution.addParam(ID);
+                break;
+            case RETURN_THIS:
+                execution.setResultThisId(ID);
+                break;
+            case RETURN_ITEM:
+                execution.setReturnValId(ID);
+                break;
+            default:
+                throw new RuntimeException("Invalid value provided for process " + process);
+        }
+    }
     /**
      * This method is used for updating values of the method under execution.
      * For use inside class only
@@ -175,6 +203,8 @@ public class ExecutionLogger {
     private static void setVarIDforExecutions(int methodId, String process, int ID) {
         MethodExecution execution = getLatestExecution();
         if (methodId != execution.getMethodInvokedId()) {
+            logger.debug(execution.toDetailedString());
+            logger.debug(instrumentResult.getMethodDetailByID(methodId).toString());
             if (execution.getExceptionClass() != null) {
                 Class<?> exceptionClass = execution.getExceptionClass();
                 while (execution.getMethodInvokedId() != methodId) {
@@ -193,29 +223,7 @@ public class ExecutionLogger {
                 throw new RuntimeException("Inconsistent method invoke");
             }
         }
-        MethodDetails details = instrumentResult.getMethodDetailByID(methodId);
-        switch (LOG_ITEM.valueOf(process)) {
-            case CALL_THIS:
-                execution.setCalleeId(ID);
-                if(details.getParameterCount() == 0)
-                    setSkipping(execution);
-                break;
-            case CALL_PARAM:
-                execution.addParam(ID);
-                setSkipping(execution);
-                break;
-            case RETURN_THIS:
-                execution.setResultThisId(ID);
-                break;
-            case RETURN_VOID:
-                ID = -1;
-            case RETURN_ITEM:
-                execution.setReturnValId(ID);
-                endLogMethod(methodId);
-                break;
-            default:
-                throw new RuntimeException("Invalid value provided for process " + process);
-        }
+        setVarIDForExecution(methodId, execution, LOG_ITEM.valueOf(process), ID);
 //        logger.debug("set " + execution.toDetailedString());
     }
 

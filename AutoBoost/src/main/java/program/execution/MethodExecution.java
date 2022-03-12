@@ -7,6 +7,7 @@ import helper.Properties;
 import program.analysis.MethodDetails;
 import program.execution.variable.VarDetail;
 import program.instrumentation.InstrumentResult;
+import soot.VoidType;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -70,7 +71,7 @@ public class MethodExecution {
         if(params.size()!=methodInvoked.getParameterCount()) {
             return false;
         }
-        if(methodInvoked.getReturnType() != null && !methodInvoked.getReturnType().equalsIgnoreCase("void") && (returnVal == null) && exceptionClass == null)
+        if(methodInvoked.getReturnSootType() != null && !methodInvoked.getReturnSootType().equals(VoidType.v()) && (returnVal == null) && exceptionClass == null)
             return false;
         return true;
     }

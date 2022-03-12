@@ -15,6 +15,7 @@ import program.execution.variable.*;
 import program.generation.test.*;
 import program.instrumentation.InstrumentResult;
 import soot.Modifier;
+import soot.VoidType;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -88,7 +89,7 @@ public class TestGenerator {
                     if(returnVarDetail instanceof ObjVarDetails) return returnVarDetail.equals(executionTrace.getNullVar());
                     if(returnVarDetail instanceof ArrVarDetails) {
                         if(((ArrVarDetails) returnVarDetail).getComponents().size() == 0) return true;
-                        return StringUtils.countMatches(instrumentResult.getMethodDetailByID(e.getMethodInvokedId()).getReturnType(), "[]") == StringUtils.countMatches(returnVarDetail.getType().getSimpleName(), "[]") && ((ArrVarDetails) returnVarDetail).getLeaveType().stream().allMatch(ClassUtils::isPrimitiveOrWrapper);
+                        return StringUtils.countMatches(instrumentResult.getMethodDetailByID(e.getMethodInvokedId()).getReturnSootType().toString(), "[]") == StringUtils.countMatches(returnVarDetail.getType().getSimpleName(), "[]") && ((ArrVarDetails) returnVarDetail).getLeaveType().stream().allMatch(ClassUtils::isPrimitiveOrWrapper);
                     }
                     return  true;
                 })
@@ -101,7 +102,7 @@ public class TestGenerator {
                     MethodDetails methodDetails = instrumentResult.getMethodDetailByID(e.getMethodInvokedId());
                     Class<?> detailsType = null;
                     try {
-                        detailsType = ClassUtils.getClass(methodDetails.getReturnType());
+                        detailsType = ClassUtils.getClass(methodDetails.getReturnSootType().toString());
                     } catch (ClassNotFoundException classNotFoundException) {
                         classNotFoundException.printStackTrace();
                     }
@@ -320,7 +321,7 @@ public class TestGenerator {
         VarStmt varStmt = null;
         switch (details.getType()) {
             case STATIC: // must be return value
-                if (details.getReturnType().equalsIgnoreCase("void"))
+                if (details.getReturnSootType().equals(VoidType.v()))
                     testCase.addStmt(invokeStmt);
                 else {
                     List<VarStmt> availableStmts = testCase.getExistingVar(execution.getReturnValId());
@@ -328,7 +329,7 @@ public class TestGenerator {
                     Class<?> actualType = executionTrace.getVarDetailByID(execution.getReturnValId()).getType();
                     if (varStmt == null)
                         varStmt = new VarStmt(actualType, testCase.getNewVarID(), execution.getReturnValId());
-                    testCase.addStmt(new AssignStmt(varStmt, (details.getReturnType().equals(actualType.getName()) ? invokeStmt : new CastStmt(execution.getReturnValId(), actualType, invokeStmt))));
+                    testCase.addStmt(new AssignStmt(varStmt, (details.getReturnSootType().toString().equals(actualType.getName()) ? invokeStmt : new CastStmt(execution.getReturnValId(), actualType, invokeStmt))));
                     testCase.addOrUpdateVar(execution.getReturnValId(), varStmt);
                 }
                 break;
@@ -339,10 +340,10 @@ public class TestGenerator {
                 break;
             case MEMBER:
                 Stmt defStmt = generateDefStmt(execution.getCalleeId(), testCase, true, true);
-                if (!details.getReturnType().equalsIgnoreCase("void")) {
+                if (!details.getReturnSootType().equals(VoidType.v())) {
                     Class<?> actualType = executionTrace.getVarDetailByID(execution.getReturnValId()).getType();
                     VarStmt varStmt1 = new VarStmt(actualType, testCase.getNewVarID(), execution.getReturnValId());
-                    testCase.addStmt(new AssignStmt(varStmt1, details.getReturnType().equals(actualType.getName())? invokeStmt : new CastStmt(execution.getReturnValId(), actualType, invokeStmt)));
+                    testCase.addStmt(new AssignStmt(varStmt1, details.getReturnSootType().toString().equals(actualType.getName())? invokeStmt : new CastStmt(execution.getReturnValId(), actualType, invokeStmt)));
                     testCase.addOrUpdateVar(execution.getReturnValId(), varStmt1);
                 } else
                     testCase.addStmt(invokeStmt);
