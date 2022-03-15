@@ -32,6 +32,10 @@ public class StringVarDetails extends VarDetail{
     }
 
     @Override
+    public boolean sameValue(Class<?> type, Object v) {
+        return this.value.equals(v);
+    }
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;

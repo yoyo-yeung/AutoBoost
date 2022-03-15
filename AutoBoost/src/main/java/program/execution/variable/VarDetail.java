@@ -25,7 +25,9 @@ public abstract class VarDetail{
                 "ID=" + ID +
                 '}';
     }
-
+    public boolean sameValue(Class<?> type, Object v) {
+        return this.getType().equals(type) && this.getGenValue().equals(v);
+    }
     public String toDetailedString() {
         return this.toString();
     }

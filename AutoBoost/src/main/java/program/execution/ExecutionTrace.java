@@ -268,16 +268,16 @@ public class ExecutionTrace {
             objValue = type.getSimpleName() + "." + objValue;
             varDetailType = EnumVarDetails.class;
         }
-        if (type.equals(String.class)) objValue = "\"" + StringEscapeUtils.escapeJava((String) objValue) + "\"";
         // high chance of having the same value
         if (process.equals(LOG_ITEM.RETURN_THIS) && ExecutionLogger.getLatestExecution().getCalleeId() != -1) {
             VarDetail calleeDetails = getVarDetailByID(ExecutionLogger.getLatestExecution().getCalleeId());
-            if (calleeDetails.getType().equals(type) && calleeDetails.getGenValue().equals(objValue))
+            if (calleeDetails.sameValue(type, objValue))
                 return calleeDetails.getID();
         }
-        Object finalObjValue1 = type.equals(long.class) || type.equals(Long.class) ? objValue + "L" : objValue;
+        Object finalObjValue1 = objValue;
         Class<?> finalVarDetailType = varDetailType;
-        Optional<VarDetail> result = this.allVars.values().stream()
+        Optional<VarDetail> result;
+        result = this.allVars.values().stream()
                 .filter(Objects::nonNull)
                 .filter(v -> {
                     if (finalVarDetailType != null) return finalVarDetailType.isInstance(v);
@@ -286,7 +286,7 @@ public class ExecutionTrace {
                     else if (ClassUtils.isPrimitiveOrWrapper(type)) return v instanceof WrapperVarDetails;
                     else return v instanceof ObjVarDetails;
                 })
-                .filter(v -> v.getType().equals(type) && v.getGenValue().equals(finalObjValue1))
+                .filter(v -> v.sameValue(type, finalObjValue1))
                 .findAny();
         return result.map(VarDetail::getID).orElse(-1);
     }

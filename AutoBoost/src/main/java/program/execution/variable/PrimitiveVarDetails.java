@@ -9,14 +9,7 @@ import java.util.Objects;
 public class PrimitiveVarDetails extends VarDetail{
     private static final CREATION_TYPE createdBy = CREATION_TYPE.DIRECT_ASSIGN;
     private final Class<?> type;
-    private byte byteValue;
-    private short shortValue;
-    private int intValue;
-    private long longValue;
-    private float floatValue;
-    private double doubleValue;
-    private char charValue;
-    private boolean booleanValue;
+    private final Object value;
 
     // must provide all details when constructed, no updating allowed
     public PrimitiveVarDetails(int ID, Object wrapperValue) throws NoSuchFieldException, IllegalAccessException {
@@ -31,8 +24,7 @@ public class PrimitiveVarDetails extends VarDetail{
         if(!ClassUtils.wrapperToPrimitive(wrappedValue.getClass()).equals(type))
             throw new IllegalArgumentException("Type specified and value provided do not match");
         this.type = type;
-        Field field = getClass().getDeclaredField(type.getName()+"Value");
-        field.set(this, wrappedValue);
+        this.value = wrappedValue;
     }
 
 
@@ -47,25 +39,17 @@ public class PrimitiveVarDetails extends VarDetail{
     @Override
     public Object getGenValue()  {
         switch(type.getName()) {
-            case "byte":
-                return this.byteValue;
-            case "short":
-                return this.shortValue;
-            case "int":
-                return this.intValue;
             case "long":
-                return this.longValue+"L";
-            case "float":
-                return this.floatValue;
-            case "double":
-                return this.doubleValue;
+                return this.value+"L";
             case "char":
-                return "'" + this.charValue + "'";
-            case "boolean":
-                return this.booleanValue;
+                return "'" + this.value + "'";
             default:
-                return null;
+                return this.value;
         }
+    }
+    @Override
+    public boolean sameValue(Class<?> type, Object v) {
+        return this.type.equals(type) && this.value.equals(v);
     }
 
     public CREATION_TYPE getCreatedBy() {
@@ -81,23 +65,10 @@ public class PrimitiveVarDetails extends VarDetail{
     }
 
     @Override
-    public int hashCode() {
-        return Objects.hash(type, byteValue, shortValue, intValue, longValue, floatValue, doubleValue, charValue, booleanValue);
-    }
-
-    @Override
     public String toString() {
         return "PrimitiveVarDetails{" +
-                "ID=" + getID() +
-                ", type=" + (type == null ? "null" : type.getSimpleName()) +
-                ", byteValue=" + byteValue +
-                ", shortValue=" + shortValue +
-                ", intValue=" + intValue +
-                ", longValue=" + longValue +
-                ", floatValue=" + floatValue +
-                ", doubleValue=" + doubleValue +
-                ", charValue=" + charValue +
-                ", booleanValue=" + booleanValue +
+                "type=" + type +
+                ", value=" + value +
                 '}';
     }
 
