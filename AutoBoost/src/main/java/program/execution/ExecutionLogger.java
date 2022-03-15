@@ -104,7 +104,7 @@ public class ExecutionLogger {
             });
 
         }
-        setSkipping(newExecution);
+        updateSkipping(newExecution);
     }
 
 
@@ -232,7 +232,7 @@ public class ExecutionLogger {
         executing.clear();
     }
 
-    private static void setSkipping(MethodExecution execution) {
+    private static void updateSkipping(MethodExecution execution) {
         if(skipping) return;
         if(( executing.size() >  1 && executing.stream().limit(executing.size() - 1).filter(e -> e.getMethodInvokedId() == execution.getMethodInvokedId()).anyMatch(e -> e.getTest() != null && e.sameCalleeParamNMethod(execution)) )||  executionTrace.
                 getAllMethodExecs().values().stream()
