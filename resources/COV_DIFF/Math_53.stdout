@@ -1,0 +1,4 @@
+Method: <org.apache.commons.math.complex.Complex: double getImaginary()>, Callee: {imaginary=NaN, real=1.0, isNaN=true, isInfinite=false,}, Params: [], Related test: test3(org.apache.commons.math.complex.Math53AB_1_Test)
+Method: <org.apache.commons.math.complex.Complex: double getReal()>, Callee: {imaginary=NaN, real=1.0, isNaN=true, isInfinite=false,}, Params: [], Related test: test4(org.apache.commons.math.complex.Math53AB_1_Test)
+Method: <org.apache.commons.math.complex.Complex: void <init>(double,double)>, Callee: null, Params: [4.0,NaN], Related test: test6(org.apache.commons.math.complex.Math53AB_1_Test)
+Method: <org.apache.commons.math.complex.Complex: double getReal()>, Callee: {imaginary=NaN, real=4.0, isNaN=true, isInfinite=false,}, Params: [], Related test: test6(org.apache.commons.math.complex.Math53AB_1_Test)
