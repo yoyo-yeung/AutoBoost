@@ -6,6 +6,7 @@ import org.apache.commons.lang3.ClassUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import program.analysis.MethodDetails;
+import program.execution.variable.StringBVarDetails;
 import soot.*;
 import soot.javaToJimple.LocalGenerator;
 import soot.jimple.*;
