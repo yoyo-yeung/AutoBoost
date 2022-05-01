@@ -2,8 +2,10 @@ package program.analysis;
 
 import entity.ACCESS;
 import entity.METHOD_TYPE;
+import org.apache.commons.lang3.ClassUtils;
 import soot.SootClass;
 import soot.SootMethod;
+import soot.SootMethodRef;
 import soot.Type;
 
 import java.util.List;
@@ -84,6 +86,13 @@ public class MethodDetails {
     }
 
     public Class<?> getdClass() {
+        if(dClass == null) {
+            try {
+                dClass = ClassUtils.getClass(declaringClass.getName());
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
         return dClass;
     }
 
