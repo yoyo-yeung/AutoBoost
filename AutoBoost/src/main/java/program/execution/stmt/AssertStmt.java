@@ -4,6 +4,7 @@ import helper.Properties;
 import org.junit.Assert;
 import program.execution.ExecutionTrace;
 import java.util.*;
+import program.execution.variable.EnumVarDetails;
 
 public class AssertStmt extends Stmt{
     private final Stmt expected;
@@ -18,6 +19,7 @@ public class AssertStmt extends Stmt{
     @Override
     public String getStmt(Set<Class<?>>fullCNameNeeded) {
         Class<?> assertType = ExecutionTrace.getSingleton().getVarDetailByID(expected.resultVarDetailID).getType();
+
         return (Properties.getSingleton().getJunitVer()==4? "Assert." : "") +
                 (assertType.isArray() ? "assertTrue(" + (assertType.getComponentType().isArray()? "Arrays.deepEquals(" : "Arrays.equals(") + expected.getStmt(fullCNameNeeded) + "," + actual.getStmt(fullCNameNeeded) + "))" :  "assertEquals(" + expected.getStmt(fullCNameNeeded) + ", " + actual.getStmt(fullCNameNeeded) +
                         (deltaChecking(assertType)
@@ -26,7 +28,7 @@ public class AssertStmt extends Stmt{
     }
 
     private boolean deltaChecking(Class<?> type){
-        return type.equals(Double.class) || type.equals(double.class) || type.equals(Float.class) || type.equals(float.class);
+        return (type.equals(Double.class) || type.equals(double.class) || type.equals(Float.class) || type.equals(float.class)) && !(ExecutionTrace.getSingleton().getVarDetailByID(expected.getResultVarDetailID()) instanceof EnumVarDetails);
     }
     @Override
     public Set<Class<?>> getImports() {
