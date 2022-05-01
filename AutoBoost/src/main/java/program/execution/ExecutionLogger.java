@@ -119,7 +119,7 @@ public class ExecutionLogger {
                 Class<?> exceptionClass = execution.getExceptionClass();
                 while (execution.getMethodInvokedId() != methodId) {
                     execution.setExceptionClass(exceptionClass);
-                    endLogMethod(execution.getMethodInvokedId());
+                    endLogMethod(execution);
                     execution = getLatestExecution();
                 }
             }
@@ -132,17 +132,21 @@ public class ExecutionLogger {
             else {
                 throw new RuntimeException("Inconsistent method invoke");
             }
+            logEnd(methodId, callee, returnVal);
         }
-        MethodDetails details = instrumentResult.getMethodDetailByID(methodId);
-        if (!details.getReturnSootType().equals(VoidType.v()) && !(instrumentResult.isLibMethod(methodId) && returnVal == null)) {
-            if(details.getReturnSootType() instanceof soot.PrimType)
-                setVarIDForExecution(methodId, execution, LOG_ITEM.RETURN_ITEM, executionTrace.getVarDetailID(ClassUtils.wrapperToPrimitive(returnVal.getClass()), returnVal, LOG_ITEM.RETURN_ITEM));
-            else
-                setVarIDForExecution(methodId, execution, LOG_ITEM.RETURN_ITEM, executionTrace.getVarDetailID(returnVal == null ? Object.class: returnVal.getClass(), returnVal, LOG_ITEM.RETURN_ITEM));
+        else {
+            MethodDetails details = instrumentResult.getMethodDetailByID(methodId);
+            if (!details.getReturnSootType().equals(VoidType.v()) && !(instrumentResult.isLibMethod(methodId) && returnVal == null)) {
+                if(details.getReturnSootType() instanceof soot.PrimType)
+                    setVarIDForExecution(methodId, execution, LOG_ITEM.RETURN_ITEM, executionTrace.getVarDetailID(ClassUtils.wrapperToPrimitive(returnVal.getClass()), returnVal, LOG_ITEM.RETURN_ITEM));
+                else
+                    setVarIDForExecution(methodId, execution, LOG_ITEM.RETURN_ITEM, executionTrace.getVarDetailID(returnVal == null ? Object.class: returnVal.getClass(), returnVal, LOG_ITEM.RETURN_ITEM));
+            }
+            if(details.getType().equals(METHOD_TYPE.CONSTRUCTOR) || details.getType().equals(METHOD_TYPE.MEMBER))
+                setVarIDForExecution(methodId, execution, LOG_ITEM.RETURN_THIS, executionTrace.getVarDetailID(callee ==null? Object.class : callee.getClass(), callee, LOG_ITEM.RETURN_THIS));
+            endLogMethod(execution);
+
         }
-        if(details.getType().equals(METHOD_TYPE.CONSTRUCTOR) || details.getType().equals(METHOD_TYPE.MEMBER))
-            setVarIDForExecution(methodId, execution, LOG_ITEM.RETURN_THIS, executionTrace.getVarDetailID(callee ==null? Object.class : callee.getClass(), callee, LOG_ITEM.RETURN_THIS));
-        endLogMethod(methodId);
 
     }
 
@@ -160,18 +164,14 @@ public class ExecutionLogger {
     /**
      * called when method has finished logging
      */
-    private static void endLogMethod(int methodId) {
-        logger.debug(executing.peek().toDetailedString());
-        if (methodId != executing.peek().getMethodInvokedId())
-            throw new RuntimeException("Method finishing logging does not match stored method");
-        MethodExecution finishedMethod = executing.pop();
-        logger.debug("ended method " + finishedMethod.toSimpleString());
+    private static void endLogMethod(MethodExecution execution) {
+        logger.debug("ended method " + execution.toSimpleString());
 //        if(!finishedMethod.relationshipCheck())
 //            throw new RuntimeException("Method finished incorrect. ");
-        executionTrace.addMethodExecution(finishedMethod, methodId);
-        // some method called the finishedMethod
+        executionTrace.addMethodExecution(execution, execution.getMethodInvokedId());
+        executing.remove(execution);
         if (executing.size() != 0)
-            executionTrace.addMethodRelationship(executing.peek().getID(), finishedMethod.getID());
+            executionTrace.addMethodRelationship(executing.peek().getID(), execution.getID());
     }
 
     private static void setVarIDForExecution(int methodID, MethodExecution execution, LOG_ITEM process, int ID) {
@@ -209,7 +209,7 @@ public class ExecutionLogger {
                 Class<?> exceptionClass = execution.getExceptionClass();
                 while (execution.getMethodInvokedId() != methodId) {
                     execution.setExceptionClass(exceptionClass);
-                    endLogMethod(execution.getMethodInvokedId());
+                    endLogMethod(execution);
                     execution = getLatestExecution();
                 }
             }
