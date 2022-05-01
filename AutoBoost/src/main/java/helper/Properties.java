@@ -20,7 +20,6 @@ public class Properties {
     private String testSourceDir = null;
     private String testSuitePrefix = "AB";
     private int junitVer = 4;
-    private Map<String, List<Integer>> faultyClassLineMap = new HashMap<String, List<Integer>>();
     private static final String classMethSep = "::";
     private static final String classSep = ",";
     private static final String NEW_LINE = "\n";
@@ -104,20 +103,6 @@ public class Properties {
         this.testSuitePrefix = testSuitePrefix;
     }
 
-    public Map<String, List<Integer>> getFaultyClassLineMap() {
-        return faultyClassLineMap;
-    }
-
-    public void setFaultyClassLineMap(Map<String, List<Integer>> faultyClassLineMap) {
-        this.faultyClassLineMap = faultyClassLineMap;
-    }
-
-    public void addFaultyClassLineMap(String key, Integer value) {
-        if(!this.faultyClassLineMap.containsKey(key))
-            this.faultyClassLineMap.put(key, new ArrayList<>());
-        this.faultyClassLineMap.get(key).add(value);
-    }
-
     public int getJunitVer() {
         return junitVer;
     }
@@ -133,7 +118,6 @@ public class Properties {
         logProperty("faultyFunc", String.join(",", this.faultyFunc));
         logProperty("testSourceDir", this.testSourceDir);
         logProperty("testClassPrefix", this.testSuitePrefix);
-        logProperty("faultyClassLineMap", this.faultyClassLineMap.entrySet().stream().map(i -> i.getKey() + ":" + i.getValue()).collect(Collectors.joining(",")));
     }
     public void logFaultyFunc() {
         logProperty("faultyFunc", String.join(",", this.faultyFunc));
