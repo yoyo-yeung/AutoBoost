@@ -43,6 +43,8 @@ public class PrimitiveVarDetails extends VarDetail{
                 return this.value+"L";
             case "char":
                 return "'" + this.value + "'";
+            case "float":
+                return this.value + "f";
             default:
                 return this.value;
         }
