@@ -1,0 +1,2 @@
+Method: <org.apache.commons.math.util.FastMath: double min(double,double)>, Callee: null, Params: [50.0,-50.0], Related test: test3(org.apache.commons.math.util.Math59AB_1_Test)
+Method: <org.apache.commons.math.util.FastMath: double min(double,double)>, Callee: null, Params: [-50.0,50.0], Related test: test1(org.apache.commons.math.util.Math59AB_1_Test)
