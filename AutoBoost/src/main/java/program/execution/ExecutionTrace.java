@@ -5,7 +5,6 @@ import entity.LOG_ITEM;
 import entity.METHOD_TYPE;
 import helper.Properties;
 import org.apache.commons.lang3.ClassUtils;
-import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jgrapht.graph.DefaultDirectedGraph;
@@ -15,6 +14,7 @@ import program.analysis.MethodDetails;
 import program.execution.variable.*;
 import program.instrumentation.InstrumentResult;
 
+import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -93,7 +93,7 @@ public class ExecutionTrace {
         if(objValue == null ) return nullVar.getID();
         if (type.isEnum()) {
             objValue = ((Enum) objValue).name();
-        } else if (!type.isArray() && !type.equals(String.class) && !ClassUtils.isPrimitiveOrWrapper(type) && !(objValue instanceof Map) && !(objValue instanceof List) && !(objValue instanceof Set) && !(objValue instanceof Map.Entry)) {
+        } else if (!type.isArray() && !type.equals(String.class) && !ClassUtils.isPrimitiveOrWrapper(type) && !(objValue instanceof Map) && !(objValue instanceof List) && !(objValue instanceof Set) ) {
             Object finalObjValue1 = objValue;
 
             Class<?> finalType = type;
@@ -157,6 +157,8 @@ public class ExecutionTrace {
                 }
             } else if (type.equals(String.class))
                 varDetail = new StringVarDetails(getNewVarID(), (String) objValue);
+            else if (StringBVarDetails.availableTypeCheck(type))
+                varDetail = new StringBVarDetails(getNewVarID(), type, getVarDetailID(String.class, objValue.toString(), process));
             else if (ArrVarDetails.availableTypeCheck(type)) {
                 varDetail = new ArrVarDetails(getNewVarID(), getComponentStream(type, objValue, process).collect(Collectors.toList()), objValue);
             } else if (Map.class.isAssignableFrom(type)) {
@@ -283,10 +285,12 @@ public class ExecutionTrace {
                     if (finalVarDetailType != null) return finalVarDetailType.isInstance(v);
                     else if (type.isPrimitive()) return v instanceof PrimitiveVarDetails;
                     else if (type.equals(String.class)) return v instanceof StringVarDetails;
+                    else if (StringBVarDetails.availableTypeCheck(type)) return v instanceof StringBVarDetails;
                     else if (ClassUtils.isPrimitiveOrWrapper(type)) return v instanceof WrapperVarDetails;
                     else return v instanceof ObjVarDetails;
                 })
                 .filter(v -> v.sameValue(type, finalObjValue1))
+
                 .findAny();
         return result.map(VarDetail::getID).orElse(-1);
     }
@@ -397,7 +401,7 @@ public class ExecutionTrace {
             result.append("null");
             return;
         }
-        else if (ClassUtils.isPrimitiveOrWrapper(obj.getClass()) || obj.getClass().getName().startsWith("java")) {
+        else if (ClassUtils.isPrimitiveOrWrapper(obj.getClass()) || obj.getClass().equals(String.class)) {
             result.append(obj);
             return;
         }
@@ -411,13 +415,19 @@ public class ExecutionTrace {
             return;
         }
         else if (obj.getClass().isArray()) {
-            result.append("[");
-            IntStream.range(0, Array.getLength(obj)).forEach(i -> {
-                if (Array.get(obj, i) == null) result.append("null");
-                else toCustomString(fieldName+"." + i, Array.get(obj, i), depth - 1, result, hashCodeToFieldMap);
-                if (i < Array.getLength(obj) - 1) result.append(",");
-            });
-            result.append("]");
+            if(ClassUtils.isPrimitiveWrapper(obj.getClass().getComponentType()) || obj.getClass().getComponentType().equals(String.class))
+                result.append(Arrays.toString((Object[]) obj));
+            else if(obj.getClass().getComponentType().isPrimitive())
+                result.append("["+IntStream.range(0, Array.getLength(obj)).mapToObj(i -> Array.get(obj,i).toString()).collect(Collectors.joining(","))+"]");
+            else {
+                result.append("[");
+                IntStream.range(0, Array.getLength(obj)).forEach(i -> {
+                    if (Array.get(obj, i) == null) result.append("null");
+                    else toCustomString(fieldName + "." + i, Array.get(obj, i), depth - 1, result, hashCodeToFieldMap);
+                    if (i < Array.getLength(obj) - 1) result.append(",");
+                });
+                result.append("]");
+            }
             return;
         } else if (obj instanceof Map) {
             result.append("{");
@@ -446,7 +456,7 @@ public class ExecutionTrace {
             Class<?> CUC = obj.getClass();
             List<Class> classesToGetFields = new ArrayList<>(ClassUtils.getAllSuperclasses(CUC));
             classesToGetFields.add(CUC);
-            classesToGetFields.removeIf(c -> c.equals(Object.class) || c.getName().startsWith("java") || ClassUtils.isPrimitiveOrWrapper(c));
+            classesToGetFields.removeIf(c -> c.equals(Object.class) || c.equals(Serializable.class));
             InstrumentResult.getSingleton().addClassDetails(new ClassDetails(CUC.getName(), classesToGetFields.stream()
                     .flatMap(c -> Arrays.stream(c.getDeclaredFields()))
                     .filter(f -> !(soot.Modifier.isStatic(f.getModifiers()) && soot.Modifier.isFinal(f.getModifiers())))
