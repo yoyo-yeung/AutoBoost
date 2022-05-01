@@ -171,7 +171,7 @@ public class MethodExecution {
                 ", resultThisId=" + (resultThisId == -1 ? "null" : trace.getVarDetailByID(resultThisId).toString()) +
                 ", e=" + (exceptionClass == null ? "null" : exceptionClass.getName()) +
                 ", reproducible=" + reproducible +
-                ", test='" + (test==null? "null" : test) + '\'' +
+                ", test=" + (test==null? "null" : test)  +
                 '}';
     }
 
