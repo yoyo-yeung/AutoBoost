@@ -4,10 +4,7 @@ import helper.CommandLineParameter;
 import helper.Help;
 import helper.Properties;
 import org.apache.commons.lang3.ClassUtils;
-import org.junit.runner.Description;
-import org.junit.runner.JUnitCore;
-import org.junit.runner.Request;
-import org.junit.runner.Result;
+import org.junit.runner.*;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
 import program.execution.ExecutionLogger;
@@ -38,8 +35,7 @@ public class AutoBoost {
         AutoBoost autoBoost = new AutoBoost();
         autoBoost.processCommand(args);
         autoBoost.setUpSoot();
-        properties.logFaultyFunc();
-        autoBoost.updateDClasses();
+        logger.debug("Faulty methods: " + properties.getFaultyFuncIds().stream().map(id -> InstrumentResult.getSingleton().getMethodDetailByID(id).toString()).collect(Collectors.joining(",")));
         autoBoost.executeTests();
         autoBoost.clearRuntimeOnlyInfo();
         autoBoost.generateTestCases();
@@ -93,6 +89,12 @@ public class AutoBoost {
             public void testFailure(Failure failure) throws Exception {
                 logger.error(failure.getDescription().getMethodName()+" failed\n" + failure.getTrace());
             }
+
+            @Override
+            public void testFinished(Description description) throws Exception {
+                executingTest = null;
+                System.gc();
+            }
         });
         Arrays.stream(properties.getTestCases()).map(t -> {
             String[] test = t.split(Properties.getClassMethSep());
@@ -125,15 +127,7 @@ public class AutoBoost {
         }
 
     }
-    public void updateDClasses() {
-        InstrumentResult.getSingleton().getMethodDetailsMap().values().forEach(v -> {
-            try {
-                v.setdClass(ClassUtils.getClass(v.getDeclaringClass().getName()));
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
-            }
-        });
-    }
+
     public static String getExecutingTest() {
         return executingTest;
     }
