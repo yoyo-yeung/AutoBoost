@@ -3,13 +3,13 @@ package application;
 import helper.CommandLineParameter;
 import helper.Help;
 import helper.Properties;
-import org.apache.commons.lang3.ClassUtils;
 import org.junit.runner.*;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
 import program.execution.ExecutionLogger;
 import program.execution.ExecutionTrace;
 import program.execution.MethodExecution;
+import program.execution.variable.VarDetail;
 import program.generation.TestGenerator;
 import program.instrumentation.InstrumentResult;
 import program.instrumentation.Instrumenter;
@@ -35,7 +35,7 @@ public class AutoBoost {
         AutoBoost autoBoost = new AutoBoost();
         autoBoost.processCommand(args);
         autoBoost.setUpSoot();
-        logger.debug("Faulty methods: " + properties.getFaultyFuncIds().stream().map(id -> InstrumentResult.getSingleton().getMethodDetailByID(id).toString()).collect(Collectors.joining(",")));
+        logger.info("Faulty methods: " + properties.getFaultyFuncIds().stream().map(id -> InstrumentResult.getSingleton().getMethodDetailByID(id).toString()).collect(Collectors.joining(",")));
         autoBoost.executeTests();
         autoBoost.clearRuntimeOnlyInfo();
         autoBoost.generateTestCases();
@@ -73,7 +73,7 @@ public class AutoBoost {
         junit.addListener(new RunListener() {
             @Override
             public void testRunStarted(Description description) {
-                logger.debug("Test execution started");
+//                logger.info("Test execution started");
             }
             @Override
             public void testRunFinished(Result result) {
@@ -83,7 +83,9 @@ public class AutoBoost {
             @Override
             public void testStarted(Description description) {
                 executingTest = description.getClassName() + ":" + description.getMethodName();
-                logger.debug(description.getMethodName());
+                logger.info("Test " + description.getMethodName() + " started ");
+                ExecutionLogger.clearExecutingStack();
+                ExecutionLogger.setLogging(true);
             }
             @Override
             public void testFailure(Failure failure) throws Exception {
@@ -93,7 +95,9 @@ public class AutoBoost {
             @Override
             public void testFinished(Description description) throws Exception {
                 executingTest = null;
-                System.gc();
+                ExecutionLogger.clearExecutingStack();
+                ExecutionLogger.setLogging(false);
+
             }
         });
         Arrays.stream(properties.getTestCases()).map(t -> {
@@ -111,7 +115,7 @@ public class AutoBoost {
 
     public void generateTestCases() throws IOException {
         TestGenerator testGenerator = TestGenerator.getSingleton();
-        logger.debug("generating");
+        logger.info("Test generation starting");
         List<MethodExecution> snapshot = new ArrayList<>(ExecutionTrace.getSingleton().getAllMethodExecs().values());
         try {
             testGenerator.generateResultCheckingTests(snapshot);
