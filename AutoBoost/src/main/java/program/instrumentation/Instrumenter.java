@@ -6,6 +6,7 @@ import org.apache.commons.lang3.ClassUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import program.analysis.MethodDetails;
+import program.execution.variable.MapVarDetails;
 import program.execution.variable.StringBVarDetails;
 import soot.*;
 import soot.javaToJimple.LocalGenerator;
@@ -13,7 +14,9 @@ import soot.jimple.*;
 import soot.tagkit.AttributeValueException;
 import soot.tagkit.Tag;
 
+import java.lang.reflect.Array;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class Instrumenter extends BodyTransformer {
@@ -22,6 +25,9 @@ public class Instrumenter extends BodyTransformer {
     private static final SootMethod logStartMethod;
     private static final SootMethod logEndMethod;
     private static final SootMethod logExceptionMethod;
+    private static final SootMethodRef getCurrentThreadmRef;
+    private static final SootMethodRef getTIDmRef;
+    private static SootClass threadClass;
 
     private static final Tag NEWLY_ADDED_TAG = new Tag() {
         @Override
@@ -36,9 +42,13 @@ public class Instrumenter extends BodyTransformer {
     };
     static {
         loggerClass = Scene.v().loadClassAndSupport("program.execution.ExecutionLogger");
-        logStartMethod = loggerClass.getMethod("void logStart(int,java.lang.Object,java.lang.Object)");
-        logEndMethod = loggerClass.getMethod("void logEnd(int,java.lang.Object,java.lang.Object)");
-        logExceptionMethod = loggerClass.getMethod("void logException(java.lang.Object)");
+        logStartMethod = loggerClass.getMethod("int logStart(int,java.lang.Object,java.lang.Object,long)");
+        logEndMethod = loggerClass.getMethod("void logEnd(int,java.lang.Object,java.lang.Object,long)");
+        logExceptionMethod = loggerClass.getMethod("void logException(java.lang.Object,long)");
+        threadClass = Scene.v().loadClassAndSupport(Thread.class.getName());
+        getCurrentThreadmRef = Scene.v().makeMethodRef(threadClass, "currentThread", new ArrayList<>(), RefType.v(Thread.class.getName()), true);
+        getTIDmRef = Scene.v().makeMethodRef(threadClass, "getId", new ArrayList<>(), LongType.v(), false);
+
     }
     private List<Unit> createArrForParams( LocalGenerator localGenerator, Local paramArrLocal,  List<Type> paramTypes, List<?> params) {
         if(params.size() == 0 ) return new ArrayList<>();
@@ -86,6 +96,10 @@ public class Instrumenter extends BodyTransformer {
         InvokeExpr loggingExpr;
         Stmt loggingStmt;
         boolean paramLogged = false;
+        Value exeIDLocal = localGenerator.generateLocal(IntType.v());
+        Value threadIDLocal = localGenerator.generateLocal(LongType.v());
+        Local threadLocal = localGenerator.generateLocal(threadClass.getType());
+        boolean threadRetrived = false;
         while (stmtIt.hasNext()) {
             stmt = (Stmt) stmtIt.next();
             if (stmt instanceof soot.jimple.internal.JIdentityStmt) {
@@ -95,6 +109,18 @@ public class Instrumenter extends BodyTransformer {
             // log if the method is NOT static initializer and NOT enum class
             if (declaringClass.isEnum())
                 continue;
+
+            if(!threadRetrived) {
+                loggingExpr = Jimple.v().newStaticInvokeExpr(getCurrentThreadmRef);
+                loggingStmt = Jimple.v().newAssignStmt(threadLocal, loggingExpr);
+                units.insertBeforeNoRedirect(loggingStmt, stmt);
+
+                loggingExpr = Jimple.v().newVirtualInvokeExpr( threadLocal, getTIDmRef);
+                loggingStmt = Jimple.v().newAssignStmt(threadIDLocal, loggingExpr);
+                units.insertBeforeNoRedirect(loggingStmt, stmt);
+                threadRetrived = true;
+            }
+
             if (canBeCalledOrFaulty && !paramLogged) {
                 // log callee and params
                 Value paramLocal = NullConstant.v();
@@ -104,8 +130,8 @@ public class Instrumenter extends BodyTransformer {
                     createArrForParams(localGenerator, (Local) paramLocal, body.getMethod().getParameterTypes(), body.getParameterLocals())
                             .forEach(u -> units.insertBeforeNoRedirect(u, finalStmt1));
                 }
-                loggingExpr = Jimple.v().newStaticInvokeExpr(logStartMethod.makeRef(), IntConstant.v(methodId), methodDetails.getType().equals(METHOD_TYPE.MEMBER) ? body.getThisLocal() : NullConstant.v(), paramLocal);
-                loggingStmt = Jimple.v().newInvokeStmt(loggingExpr);
+                loggingExpr = Jimple.v().newStaticInvokeExpr(logStartMethod.makeRef(), IntConstant.v(methodId), methodDetails.getType().equals(METHOD_TYPE.MEMBER) ? body.getThisLocal() : NullConstant.v(), paramLocal, threadIDLocal);
+                loggingStmt = Jimple.v().newAssignStmt(exeIDLocal, loggingExpr);
                 loggingStmt.addTag(NEWLY_ADDED_TAG);
                 units.insertBeforeNoRedirect(loggingStmt, stmt);
                 // set paramLogged to prevent re-logging
@@ -113,7 +139,7 @@ public class Instrumenter extends BodyTransformer {
             }
             if (stmt instanceof ThrowStmt) {
                 Value thrownOp = ((ThrowStmt) stmt).getOp();
-                loggingExpr = Jimple.v().newStaticInvokeExpr(logExceptionMethod.makeRef(), thrownOp);
+                loggingExpr = Jimple.v().newStaticInvokeExpr(logExceptionMethod.makeRef(), thrownOp, threadIDLocal);
                 loggingStmt = Jimple.v().newInvokeStmt(loggingExpr);
                 loggingStmt.addTag(NEWLY_ADDED_TAG);
                 units.insertBefore(loggingStmt, stmt);
@@ -132,7 +158,7 @@ public class Instrumenter extends BodyTransformer {
                     } else
                         returnVal = ((ReturnStmt) stmt).getOp();
                 }
-                loggingExpr = Jimple.v().newStaticInvokeExpr(logEndMethod.makeRef(), IntConstant.v(methodId), methodDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR) || methodDetails.getType().equals(METHOD_TYPE.MEMBER) ? body.getThisLocal() : NullConstant.v(), returnVal);
+                loggingExpr = Jimple.v().newStaticInvokeExpr(logEndMethod.makeRef(), exeIDLocal, methodDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR) || methodDetails.getType().equals(METHOD_TYPE.MEMBER) ? body.getThisLocal() : NullConstant.v(), returnVal, threadIDLocal);
                 loggingStmt = Jimple.v().newInvokeStmt(loggingExpr);
                 loggingStmt.addTag(NEWLY_ADDED_TAG);
                 units.insertBefore(loggingStmt, stmt);
@@ -152,8 +178,9 @@ public class Instrumenter extends BodyTransformer {
                     paramLocal = localGenerator.generateLocal(ArrayType.v(RefType.v(Object.class.getName()), invokedMethodDetails.getParameterCount()));
                     units.insertBefore(createArrForParams(localGenerator, (Local) paramLocal, invokedExpr.getMethod().getParameterTypes(), invokedExpr.getArgs()), stmt);
                 }
-                loggingExpr = Jimple.v().newStaticInvokeExpr(logStartMethod.makeRef(), IntConstant.v(invokedMethodID), invokedMethodDetails.getType().equals(METHOD_TYPE.MEMBER) && invokedExpr instanceof InstanceInvokeExpr ? ((InstanceInvokeExpr) invokedExpr).getBase() : NullConstant.v(), paramLocal);
-                loggingStmt = Jimple.v().newInvokeStmt(loggingExpr);
+                Value invokedMethodExeIDLocal = localGenerator.generateLocal(IntType.v());
+                loggingExpr = Jimple.v().newStaticInvokeExpr(logStartMethod.makeRef(), IntConstant.v(invokedMethodID), invokedMethodDetails.getType().equals(METHOD_TYPE.MEMBER) && invokedExpr instanceof InstanceInvokeExpr ? ((InstanceInvokeExpr) invokedExpr).getBase() : NullConstant.v(), paramLocal, threadIDLocal);
+                loggingStmt = Jimple.v().newAssignStmt(invokedMethodExeIDLocal, loggingExpr);
                 loggingStmt.addTag(NEWLY_ADDED_TAG);
                 units.insertBefore(loggingStmt, stmt);
 
@@ -171,7 +198,7 @@ public class Instrumenter extends BodyTransformer {
                     } else returnVal = ((AssignStmt) stmt).getLeftOp();
 
                 }
-                loggingExpr = Jimple.v().newStaticInvokeExpr(logEndMethod.makeRef(), IntConstant.v(invokedMethodID), (invokedMethodDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR) || invokedMethodDetails.getType().equals(METHOD_TYPE.MEMBER)) && (invokedExpr instanceof InstanceInvokeExpr) ? ((InstanceInvokeExpr) invokedExpr).getBase() : NullConstant.v(), returnVal);
+                loggingExpr = Jimple.v().newStaticInvokeExpr(logEndMethod.makeRef(), invokedMethodExeIDLocal, (invokedMethodDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR) || invokedMethodDetails.getType().equals(METHOD_TYPE.MEMBER)) && (invokedExpr instanceof InstanceInvokeExpr) ? ((InstanceInvokeExpr) invokedExpr).getBase() : NullConstant.v(), returnVal, threadIDLocal);
                 loggingStmt = Jimple.v().newInvokeStmt(loggingExpr);
                 loggingStmt.addTag(NEWLY_ADDED_TAG);
                 units.insertAfter(loggingStmt, afterStmt);
@@ -186,20 +213,23 @@ public class Instrumenter extends BodyTransformer {
         if(!invokedMethod.getDeclaringClass().isJavaLibraryClass()) return false;
         if((invokedMethod.getName().equals("equals") ||  invokedMethod.getName().equals("hashCode") || invokedMethod.getName().equals("toString")) && !invokedMethod.isStatic()) return false;
         if(invokedMethod.isConstructor() && invokedMethod.getDeclaringClass().isInterface()) return false;
+        if(currentMethod.isStaticInitializer() && invokedMethod.getDeclaringClass().getName().equals(Class.class.getName())) return false; // prevent self class calling
 //        if(!invokedMethod.isPublic()) return false;
         if(currentMethod.isConstructor() && currentMethod.getDeclaringClass().getSuperclass().equals(invokedMethod.getDeclaringClass()) && invokedMethod.isConstructor()) return false;
         try{
             Class<?> declaringClass = ClassUtils.getClass(invokedMethod.getDeclaringClass().getName());
 
-            if(ClassUtils.isPrimitiveOrWrapper(declaringClass) ) // based on observation, either wrapper class/string/primitive class return value, which can all be created by program, without using methods of classes
+            if(ClassUtils.isPrimitiveOrWrapper(declaringClass) || declaringClass.equals(Arrays.class) || declaringClass.equals(Array.class) || declaringClass.equals(java.lang.Thread.class) || declaringClass.getPackage().getName().contains("java.util.concurrent")) // based on observation, either wrapper class/string/primitive class return value, which can all be created by program, without using methods of classes
                 return false;
             if(declaringClass.equals(String.class) || StringBVarDetails.availableTypeCheck(declaringClass))
                 return false;
-            if(Map.class.isAssignableFrom(declaringClass) && declaringClass.getName().startsWith("java"))
+            if(MapVarDetails.availableTypeCheck(declaringClass))
                 return false;
             if(Collection.class.isAssignableFrom(declaringClass) && declaringClass.getName().startsWith("java") && ((invokedMethod.getReturnType() instanceof PrimType || invokedMethod.getReturnType().equals(VoidType.v())) || invokedMethod.getReturnType().toString().equals(Object.class.getName()))) {
+
                 return false;
             }
+
 
 //            logger.debug(invokedMethod.getSignature() +"\t passed");
         } catch (ClassNotFoundException e) {

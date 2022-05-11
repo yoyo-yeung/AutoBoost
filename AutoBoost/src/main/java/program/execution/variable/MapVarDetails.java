@@ -3,6 +3,7 @@ package program.execution.variable;
 import entity.CREATION_TYPE;
 import helper.Properties;
 import program.execution.ExecutionTrace;
+import soot.Modifier;
 
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -65,4 +66,8 @@ public class MapVarDetails extends VarDetail{
                 ", value=" + (value == null ? "null" : value) +
                 '}';
     }
+    public static boolean availableTypeCheck(Class<?> type ){
+        return Map.class.isAssignableFrom(type) && type.getName().startsWith("java.")&& Modifier.isPublic(type.getModifiers());
+    }
+
 }

@@ -190,6 +190,13 @@ public class TestGenerator {
             exeUnderCheck.remove(methodExecutionID);
             return false;
         }
+        Set<Integer> diffResExe = ExecutionTrace.getSingleton().getAllMethodExecs().values().stream().filter(execution::sameCalleeParamNMethod).filter(e -> e.getReturnValId() != execution.getReturnValId()).map(MethodExecution::getID).collect(Collectors.toSet());
+        if(diffResExe.size() > 0 ) {
+            failedExe.addAll(diffResExe);
+            failedExe.add(methodExecutionID);
+            exeUnderCheck.remove(methodExecutionID);
+            return false;
+        }
         passedExe.add(methodExecutionID);
         exeUnderCheck.remove(methodExecutionID);
         return true;
