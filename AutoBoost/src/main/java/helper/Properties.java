@@ -49,7 +49,7 @@ public class Properties {
     }
 
     private void logProperty(String name, Object value){
-        logger.debug(String.format("Argument set for %-15s:", name) + (value == null ? "null" : String.format(" %s", value)));
+        logger.info(String.format("Argument set for %-15s:", name) + (value == null ? "null" : String.format(" %s", value)));
     }
 
     public String[] getTestCases() {
