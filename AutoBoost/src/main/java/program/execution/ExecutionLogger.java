@@ -66,7 +66,7 @@ public class ExecutionLogger {
         Stack<MethodExecution> currentExecuting = getCurrentExecuting(threadID);
         if (details.getType().equals(METHOD_TYPE.STATIC_INITIALIZER) || (currentExecuting.size() > 0 && currentExecuting.peek().getTest() == null))
             newExecution.setTest(null);
-        addRelation(threadID, newExecution);
+        updateExecutionRelationships(threadID, newExecution);
         addExecutionToThreadStack(threadID, newExecution);
         if(details.getType().equals(METHOD_TYPE.MEMBER)) // i.e. have callee
             setVarIDForExecution(newExecution, LOG_ITEM.CALL_THIS, executionTrace.getVarDetailID(newExecution, callee == null ? Object.class : callee.getClass(), callee, LOG_ITEM.CALL_THIS));
@@ -151,7 +151,7 @@ public class ExecutionLogger {
         logger.debug("ended method " + execution.toDetailedString());
 //        if(!finishedMethod.relationshipCheck())
 //            throw new RuntimeException("Method finished incorrect. ");
-        executionTrace.addMethodExecution(execution, execution.getMethodInvokedId());
+        executionTrace.updateFinishedMethodExecution(execution);
         removeExecutionFromStack(threadID, execution);
     }
 
@@ -190,8 +190,9 @@ public class ExecutionLogger {
         }
     }
 
-    private static void addRelation(long threadID, MethodExecution execution) {
+    private static void updateExecutionRelationships(long threadID, MethodExecution execution) {
         Stack<MethodExecution> executionStack = getCurrentExecuting(threadID);
+        executionTrace.addMethodExecution(execution);
         if (executionStack.size() != 0)
             executionTrace.addMethodRelationship(executionStack.peek().getID(), execution.getID());
     }
