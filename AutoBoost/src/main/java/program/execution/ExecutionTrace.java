@@ -125,7 +125,7 @@ public class ExecutionTrace {
             Object finalObjValue1 = objValue;
 
             Class<?> finalType = type;
-            Optional<String> match = Arrays.stream(type.getDeclaredFields()).filter(f -> f.getType().equals(finalType)).filter(f -> Modifier.isPublic(f.getModifiers()) && Modifier.isStatic(f.getModifiers()) && !Modifier.isTransient(f.getModifiers()) ).filter(f -> {
+            Optional<String> match = Arrays.stream(type.getDeclaredFields()).filter(f -> f.getType().equals(finalType)).filter(f -> !InstrumentResult.getSingleton().getClassPublicFieldsMap().containsKey(finalType.getName()) || InstrumentResult.getSingleton().getClassPublicFieldsMap().get(finalType.getName()).contains(f.getName())).filter(f -> {
                 try {
                     Object val = f.get(finalObjValue1);
                     return val != null && System.identityHashCode(val) == System.identityHashCode(finalObjValue1);
