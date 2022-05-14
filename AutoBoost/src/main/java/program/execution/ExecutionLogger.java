@@ -12,12 +12,13 @@ import soot.VoidType;
 
 import java.lang.reflect.Array;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class ExecutionLogger {
     private static final Logger logger = LogManager.getLogger(ExecutionLogger.class);
-    private static final HashMap<Long, Stack<MethodExecution>> threadExecutingMap = new HashMap<Long, Stack<MethodExecution>>();
+    private static final ConcurrentHashMap<Long, Stack<MethodExecution>> threadExecutingMap = new ConcurrentHashMap<Long, Stack<MethodExecution>>();
     private static final InstrumentResult instrumentResult = InstrumentResult.getSingleton();
     private static final ExecutionTrace executionTrace = ExecutionTrace.getSingleton();
     private static final HashMap<Long, Boolean> threadSkippingMap = new HashMap<Long, Boolean>();
@@ -201,7 +202,7 @@ public class ExecutionLogger {
     }
 
     private static void removeExecutionFromStack(long threadID, MethodExecution execution) {
-        threadExecutingMap.get(threadID).remove(execution);
+        threadExecutingMap.get(threadID).removeIf(e -> e.getID()==execution.getID());
         if(threadExecutingMap.get(threadID).size() == 0 ) threadExecutingMap.remove(threadID);
     }
 
