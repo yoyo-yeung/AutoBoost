@@ -149,9 +149,14 @@ public class ExecutionLogger {
      */
     private static void endLogMethod(long threadID, MethodExecution execution) {
         logger.debug("ended method " + execution.toDetailedString());
-//        if(!finishedMethod.relationshipCheck())
-//            throw new RuntimeException("Method finished incorrect. ");
-        executionTrace.updateFinishedMethodExecution(execution);
+        Optional<MethodExecution> duplicate = executionTrace.getAllMethodExecs().values().stream().filter(execution::sameContent).findFirst();
+        if(duplicate.isPresent()) {
+            executionTrace.replacePossibleDefExe(execution, duplicate.get());
+            executionTrace.changeVertex(execution.getID(), duplicate.get().getID());
+        }
+        else {
+            executionTrace.updateFinishedMethodExecution(execution);
+        }
         removeExecutionFromStack(threadID, execution);
     }
 

@@ -13,11 +13,11 @@ import program.analysis.ClassDetails;
 import program.analysis.MethodDetails;
 import program.execution.variable.*;
 import program.instrumentation.InstrumentResult;
+import soot.Modifier;
 
 import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -263,6 +263,9 @@ public class ExecutionTrace {
         MethodDetails details = InstrumentResult.getSingleton().getMethodDetailByID(execution.getMethodInvokedId());
         MethodExecution existingDefEx = getDefExeList(varDetail.getID()) == null ? null : getMethodExecutionByID(getDefExeList(varDetail.getID()));
         MethodDetails existingDef = existingDefEx == null ? null : InstrumentResult.getSingleton().getMethodDetailByID(existingDefEx.getMethodInvokedId());
+        // return false if its essentially the same execution
+        if(existingDefEx != null && existingDefEx.getMethodInvokedId() == execution.getMethodInvokedId() && existingDefEx.getParams().equals(execution.getParams()) && existingDefEx.getCalleeId() == execution.getCalleeId() && (!process.equals(LOG_ITEM.RETURN_THIS) || existingDefEx.getResultThisId() == varDetail.getID()) && (!process.equals(LOG_ITEM.RETURN_ITEM) || existingDefEx.getReturnValId() == varDetail.getID()) )
+            return false;
         if (details.getAccess().equals(ACCESS.PRIVATE) || (details.getAccess().equals(ACCESS.PROTECTED) && !details.getDeclaringClass().getPackageName().equals(Properties.getSingleton().getGeneratedPackage())))
             return false;
         if (execution.getCalleeId() == varDetail.getID() || execution.getParams().contains(varDetail.getID()))
@@ -426,6 +429,8 @@ public class ExecutionTrace {
         if (!this.callGraph.containsVertex(original)) return;
         this.callGraph.addVertex(now);
         this.callGraph.outgoingEdgesOf(original).forEach(e -> addMethodRelationship(now, this.callGraph.getEdgeTarget(e)));
+        this.callGraph.incomingEdgesOf(original).forEach(e -> addMethodRelationship(this.callGraph.getEdgeSource(e), now));
+        this.callGraph.removeAllEdges(now, now);
         this.callGraph.removeVertex(original);
     }
 
@@ -436,7 +441,7 @@ public class ExecutionTrace {
 
     public Set<Integer> getAllChildren(int father) {
         Set<Integer> results = new HashSet<>();
-        this.callGraph.outgoingEdgesOf(father).forEach(e -> {
+        this.callGraph.outgoingEdgesOf(father).stream().filter(e -> this.callGraph.getEdgeTarget(e)!=father).forEach(e -> {
             results.add(this.callGraph.getEdgeTarget(e));
             results.addAll(getAllChildren(this.callGraph.getEdgeTarget(e)));
         });
@@ -533,7 +538,6 @@ public class ExecutionTrace {
                     .filter(f -> !(soot.Modifier.isStatic(f.getModifiers()) && soot.Modifier.isFinal(f.getModifiers())))
                     .collect(Collectors.toList())));
         }
-
         result.append("{");
         InstrumentResult.getSingleton().getClassDetailsByID(obj.getClass().getName()).getClassFields()
                 .forEach(f -> {
@@ -552,6 +556,17 @@ public class ExecutionTrace {
     public void clear() {
         allMethodExecs.clear();
         varToDefMap.clear();
+    }
+
+    public void replacePossibleDefExe(MethodExecution original, MethodExecution repl){
+        Set<Integer> varInvolved = new HashSet<>(original.getParams());
+        varInvolved.add(original.getCalleeId());
+        varInvolved.add(original.getReturnValId());
+        varInvolved.add(original.getResultThisId());
+        varInvolved.remove(-1);
+        varInvolved.removeIf(v -> !varToDefMap.containsKey(v) || varToDefMap.get(v) == null || varToDefMap.get(v) != original.getID());
+        varInvolved.forEach(v -> varToDefMap.replace(v, original.getID(), repl.getID()));
+
     }
 
 }
