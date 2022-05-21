@@ -177,7 +177,10 @@ public class MethodExecution {
 
     public boolean sameCalleeParamNMethod(MethodExecution ex) {
         return this.methodInvokedId == ex.methodInvokedId && this.calleeId == ex.calleeId && this.params.equals(ex.params);
+    }
 
+    public boolean sameContent(MethodExecution ex) {
+        return sameCalleeParamNMethod(ex) && this.returnValId == ex.returnValId && this.resultThisId == ex.resultThisId;
     }
 
     public void setReproducible(boolean reproducible) {
