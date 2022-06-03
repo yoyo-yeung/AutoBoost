@@ -27,7 +27,7 @@ public class VarStmt extends Stmt{
     }
 
     public String getDeclarationStmt(Set<Class<?>> fullCNameNeeded) {
-        return "final "+ (fullCNameNeeded.contains(varType)? varType.getName() : varType.getSimpleName()) + " " + varName;
+        return "final "+ (fullCNameNeeded.contains(varType)? varType.getName().replace("$", ".") : varType.getSimpleName()) + " " + varName;
     }
 
     @Override
