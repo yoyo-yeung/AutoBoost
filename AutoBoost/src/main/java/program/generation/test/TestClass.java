@@ -1,6 +1,7 @@
 package program.generation.test;
 
 import helper.Properties;
+import org.apache.commons.lang3.ClassUtils;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -84,6 +85,7 @@ public class TestClass {
     public String output() {
         Set<Class<?>> fullCNameNeeded= this.imports.stream().collect(Collectors.groupingBy(Class::getSimpleName, Collectors.toSet())).entrySet().stream().filter(e -> e.getValue().size() > 1 )
                 .flatMap(e -> e.getValue().stream()).collect(Collectors.toSet());
+        fullCNameNeeded.addAll(this.imports.stream().filter(ClassUtils::isInnerClass).collect(Collectors.toSet()));
         StringBuilder result = new StringBuilder();
         result.append("package " + Properties.getSingleton().getGeneratedPackage()).append(";").append(Properties.getNewLine());
         this.imports.stream().filter(i -> !fullCNameNeeded.contains(i)).filter(i -> !i.getPackage().getName().equals(Properties.getSingleton().getGeneratedPackage())).map(i -> {
