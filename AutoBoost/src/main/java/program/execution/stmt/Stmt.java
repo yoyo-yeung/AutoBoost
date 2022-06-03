@@ -1,6 +1,7 @@
 package program.execution.stmt;
 
 import org.apache.commons.lang3.ClassUtils;
+import program.generation.TestGenerator;
 
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -40,13 +41,12 @@ public abstract class Stmt {
     }
 
     protected static Class<?> getTypeToImport(Class<?> type) {
-        if(type.isAnonymousClass()) return null;
         if (type.isArray()) {
             while (type.isArray())
                 type = type.getComponentType();
         }
-        if(ClassUtils.isPrimitiveOrWrapper(type) || type.equals(Object.class))
+        if(type.isPrimitive() || type.equals(Object.class))
             return null;
-        else return type;
+        else return TestGenerator.accessibilityCheck(type) ? type : TestGenerator.getAccessibleSuperType(type);
     }
 }
