@@ -190,6 +190,30 @@ public class TestGenerator {
             exeUnderCheck.remove(methodExecutionID);
             return false;
         }
+
+        if(execution.getCalleeId() != -1) {
+            Class<?> calleeType = executionTrace.getVarDetailByID(execution.getCalleeId()).getType() ;
+            // if the callee is not an accessible class
+            // check if there exist a class between real var type & method declaring class that can be accessed (else the method is NOT accessible)
+            if(!accessibilityCheck(calleeType) ) {
+                List<Class<?>> superClasses = ClassUtils.getAllSuperclasses(calleeType);
+                superClasses = superClasses.subList(0, superClasses.indexOf(details.getdClass())+1);
+                if(superClasses.stream().noneMatch(TestGenerator::accessibilityCheck)) {
+                    failedExe.add(methodExecutionID);
+                    exeUnderCheck.remove(methodExecutionID);
+                    return false;
+                }
+
+            }
+        }
+        if(!accessibilityCheck(details.getdClass()) && details.getType().equals(METHOD_TYPE.CONSTRUCTOR)){
+            failedExe.add(methodExecutionID);
+            exeUnderCheck.remove(methodExecutionID);
+            return false;
+        }
+
+
+
         Set<Integer> diffResExe = ExecutionTrace.getSingleton().getAllMethodExecs().values().stream().filter(execution::sameCalleeParamNMethod).filter(e -> e.getReturnValId() != execution.getReturnValId()).map(MethodExecution::getID).collect(Collectors.toSet());
         if(diffResExe.size() > 0 ) {
             failedExe.addAll(diffResExe);
@@ -201,16 +225,19 @@ public class TestGenerator {
         exeUnderCheck.remove(methodExecutionID);
         return true;
     }
+    public static boolean accessibilityCheck(Class<?> c) {
+        int modifier = c.getModifiers();
+        if(c.getName().contains("$"))
+            try {
+                Integer.parseInt(c.getName().substring(c.getName().indexOf("$") + 1)); // dont know why isAnonymousClass return false for these
+                return false;
+            }
+            catch (NumberFormatException e ){
 
-    private boolean memberClassCheck(Class<?> memberClass) {
-        int modifier = memberClass.getModifiers();
-        if (Modifier.isPrivate(modifier) || (!Modifier.isPrivate(modifier) && !Modifier.isPublic(modifier) && !memberClass.getPackage().getName().equals(Properties.getSingleton().getGeneratedPackage())) || ((memberClass.isMemberClass() || memberClass.isLocalClass()) && !Modifier.isStatic(modifier)))
-            return false;
-        if (memberClass.isAnonymousClass()) return false;
-        if (memberClass.isMemberClass() || memberClass.isLocalClass())
-            return memberClass.getEnclosingClass().getPackage().getName().startsWith("java") || memberClassCheck(memberClass.getEnclosingClass());
-        else return true;
-
+            }
+        return (Modifier.isPublic(modifier) || (!Modifier.isPrivate(modifier) && c.getPackage().getName().equals(Properties.getSingleton().getGeneratedPackage()))) // access check
+                && (!ClassUtils.isInnerClass(c) || (Modifier.isStatic(modifier) && accessibilityCheck(c.getEnclosingClass()))) // if is inner class, is static inner class and its enclosing class CAN be accessed
+                && !c.isAnonymousClass(); // is NOT anonymous class
     }
 
     private boolean varCanBeTested(Integer varID, int lv, Set<Integer> exeUnderCheck) {
@@ -237,7 +264,7 @@ public class TestGenerator {
                 return true;
             }
             return false;
-        } else if (!varDetail.equals(ExecutionTrace.getSingleton().getNullVar()) && (((varDetail.getType().isLocalClass() || varDetail.getType().isMemberClass()) && !memberClassCheck(varDetail.getType())) || varDetail.getType().isAnonymousClass() || varDetail.getType().getName().contains("$") || executionTrace.getDefExeList(varID) == null || !exeCanBeTested(executionTrace.getDefExeList(varID), lv + 1, varID, exeUnderCheck))) {
+        } else if (!varDetail.equals(ExecutionTrace.getSingleton().getNullVar()) && (executionTrace.getDefExeList(varID) == null || !exeCanBeTested(executionTrace.getDefExeList(varID), lv + 1, varID, exeUnderCheck))) {
             return false;
         }
         passedVar.add(varID);
@@ -325,6 +352,10 @@ public class TestGenerator {
 
         return invokeStmt;
     }
+    public static Class<?> getAccessibleSuperType(Class<?> c) {
+        return ClassUtils.getAllSuperclasses(c).stream().filter(TestGenerator::accessibilityCheck).findFirst().orElse(c);
+    }
+
 
     private VarStmt getComplexDefStmt(VarDetail varDetail, TestCase testCase) {
         int varDetailID = varDetail.getID();
@@ -341,6 +372,8 @@ public class TestGenerator {
                     List<VarStmt> availableStmts = testCase.getExistingVar(execution.getReturnValId());
                     varStmt = availableStmts == null || availableStmts.size() == 0 ? null : availableStmts.get(0);
                     Class<?> actualType = executionTrace.getVarDetailByID(execution.getReturnValId()).getType();
+                    if(!accessibilityCheck(actualType))
+                        actualType = getAccessibleSuperType(actualType);
                     if (varStmt == null)
                         varStmt = new VarStmt(actualType, testCase.getNewVarID(), execution.getReturnValId());
                     testCase.addStmt(new AssignStmt(varStmt, (details.getReturnSootType().toString().equals(actualType.getName()) ? invokeStmt : new CastStmt(execution.getReturnValId(), actualType, invokeStmt))));
@@ -356,6 +389,8 @@ public class TestGenerator {
                 Stmt defStmt = generateDefStmt(execution.getCalleeId(), testCase, true, true);
                 if (!details.getReturnSootType().equals(VoidType.v())) {
                     Class<?> actualType = executionTrace.getVarDetailByID(execution.getReturnValId()).getType();
+                    if(!accessibilityCheck(actualType))
+                        actualType = getAccessibleSuperType(actualType);
                     VarStmt varStmt1 = new VarStmt(actualType, testCase.getNewVarID(), execution.getReturnValId());
 //                        logger.debug(varStmt1.getImports());
                     testCase.addStmt(new AssignStmt(varStmt1, details.getReturnSootType().toString().equals(actualType.getName())? invokeStmt : new CastStmt(execution.getReturnValId(), actualType, invokeStmt)));
