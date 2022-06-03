@@ -169,7 +169,7 @@ public class Instrumenter extends BodyTransformer {
 
             if (stmt.containsInvokeExpr() && isLoggingInvokedLibMethod(stmt.getInvokeExpr(), sootMethod, stmt.getInvokeExpr().getMethodRef())) {
                 InvokeExpr invokedExpr = stmt.getInvokeExpr();
-                MethodDetails invokedMethodDetails = result.findExistingLibMethod(invokedExpr.getMethodRef().getSignature());
+                MethodDetails invokedMethodDetails = result.findExistingLibMethod(invokedExpr.getMethod().getSignature());
                 if (invokedMethodDetails == null) {
                     invokedMethodDetails = new MethodDetails(invokedExpr.getMethod());
                     result.addLibMethod(invokedMethodDetails);
