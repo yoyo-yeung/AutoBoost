@@ -24,7 +24,7 @@ public class MethodInvStmt extends Stmt{
     @Override
     public String getStmt(Set<Class<?>> fullCNameNeeded) {
         MethodDetails details  = InstrumentResult.getSingleton().getMethodDetailByID(methodInvID);
-        return (callee == null ? "" : callee) + (details.getType().equals(METHOD_TYPE.CONSTRUCTOR) ? ("new " + (fullCNameNeeded.contains(details.getdClass()) ? details.getdClass().getName() : details.getdClass().getSimpleName().replace("$", "."))): (callee == null ? "" : ".") + details.getName()) + "(" + paramStmts.stream().map(s-> s.getStmt(fullCNameNeeded)).collect(Collectors.joining(Properties.getDELIMITER())) + ")";
+        return (callee == null ? "" : callee) + (details.getType().equals(METHOD_TYPE.CONSTRUCTOR) ? ("new " + (fullCNameNeeded.contains(details.getdClass()) ? details.getdClass().getName().replace("$", ".") : details.getdClass().getSimpleName().replace("$", "."))): (callee == null ? "" : ".") + details.getName()) + "(" + paramStmts.stream().map(s-> s.getStmt(fullCNameNeeded)).collect(Collectors.joining(Properties.getDELIMITER())) + ")";
     }
 
     @Override
