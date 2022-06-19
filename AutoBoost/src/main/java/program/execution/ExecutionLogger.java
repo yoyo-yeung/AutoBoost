@@ -2,6 +2,7 @@ package program.execution;
 
 import entity.LOG_ITEM;
 import entity.METHOD_TYPE;
+import entity.UnrecognizableException;
 import helper.Properties;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.logging.log4j.LogManager;
@@ -96,16 +97,7 @@ public class ExecutionLogger {
         MethodExecution execution = getLatestExecution(threadID);
         if(execution == null) return;
         if (executionID != execution.getID()) {
-            if (execution.getExceptionClass() != null) {
-                Class<?> exceptionClass = execution.getExceptionClass();
-                while (execution.getID() != executionID) {
-                    execution.setExceptionClass(exceptionClass);
-                    endLogMethod(threadID, execution);
-                    logger.debug("force end "+ execution.toDetailedString());
-                    execution = getLatestExecution(threadID);
-                }
-            }
-            else if (instrumentResult.isLibMethod(execution.getMethodInvokedId())) {
+            if (instrumentResult.isLibMethod(execution.getMethodInvokedId())) {
                 while(instrumentResult.isLibMethod(execution.getMethodInvokedId()) && execution.getID() != executionID) {
                     getCurrentExecuting(threadID).pop();
                     executionTrace.changeVertex(execution.getID(), getLatestExecution(threadID).getID());
@@ -113,7 +105,17 @@ public class ExecutionLogger {
                 }
             }
             else {
-                throw new RuntimeException("Inconsistent method invoke");
+                Class<?> exceptionClass = execution.getExceptionClass() != null ? execution.getExceptionClass() : UnrecognizableException.class;
+                while (execution.getID() != executionID) {
+                    execution.setExceptionClass(exceptionClass);
+                    endLogMethod(threadID, execution);
+                    if(exceptionClass.equals(UnrecognizableException.class)) {
+                        logger.error(execution.toDetailedString());
+                        logger.error(getCurrentExecuting(threadID).stream().map(MethodExecution::toDetailedString).collect(Collectors.joining(",")));
+                        logger.error(getCurrentExecuting(threadID).stream().filter(e -> e.getID()==executionID).findFirst().map(MethodExecution::toDetailedString).orElse("null"));
+                    }
+                    execution = getLatestExecution(threadID);
+                }
             }
             logEnd(executionID, callee, returnVal, threadID);
         }
