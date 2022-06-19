@@ -2,6 +2,7 @@ package program.generation;
 
 import entity.ACCESS;
 import entity.METHOD_TYPE;
+import entity.UnrecognizableException;
 import helper.Properties;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -121,7 +122,7 @@ public class TestGenerator {
 
     public void generateExceptionTests(List<MethodExecution> snapshot) {
         snapshot.stream()
-                .filter(e -> e.getReturnValId() == -1 && e.getExceptionClass() != null && exeCanBeTested(e.getID(), 0, -1, new HashSet<>()))
+                .filter(e -> e.getReturnValId() == -1 && e.getExceptionClass() != null && !e.getExceptionClass().equals(UnrecognizableException.class) && exeCanBeTested(e.getID(), 0, -1, new HashSet<>()))
                 .map(e -> {
                     ExceptionTestCase testCase = new ExceptionTestCase();
                     MethodInvStmt invStmt = getMethodInvStmt(e, testCase);
