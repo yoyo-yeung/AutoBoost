@@ -489,7 +489,7 @@ public class ExecutionTrace {
         }
         else hashCodeToFieldMap.put(System.identityHashCode(obj), fieldName);
         if (depth == 0) {
-            result.append(obj.getClass().getSimpleName()).append("[]");
+            result.append("[]");
             return;
         }
         else if (obj.getClass().isArray()) {
