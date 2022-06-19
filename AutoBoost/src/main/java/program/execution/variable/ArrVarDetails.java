@@ -69,7 +69,6 @@ public class ArrVarDetails extends VarDetail{
                 ", componentType=" + (componentType == null ? "null" : componentType.getSimpleName()) +
                 ", type=" + (type == null ? "null" : type.getSimpleName())  +
                 ", components=" + (components == null ? "null" : components.toString()) +
-                ", value=" + (value == null ? "null" : value.toString()) +
                 '}';
     }
 
@@ -80,7 +79,6 @@ public class ArrVarDetails extends VarDetail{
                 ", componentType=" + (componentType == null ? "null" : componentType.getSimpleName()) +
                 ", type=" + (type == null ? "null" : type.getSimpleName()) +
                 ", components=" + (components == null ? "null" : components.stream().filter(c -> c!= -1).map(c -> ExecutionTrace.getSingleton().getVarDetailByID(c).toDetailedString()).collect(Collectors.joining(Properties.getDELIMITER()))) +
-                ", value=" + (value == null ? "null" : value.toString()) +
                 '}';
 
     }
