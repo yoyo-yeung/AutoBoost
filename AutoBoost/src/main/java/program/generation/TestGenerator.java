@@ -80,7 +80,7 @@ public class TestGenerator {
                                 return true;
                             }
                     } catch (NoSuchMethodException noSuchMethodException) {
-                        noSuchMethodException.printStackTrace();
+                        logger.error(noSuchMethodException.getMessage());
                     }
                     return true;
                 })
