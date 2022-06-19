@@ -25,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 public class TestGenerator {
     private static final Logger logger = LogManager.getLogger(TestGenerator.class);
@@ -250,10 +251,9 @@ public class TestGenerator {
             passedVar.add(varID);
             return true;
         } else if (varDetail.getClass().equals(MapVarDetails.class)) {
-            if (((MapVarDetails) varDetail).getKeyValuePairs().entrySet().stream().allMatch(e -> varCanBeTested(e.getKey(), lv + 1, exeUnderCheck) && varCanBeTested(e.getValue(), lv + 1, exeUnderCheck))) {
+            if (((MapVarDetails) varDetail).getKeyValuePairs().stream().allMatch(e -> varCanBeTested(e.getKey(), lv + 1, exeUnderCheck) && varCanBeTested(e.getValue(), lv + 1, exeUnderCheck))) {
                 passedVar.add(varID);
-                passedVar.addAll(((MapVarDetails) varDetail).getKeyValuePairs().keySet());
-                passedVar.addAll(((MapVarDetails) varDetail).getKeyValuePairs().values());
+                passedVar.addAll(((MapVarDetails) varDetail).getKeyValuePairs().stream().flatMap(e -> Stream.of(e.getKey(), e.getValue())).collect(Collectors.toSet()));
                 return true;
             }
             return false;
@@ -302,7 +302,7 @@ public class TestGenerator {
             params.add(new ConstantStmt(((StringBVarDetails) varDetail).getStringValID()));
         }
         else if (varDetailClass.equals(MapVarDetails.class)) {
-            params = ((MapVarDetails) varDetail).getKeyValuePairs().entrySet().stream().map(e -> new PairStmt(generateDefStmt(e.getKey(), testCase, true, true), generateDefStmt(e.getValue(), testCase, true, true))).collect(Collectors.toList());
+            params = ((MapVarDetails) varDetail).getKeyValuePairs().stream().map(e -> new PairStmt(generateDefStmt(e.getKey(), testCase, true, true), generateDefStmt(e.getValue(), testCase, true, true))).collect(Collectors.toList());
         } else {
             params = ((ArrVarDetails) varDetail).getComponents().stream().map(e -> generateDefStmt(e, testCase, true, true)).collect(Collectors.toList());
             if (((ArrVarDetails) varDetail).getComponents().stream().map(executionTrace::getVarDetailByID).noneMatch(e -> e.getType().isArray()) && ((ArrVarDetails) varDetail).getComponents().size() <= 25)

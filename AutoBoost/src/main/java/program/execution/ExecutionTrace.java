@@ -191,7 +191,9 @@ public class ExecutionTrace {
             else if (ArrVarDetails.availableTypeCheck(type) && ArrVarDetails.availableTypeCheck(objValue.getClass())) {
                 varDetail = new ArrVarDetails(getNewVarID(), getComponentStream(execution, type, objValue, process).collect(Collectors.toList()), objValue);
             } else if (MapVarDetails.availableTypeCheck(type) && MapVarDetails.availableTypeCheck(objValue.getClass())) {
-                varDetail = new MapVarDetails(getNewVarID(), type, ((Map<?, ?>) objValue).entrySet().stream().collect(Collectors.toMap(e -> getVarDetailID(execution, getClassOfObj(e.getKey()), e.getKey(), process), e -> getVarDetailID(execution, getClassOfObj(e.getValue()), e.getValue(), process))), objValue);
+                varDetail = new MapVarDetails(getNewVarID(), type, ((Map<?, ?>) objValue).entrySet().stream()
+                        .map(e -> new AbstractMap.SimpleEntry<Integer, Integer>(getVarDetailID(execution, getClassOfObj(e.getKey()), e.getKey(), process), getVarDetailID(execution, getClassOfObj(e.getValue()), e.getValue(), process)))
+                        .collect(Collectors.<Map.Entry<Integer, Integer>>toSet()), objValue);
             }
              else if (ClassUtils.isPrimitiveWrapper(type)) {
                 varDetail = new WrapperVarDetails(getNewVarID(), type, objValue);
