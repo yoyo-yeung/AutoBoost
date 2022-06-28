@@ -82,14 +82,14 @@ public class AutoBoost {
             }
             @Override
             public void testStarted(Description description) {
-                executingTest = description.getClassName() + ":" + description.getMethodName();
-                logger.info("Test " + description.getMethodName() + " started ");
+                executingTest = description.getDisplayName() ;
+                logger.info("Test " + description.getDisplayName() + " started ");
                 ExecutionLogger.clearExecutingStack();
                 ExecutionLogger.setLogging(true);
             }
             @Override
             public void testFailure(Failure failure) throws Exception {
-                logger.error(failure.getDescription().getMethodName()+" failed\n" + failure.getTrace());
+                logger.error(failure.getDescription().getDisplayName()+" failed\n" + failure.getTrace());
             }
 
             @Override
