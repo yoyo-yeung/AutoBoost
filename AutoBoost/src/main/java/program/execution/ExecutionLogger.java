@@ -114,6 +114,7 @@ public class ExecutionLogger {
                         logger.error(getCurrentExecuting(threadID).stream().map(MethodExecution::toDetailedString).collect(Collectors.joining(",")));
                         logger.error(getCurrentExecuting(threadID).stream().filter(e -> e.getID()==executionID).findFirst().map(MethodExecution::toDetailedString).orElse("null"));
                     }
+                    logger.debug("force end "+ execution.toDetailedString());
                     execution = getLatestExecution(threadID);
                 }
             }
@@ -153,6 +154,7 @@ public class ExecutionLogger {
         logger.debug("ended method " + execution.toDetailedString());
         Optional<MethodExecution> duplicate = executionTrace.getAllMethodExecs().values().stream().filter(execution::sameContent).findFirst();
         if(duplicate.isPresent()) {
+            logger.debug(execution.toDetailedString() +"\t" + duplicate.get().toDetailedString());
             executionTrace.replacePossibleDefExe(execution, duplicate.get());
             executionTrace.changeVertex(execution.getID(), duplicate.get().getID());
         }
