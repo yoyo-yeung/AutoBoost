@@ -441,10 +441,10 @@ public class TestGenerator {
 
     public void output() throws IOException {
         Properties properties = Properties.getSingleton();
-        File packageDir = new File(properties.getTestSourceDir(), properties.getGeneratedPackage().replace(".", File.separator));
-        if (!packageDir.exists() || !packageDir.isDirectory())
-            packageDir.mkdirs();
-        File file;
+        int totalCases = 0 ;
+
+        File file = new File(properties.getTestSourceDir());
+        file.mkdirs();
         FileOutputStream writeStream;
 //        if (Properties.getSingleton().getJunitVer() != 3) {
 //            file = new File(packageDir, testSuite.getTestSuiteName() + ".java");
@@ -454,16 +454,21 @@ public class TestGenerator {
 //            writeStream.close();
 //        }
         for (TestClass tc : testSuite.getTestClasses()) {
+            File packageDir = new File(properties.getTestSourceDir(),tc.getPackageName().replace(".", File.separator));
+            if (!packageDir.exists() || !packageDir.isDirectory())
+                packageDir.mkdirs();
             file = new File(packageDir, tc.getClassName() + ".java");
             file.createNewFile();
             writeStream = new FileOutputStream(file);
             writeStream.write(tc.output().getBytes(StandardCharsets.UTF_8));
             writeStream.close();
+            totalCases += tc.getEnclosedTestCases().size();
         }
         file = new File(properties.getTestSourceDir(), "ab-tests.stdout");
         file.createNewFile();
         writeStream = new FileOutputStream(file);
-        writeStream.write(testSuite.getTestClasses().stream().map(c -> properties.getGeneratedPackage() + "." + c.getClassName()).collect(Collectors.joining(",")).getBytes(StandardCharsets.UTF_8));
+        writeStream.write(testSuite.getTestClasses().stream().map(c -> c.getPackageName() + "." + c.getClassName()).collect(Collectors.joining(",")).getBytes(StandardCharsets.UTF_8));
         writeStream.close();
+        logger.debug("Total no. of test cases generated: " + totalCases);
     }
 }
