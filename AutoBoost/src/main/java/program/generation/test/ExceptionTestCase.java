@@ -6,8 +6,8 @@ import java.util.Set;
 
 public class ExceptionTestCase extends TestCase{
     private Class<?> exceptionClass;
-    public ExceptionTestCase() {
-        super();
+    public ExceptionTestCase(String packageName) {
+        super(packageName);
         this.addImports(exceptionClass);
     }
 

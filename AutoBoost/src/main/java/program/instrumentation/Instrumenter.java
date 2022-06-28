@@ -84,7 +84,7 @@ public class Instrumenter extends BodyTransformer {
         SootMethod sootMethod = body.getMethod();
         Properties properties = Properties.getSingleton();
         if(sootMethod.getName().contains("$")) return;
-        boolean canBeCalledOrFaulty = Modifier.isPublic(sootMethod.getModifiers()) || ((!Modifier.isPublic(sootMethod.getModifiers()) && !Modifier.isPrivate(sootMethod.getModifiers())) && sootMethod.getDeclaringClass().getPackageName().equals(properties.getGeneratedPackage())) || properties.getFaultyFunc().contains(sootMethod.getSignature());
+        boolean canBeCalledOrFaulty = Modifier.isPublic(sootMethod.getModifiers()) || ((!Modifier.isPublic(sootMethod.getModifiers()) && !Modifier.isPrivate(sootMethod.getModifiers()))) || properties.getFaultyFunc().contains(sootMethod.getSignature());
         SootClass declaringClass = sootMethod.getDeclaringClass();
         if(!result.getClassPublicFieldsMap().containsKey(declaringClass.getName()))
             result.getClassPublicFieldsMap().put(declaringClass.getName(), declaringClass.getFields().stream().filter(f -> f.isPublic() && f.isStatic()).map(SootField::getName).collect(Collectors.toSet()));

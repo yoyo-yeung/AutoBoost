@@ -81,11 +81,11 @@ public class ConstructStmt extends Stmt{
     }
 
     @Override
-    public Set<Class<?>> getImports() {
+    public Set<Class<?>> getImports(String packageName) {
         Set<Class<?>> results = new HashSet<>();
-        results.add(getTypeToImport(ExecutionTrace.getSingleton().getVarDetailByID(resultVarDetailID).getType()));
+        results.add(getTypeToImport(ExecutionTrace.getSingleton().getVarDetailByID(resultVarDetailID).getType(), packageName));
         results.remove(null);
-        this.paramStmts.forEach(stmt -> results.addAll(stmt.getImports()));
+        this.paramStmts.forEach(stmt -> results.addAll(stmt.getImports(packageName)));
         return results;
     }
 }

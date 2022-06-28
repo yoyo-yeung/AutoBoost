@@ -15,8 +15,10 @@ public class TestClass {
     private ArrayList<TestCase> enclosedTestCases = new ArrayList<>();
     private Set<Class<?>> imports = new HashSet<>();
     private String className = null;
+    private String packageName = null;
 
-    public TestClass() {
+    public TestClass(String packageName) {
+        this.packageName = packageName;
         this.ID = classIDGenerator.incrementAndGet();
         this.className = Properties.getSingleton().getTestSuitePrefix() + "_"+ this.ID + "_Test";
         if(Properties.getSingleton().getJunitVer() == 3)
@@ -82,13 +84,21 @@ public class TestClass {
         this.className = className;
     }
 
+    public String getPackageName() {
+        return packageName;
+    }
+
+    public void setPackageName(String packageName) {
+        this.packageName = packageName;
+    }
+
     public String output() {
         Set<Class<?>> fullCNameNeeded= this.imports.stream().collect(Collectors.groupingBy(Class::getSimpleName, Collectors.toSet())).entrySet().stream().filter(e -> e.getValue().size() > 1 )
                 .flatMap(e -> e.getValue().stream()).collect(Collectors.toSet());
         fullCNameNeeded.addAll(this.imports.stream().filter(ClassUtils::isInnerClass).collect(Collectors.toSet()));
         StringBuilder result = new StringBuilder();
-        result.append("package " + Properties.getSingleton().getGeneratedPackage()).append(";").append(Properties.getNewLine());
-        this.imports.stream().filter(i -> !fullCNameNeeded.contains(i)).filter(i -> !i.getPackage().getName().equals(Properties.getSingleton().getGeneratedPackage())).map(i -> {
+        result.append("package " + packageName).append(";").append(Properties.getNewLine());
+        this.imports.stream().filter(i -> !fullCNameNeeded.contains(i)).filter(i -> !i.getPackage().getName().equals(packageName)).map(i -> {
             return "import " + i.getName().replace("$", ".") + ";" + Properties.getNewLine();
         }).forEach(result::append);
         result.append("public class ").append(this.className).append(Properties.getSingleton().getJunitVer()==3? " extends TestCase" : "").append("{").append(Properties.getNewLine());

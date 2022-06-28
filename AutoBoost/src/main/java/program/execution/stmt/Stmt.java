@@ -1,6 +1,5 @@
 package program.execution.stmt;
 
-import org.apache.commons.lang3.ClassUtils;
 import program.generation.TestGenerator;
 
 import java.util.Set;
@@ -34,19 +33,19 @@ public abstract class Stmt {
 
     public abstract String getStmt(Set<Class<?>> fullCNameNeeded);
 
-    public abstract Set<Class<?>> getImports();
+    public abstract Set<Class<?>> getImports(String packageName);
 
     protected static int getNewStmtID(){
         return stmtIDGenerator.incrementAndGet();
     }
 
-    protected static Class<?> getTypeToImport(Class<?> type) {
+    protected static Class<?> getTypeToImport(Class<?> type, String packageName) {
         if (type.isArray()) {
             while (type.isArray())
                 type = type.getComponentType();
         }
         if(type.isPrimitive() || type.equals(Object.class))
             return null;
-        else return TestGenerator.accessibilityCheck(type) ? type : TestGenerator.getAccessibleSuperType(type);
+        else return TestGenerator.accessibilityCheck(type, packageName) ? type : TestGenerator.getAccessibleSuperType(type, packageName);
     }
 }

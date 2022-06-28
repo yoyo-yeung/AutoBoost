@@ -29,7 +29,7 @@ public class CastStmt extends Stmt{
     }
 
     @Override
-    public Set<Class<?>> getImports() {
-        return Stream.of(Collections.singleton(newType), enclosedStmt.getImports()).flatMap(Collection::stream).map(Stmt::getTypeToImport).filter(Objects::nonNull).collect(Collectors.toSet());
+    public Set<Class<?>> getImports(String packageName) {
+        return Stream.of(Collections.singleton(newType), enclosedStmt.getImports(packageName)).flatMap(Collection::stream).map(c -> getTypeToImport(c, packageName)).filter(Objects::nonNull).collect(Collectors.toSet());
     }
 }
