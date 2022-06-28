@@ -102,6 +102,45 @@
 
                 </configuration>
             </plugin>
+            <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+            <version>3.3.0</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            <configuration>
+                <!-- put your configurations here -->
+                <relocations>
+                <relocation>
+                    <pattern>org.junit</pattern>
+                    <shadedPattern>kwyyeung.autoboost.internal.junit</shadedPattern>
+                </relocation>
+                    <relocation>
+                        <pattern>org.apache.commons</pattern>
+                        <shadedPattern>kwyyeung.autoboost.internal.org.apache.commons</shadedPattern>
+                    </relocation>
+                    <relocation>
+                        <pattern>soot</pattern>
+                        <shadedPattern>kwyyeung.autoboost.internal.soot</shadedPattern>
+                    </relocation>
+                    <relocation>
+                        <pattern>org.apache.logging.log4j</pattern>
+                        <shadedPattern>kwyyeung.autoboost.internal.org.apache.logging.log4j</shadedPattern>
+                    </relocation>
+                    <relocation>
+                        <pattern>org.jgrapht</pattern>
+                        <shadedPattern>kwyyeung.autoboost.internal.org.jgrapht</shadedPattern>
+                    </relocation>
+                </relocations>
+            </configuration>
+
+        </plugin>
         </plugins>
     </build>
 </project>
