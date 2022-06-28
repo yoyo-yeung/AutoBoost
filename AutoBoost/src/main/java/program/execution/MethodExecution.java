@@ -34,22 +34,6 @@ public class MethodExecution {
         this.test = AutoBoost.getExecutingTest();
     }
 
-    public MethodExecution(int ID, int methodInvokedId, int calleeId, List<Integer> params, int returnValId, int resultThisId, Class<?> e) {
-        if(!relationshipCheck(methodInvokedId, calleeId, params, returnValId, resultThisId))
-            throw new IllegalArgumentException("Arguments not matched");
-        this.ID = ID;
-        this.methodInvokedId = methodInvokedId;
-        this.calleeId = calleeId;
-        this.params = params == null ? new ArrayList<>() : params;
-        this.returnValId = returnValId;
-        this.resultThisId = resultThisId;
-        this.exceptionClass = e;
-        this.test = AutoBoost.getExecutingTest();
-    }
-
-    public boolean relationshipCheck() {
-        return relationshipCheck(this.methodInvokedId, this.calleeId, this.params, this.returnValId, this.resultThisId);
-    }
 
     private boolean relationshipCheck(int methodInvokedId, int calleeId, List<Integer> params, int returnValId, int resultThisId) {
         MethodDetails methodInvoked = InstrumentResult.getSingleton().getMethodDetailByID(methodInvokedId);
