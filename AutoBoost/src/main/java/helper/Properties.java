@@ -16,9 +16,9 @@ public class Properties {
     private String[] testCases = null;
     private List<String> faultyFunc = new ArrayList<>();
     private List<Integer> faultyFuncIds = new ArrayList<>();
-    private String generatedPackage = null;
     private String testSourceDir = null;
     private String testSuitePrefix = "AB";
+    private int casePerClass =200;
     private int junitVer = 4;
     private static final String classMethSep = "::";
     private static final String classSep = ",";
@@ -61,13 +61,6 @@ public class Properties {
 
     }
 
-    public String getGeneratedPackage() {
-        return generatedPackage;
-    }
-
-    public void setGeneratedPackage(String generatedPackage) {
-        this.generatedPackage = generatedPackage;
-    }
 
     public static String getDELIMITER() {
         return DELIMITER;
@@ -114,7 +107,6 @@ public class Properties {
     public void logProperties() {
         logProperty("insBinPath", this.insBinPath);
         logProperty("testCases", String.join(",", this.testCases));
-        logProperty("generatedPackage", this.generatedPackage);
         logProperty("faultyFunc", String.join(",", this.faultyFunc));
         logProperty("testSourceDir", this.testSourceDir);
         logProperty("testClassPrefix", this.testSuitePrefix);
@@ -133,5 +125,13 @@ public class Properties {
 
     public void addFaultyFuncId(Integer faultyFuncId) {
         this.faultyFuncIds.add(faultyFuncId);
+    }
+
+    public int getCasePerClass() {
+        return casePerClass;
+    }
+
+    public void setCasePerClass(int casePerClass) {
+        this.casePerClass = casePerClass;
     }
 }
