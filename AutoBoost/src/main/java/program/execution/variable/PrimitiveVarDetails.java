@@ -2,6 +2,8 @@ package program.execution.variable;
 
 import entity.CREATION_TYPE;
 import org.apache.commons.lang3.ClassUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.StringEscapeUtils;
 
 import java.lang.reflect.Field;
 import java.util.Objects;
@@ -42,7 +44,7 @@ public class PrimitiveVarDetails extends VarDetail{
             case "long":
                 return this.value+"L";
             case "char":
-                return "'" + this.value + "'";
+                return "'" + StringEscapeUtils.escapeJava(this.value.toString())  + "'";
             case "float":
                 return this.value + "f";
             default:
