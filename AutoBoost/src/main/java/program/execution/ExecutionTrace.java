@@ -573,6 +573,13 @@ public class ExecutionTrace {
         varInvolved.add(original.getCalleeId());
         varInvolved.add(original.getReturnValId());
         varInvolved.add(original.getResultThisId());
+        if(original.getReturnValId() != -1) {
+            VarDetail returnVarDetail = getVarDetailByID(original.getReturnValId());
+            if (returnVarDetail instanceof ArrVarDetails)
+                varInvolved.addAll(((ArrVarDetails) returnVarDetail).getComponents());
+            if (returnVarDetail instanceof MapVarDetails)
+                varInvolved.addAll(((MapVarDetails) returnVarDetail).getKeyValuePairs().stream().flatMap(e -> Stream.of(e.getKey(), e.getValue())).collect(Collectors.toList()));
+        }
         varInvolved.remove(-1);
         varInvolved.removeIf(v -> !varToDefMap.containsKey(v) || varToDefMap.get(v) == null || varToDefMap.get(v) != original.getID());
         varInvolved.forEach(v -> varToDefMap.replace(v, original.getID(), repl.getID()));
