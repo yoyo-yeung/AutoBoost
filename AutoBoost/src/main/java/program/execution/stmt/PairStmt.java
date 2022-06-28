@@ -3,8 +3,6 @@ package program.execution.stmt;
 import helper.Properties;
 
 import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -24,7 +22,7 @@ public class PairStmt extends Stmt{
     }
 
     @Override
-    public Set<Class<?>> getImports() {
-        return Stream.of(keyStmt.getImports(), valueStmt.getImports()).flatMap(Collection::stream).collect(Collectors.toSet());
+    public Set<Class<?>> getImports(String packageName) {
+        return Stream.of(keyStmt.getImports(packageName), valueStmt.getImports(packageName)).flatMap(Collection::stream).collect(Collectors.toSet());
     }
 }

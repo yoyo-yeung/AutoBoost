@@ -1,8 +1,6 @@
 package program.execution.stmt;
 
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -22,7 +20,7 @@ public class AssignStmt extends Stmt{
     }
 
     @Override
-    public Set<Class<?>> getImports() {
-        return Stream.of(leftStmt.getImports(), rightStmt.getImports()).flatMap(Collection::stream).collect(Collectors.toSet());
+    public Set<Class<?>> getImports(String packageName) {
+        return Stream.of(leftStmt.getImports(packageName), rightStmt.getImports(packageName)).flatMap(Collection::stream).collect(Collectors.toSet());
     }
 }

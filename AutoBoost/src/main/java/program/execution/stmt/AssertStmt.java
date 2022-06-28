@@ -31,14 +31,14 @@ public class AssertStmt extends Stmt{
         return (type.equals(Double.class) || type.equals(double.class) || type.equals(Float.class) || type.equals(float.class)) && !(ExecutionTrace.getSingleton().getVarDetailByID(expected.getResultVarDetailID()) instanceof EnumVarDetails);
     }
     @Override
-    public Set<Class<?>> getImports() {
+    public Set<Class<?>> getImports(String packageName) {
         Set<Class<?>> imports = new HashSet<>();
         if(Properties.getSingleton().getJunitVer() == 4)
             imports.add(Assert.class);
         if(ExecutionTrace.getSingleton().getVarDetailByID(expected.resultVarDetailID).getType().isArray())
             imports.add(Arrays.class);
-        imports.addAll(expected.getImports());
-        imports.addAll(actual.getImports());
+        imports.addAll(expected.getImports(packageName));
+        imports.addAll(actual.getImports(packageName));
         return imports;
     }
 }

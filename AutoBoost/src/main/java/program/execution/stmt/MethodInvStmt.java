@@ -28,12 +28,12 @@ public class MethodInvStmt extends Stmt{
     }
 
     @Override
-    public Set<Class<?>> getImports() {
+    public Set<Class<?>> getImports(String packageName) {
         Set<Class<?>> results = new HashSet<>();
         METHOD_TYPE methodType = InstrumentResult.getSingleton().getMethodDetailByID(methodInvID).getType();
         if(methodType.equals(METHOD_TYPE.CONSTRUCTOR) || methodType.equals(METHOD_TYPE.STATIC) || callee.contains(".")) // callee contains . -> enum type
-            results.add(getTypeToImport(InstrumentResult.getSingleton().getMethodDetailByID(methodInvID).getdClass()));
-        this.paramStmts.forEach(stmt -> results.addAll(stmt.getImports()));
+            results.add(getTypeToImport(InstrumentResult.getSingleton().getMethodDetailByID(methodInvID).getdClass(), packageName));
+        this.paramStmts.forEach(stmt -> results.addAll(stmt.getImports(packageName)));
         results.remove(null);
         return results;
     }

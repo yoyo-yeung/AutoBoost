@@ -31,9 +31,9 @@ public class VarStmt extends Stmt{
     }
 
     @Override
-    public Set<Class<?>> getImports() {
+    public Set<Class<?>> getImports(String packageName) {
         Set<Class<?>> imports = new HashSet<>();
-        imports.add(getTypeToImport(varType));
+        imports.add(getTypeToImport(varType, packageName));
         imports.remove(null);
         return imports;
     }

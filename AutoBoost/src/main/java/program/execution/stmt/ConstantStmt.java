@@ -25,9 +25,9 @@ public class ConstantStmt extends Stmt{
     }
 
     @Override
-    public Set<Class<?>> getImports() {
+    public Set<Class<?>> getImports(String packageName) {
         if(ExecutionTrace.getSingleton().getVarDetailByID(resultVarDetailID).getClass().equals(EnumVarDetails.class))
             return new HashSet<>();
-        return Stream.of(ExecutionTrace.getSingleton().getVarDetailByID(resultVarDetailID).getType()).map(Stmt::getTypeToImport).filter(Objects::nonNull).collect(Collectors.toSet());
+        return Stream.of(ExecutionTrace.getSingleton().getVarDetailByID(resultVarDetailID).getType()).map(c-> getTypeToImport(c, packageName)).filter(Objects::nonNull).collect(Collectors.toSet());
     }
 }
