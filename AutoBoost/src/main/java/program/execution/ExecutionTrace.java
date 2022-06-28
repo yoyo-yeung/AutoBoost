@@ -241,6 +241,7 @@ public class ExecutionTrace {
             return true;
 
         MethodDetails details = InstrumentResult.getSingleton().getMethodDetailByID(execution.getMethodInvokedId());
+        if (details.getAccess().equals(ACCESS.PRIVATE))
             return true;
         switch (process) {
             case CALL_THIS:
@@ -274,12 +275,14 @@ public class ExecutionTrace {
         // return false if its essentially the same execution
         if(existingDefEx != null && existingDefEx.getMethodInvokedId() == execution.getMethodInvokedId() && existingDefEx.getParams().equals(execution.getParams()) && existingDefEx.getCalleeId() == execution.getCalleeId() && (!process.equals(LOG_ITEM.RETURN_THIS) || existingDefEx.getResultThisId() == varDetail.getID()) && (!process.equals(LOG_ITEM.RETURN_ITEM) || existingDefEx.getReturnValId() == varDetail.getID()) )
             return false;
-        if (details.getAccess().equals(ACCESS.PRIVATE) || (details.getAccess().equals(ACCESS.PROTECTED) && !details.getDeclaringClass().getPackageName().equals(Properties.getSingleton().getGeneratedPackage())))
+        if (details.getAccess().equals(ACCESS.PRIVATE))
             return false;
         if (execution.getCalleeId() == varDetail.getID() || execution.getParams().contains(varDetail.getID()))
             return false;
         if (existingDef == null) return true;
         else if (existingDef.getId() == details.getId()) return false;
+
+        if(details.getAccess().equals(ACCESS.PUBLIC) && !existingDef.getAccess().equals(ACCESS.PUBLIC)) return true;
 
         int existingNullDefCount = getNullDefCount(existingDefEx);
         int currentNullDefCount = getNullDefCount(execution);
