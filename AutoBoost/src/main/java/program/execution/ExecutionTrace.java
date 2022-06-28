@@ -338,7 +338,9 @@ public class ExecutionTrace {
         Class<?> varDetailType = null;
 //        logger.debug("findExisting ");
         if (type.isEnum() || artificialEnum) {
-            objValue = type.getSimpleName() + "." + objValue;
+            if(type.equals(Class.class))
+                objValue = objValue.toString().replace("$", ".") +".class";
+            else objValue = type.getSimpleName() + "." + objValue;
             varDetailType = EnumVarDetails.class;
         }
         else if (ArrVarDetails.availableTypeCheck(type) && ArrVarDetails.availableTypeCheck(objValue.getClass())) {
