@@ -147,8 +147,8 @@ public class ExecutionTrace {
                 objValue = match.get();
             } else if (type.equals(Class.class)) {
                 artificialEnum = true;
-                type = (Class<?>) objValue;
-                objValue = "class";
+                if(((Class)objValue).isArray()) objValue = Array.class;
+                objValue = ((Class) objValue).getName();
             } else objValue = toStringWithAttr(objValue);
         }
         else if (ClassUtils.isPrimitiveOrWrapper(type)) {
@@ -241,7 +241,6 @@ public class ExecutionTrace {
             return true;
 
         MethodDetails details = InstrumentResult.getSingleton().getMethodDetailByID(execution.getMethodInvokedId());
-        if (details.getAccess().equals(ACCESS.PRIVATE) || (details.getAccess().equals(ACCESS.PROTECTED) && !details.getDeclaringClass().getPackageName().equals(Properties.getSingleton().getGeneratedPackage())))
             return true;
         switch (process) {
             case CALL_THIS:
