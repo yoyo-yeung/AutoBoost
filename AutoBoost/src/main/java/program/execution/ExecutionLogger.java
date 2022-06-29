@@ -8,6 +8,7 @@ import org.apache.commons.lang3.ClassUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import program.analysis.MethodDetails;
+import program.execution.variable.VarDetail;
 import program.instrumentation.InstrumentResult;
 import soot.VoidType;
 
@@ -69,7 +70,7 @@ public class ExecutionLogger {
         updateExecutionRelationships(threadID, newExecution);
         addExecutionToThreadStack(threadID, newExecution);
         if(details.getType().equals(METHOD_TYPE.MEMBER)) // i.e. have callee
-            setVarIDForExecution(newExecution, LOG_ITEM.CALL_THIS, executionTrace.getVarDetail(newExecution, callee == null ? Object.class : callee.getClass(), callee, LOG_ITEM.CALL_THIS).getID());
+            setVarForExecution(newExecution, LOG_ITEM.CALL_THIS, executionTrace.getVarDetail(newExecution, callee == null ? Object.class : callee.getClass(), callee, LOG_ITEM.CALL_THIS));
         if(details.getParameterCount() > 0 ) {
             if (Array.getLength(params) < details.getParameterCount())
                 throw new RuntimeException("Illegal parameter provided for logging");
@@ -165,9 +166,9 @@ public class ExecutionLogger {
 
     private static void setVarIDForExecution(MethodExecution execution, LOG_ITEM process, int ID) {
         switch (process) {
-            case CALL_THIS:
-                execution.setCalleeId(ID);
-                break;
+//            case CALL_THIS:
+//                execution.setCalleeId(ID);
+//                break;
             case CALL_PARAM:
                 execution.addParam(ID);
                 break;
@@ -182,7 +183,15 @@ public class ExecutionLogger {
         }
     }
 
-
+    private static void setVarForExecution(MethodExecution execution, LOG_ITEM process, VarDetail varDetail) {
+        switch (process) {
+            case CALL_THIS:
+                execution.setCallee(varDetail);
+                break;
+            default:
+                throw new RuntimeException("Invalid value provided for process " + process);
+        }
+    }
 
     public static void clearExecutingStack() {
         threadExecutingMap.clear();

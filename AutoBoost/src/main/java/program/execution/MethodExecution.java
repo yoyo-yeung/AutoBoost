@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 public class MethodExecution {
     private final int ID;
     private final MethodDetails methodInvoked;
-    private int calleeId; // if member function
+    private VarDetail callee = null;
     private final List<Integer> params;
     private int returnValId; // if non void
     private int resultThisId; // if member function, object after executing its member function
@@ -26,7 +26,6 @@ public class MethodExecution {
     public MethodExecution(int ID, MethodDetails methodInvoked) {
         this.ID = ID;
         this.methodInvoked = methodInvoked;
-        this.calleeId = -1;
         this.params = new ArrayList<>();
         this.returnValId = -1;
         this.resultThisId = -1;
@@ -64,18 +63,27 @@ public class MethodExecution {
         return methodInvoked;
     }
 
+
     public int getID() {
         return ID;
     }
 
 
-    public int getCalleeId() {
-        return calleeId;
+    public VarDetail getCallee() {
+        return callee;
     }
 
+
+    public void setCallee(VarDetail callee) {
+        this.callee = callee;
+    }
     public List<Integer> getParams() {
         return params;
     }
+    public int getCalleeId() {
+        return this.callee == null? -1 : this.callee.getID();
+    }
+
 
     public int getReturnValId() {
         return returnValId;
@@ -83,12 +91,6 @@ public class MethodExecution {
 
     public int getResultThisId() {
         return resultThisId;
-    }
-
-    public void setCalleeId(int calleeId) {
-        if(this.calleeId != -1)
-            throw new IllegalArgumentException("Callee cannot be set twice");
-        this.calleeId = calleeId;
     }
 
     public void addParam(int param) {
@@ -123,7 +125,7 @@ public class MethodExecution {
         return "MethodExecution{" +
                 "ID=" + ID +
                 ", methodInvokedId=" + methodInvoked.getId() +
-                ", calleeId=" + calleeId +
+                ", calleeId=" + this.getCalleeId() +
                 ", params=" + params +
                 ", returnValId=" + returnValId +
                 ", resultThisId=" + resultThisId +
@@ -136,7 +138,7 @@ public class MethodExecution {
         return "MethodExecution{" +
                 "ID=" + ID +
                 ", methodInvokedId=" + methodInvoked.toString() +
-                ", calleeId=" + calleeId +
+                ", calleeId=" + this.getCalleeId() +
                 ", params=" + params +
                 ", returnValId=" + returnValId +
                 ", resultThisId=" + resultThisId +
@@ -150,7 +152,7 @@ public class MethodExecution {
         return "MethodExecution{" +
                 "ID=" + ID +
                 ", methodInvokedId=" +  methodInvoked.toString() +
-                ", calleeId=" + (calleeId == -1 ? "null" : trace.getVarDetailByID(calleeId).toString() )+
+                ", calleeId=" + (callee == null ? "null": callee.toDetailedString() )+
                 ", params=" + params.stream().map(p -> p == -1 ? "null" : trace.getVarDetailByID(p).toString()).collect(Collectors.joining(Properties.getDELIMITER())) +
                 ", returnValId=" + (returnValId == -1 ? "null" : trace.getVarDetailByID(returnValId).toString()) +
                 ", resultThisId=" + (resultThisId == -1 ? "null" : trace.getVarDetailByID(resultThisId).toString()) +
@@ -161,7 +163,7 @@ public class MethodExecution {
     }
 
     public boolean sameCalleeParamNMethod(MethodExecution ex) {
-        return this.methodInvoked.equals(ex.getMethodInvoked()) && this.calleeId == ex.calleeId && this.params.equals(ex.params);
+        return this.methodInvoked.equals(ex.getMethodInvoked()) && this.getCalleeId() == ex.getCalleeId() && this.params.equals(ex.params);
     }
 
     public boolean sameContent(MethodExecution ex) {
@@ -189,11 +191,11 @@ public class MethodExecution {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         MethodExecution execution = (MethodExecution) o;
-        return this.calleeId == execution.calleeId && this.params.equals(execution.params) && this.methodInvoked.equals(execution.getMethodInvoked());
+        return this.getCalleeId() == execution.getCalleeId() && this.params.equals(execution.params) && this.methodInvoked.equals(execution.getMethodInvoked());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(calleeId, params, returnValId, resultThisId, exceptionClass);
+        return Objects.hash(callee, params, returnValId, resultThisId, exceptionClass);
     }
 }
