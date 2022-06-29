@@ -51,15 +51,15 @@ public class TestGenerator {
     public void generateResultCheckingTests(List<MethodExecution> snapshot) {
         snapshot.stream()
                 .filter(e -> {
-                    MethodDetails details = instrumentResult.getMethodDetailByID(e.getMethodInvokedId());
-                    return !instrumentResult.isLibMethod(e.getMethodInvokedId()) && !(details.getType().equals(METHOD_TYPE.MEMBER) && Arrays.stream(SKIP_MEMBER_METHODS).anyMatch(s -> details.getName().equals(s))) && !(details.getType().equals(METHOD_TYPE.STATIC) && Arrays.stream(SKIP_STATIC_METHODS).anyMatch(s -> details.getName().equals(s))) ;
+                    MethodDetails details = e.getMethodInvoked();
+                    return !instrumentResult.isLibMethod(details.getId()) && !(details.getType().equals(METHOD_TYPE.MEMBER) && Arrays.stream(SKIP_MEMBER_METHODS).anyMatch(s -> details.getName().equals(s))) && !(details.getType().equals(METHOD_TYPE.STATIC) && Arrays.stream(SKIP_STATIC_METHODS).anyMatch(s -> details.getName().equals(s))) ;
                 })
                 .filter(e -> e.getTest() != null)
                 .distinct()
-                .filter(e -> e.getReturnValId() != -1 && (executionTrace.getDefExeList(e.getReturnValId()) == null || !executionTrace.getDefExeList(e.getReturnValId()).equals(e.getID())) && exeCanBeTested(e.getID(), 0, -1, new HashSet<>(), instrumentResult.getMethodDetailByID(e.getMethodInvokedId()).getdClass().getPackage().getName()))// prevent self checking
+                .filter(e -> e.getReturnValId() != -1 && (executionTrace.getDefExeList(e.getReturnValId()) == null || !executionTrace.getDefExeList(e.getReturnValId()).equals(e.getID())) && exeCanBeTested(e.getID(), 0, -1, new HashSet<>(), e.getMethodInvoked().getdClass().getPackage().getName()))// prevent self checking
                 .filter(e -> {
                     try {
-                        MethodDetails details = instrumentResult.getMethodDetailByID(e.getMethodInvokedId());
+                        MethodDetails details = e.getMethodInvoked();
                         Method method = details.getdClass().getMethod(details.getName(), details.getParameterTypes().stream().map(t -> {
                             try {
                                 return ClassUtils.getClass(t.toQuotedString());
@@ -92,13 +92,13 @@ public class TestGenerator {
                     if(varDetailClass.equals(ObjVarDetails.class)) return returnVarDetail.equals(executionTrace.getNullVar());
                     if(varDetailClass.equals(ArrVarDetails.class)) {
                         if(((ArrVarDetails) returnVarDetail).getComponents().size() == 0) return true;
-                        return StringUtils.countMatches(instrumentResult.getMethodDetailByID(e.getMethodInvokedId()).getReturnSootType().toString(), "[]") == StringUtils.countMatches(returnVarDetail.getType().getSimpleName(), "[]") && ((ArrVarDetails) returnVarDetail).getLeaveType().stream().allMatch(ClassUtils::isPrimitiveOrWrapper);
+                        return StringUtils.countMatches(e.getMethodInvoked().getReturnSootType().toString(), "[]") == StringUtils.countMatches(returnVarDetail.getType().getSimpleName(), "[]") && ((ArrVarDetails) returnVarDetail).getLeaveType().stream().allMatch(ClassUtils::isPrimitiveOrWrapper);
                     }
                     return  true;
                 })
                 .map(e ->
                 {
-                    MethodDetails methodDetails = instrumentResult.getMethodDetailByID(e.getMethodInvokedId());
+                    MethodDetails methodDetails = e.getMethodInvoked();
 
                     ValueTestCase testCase = new ValueTestCase(methodDetails.getdClass().getPackage().getName());
                     MethodInvStmt invStmt = getMethodInvStmt(e, testCase);
@@ -125,9 +125,9 @@ public class TestGenerator {
 
     public void generateExceptionTests(List<MethodExecution> snapshot) {
         snapshot.stream()
-                .filter(e -> e.getReturnValId() == -1 && e.getExceptionClass() != null && !e.getExceptionClass().equals(UnrecognizableException.class) && exeCanBeTested(e.getID(), 0, -1, new HashSet<>(), instrumentResult.getMethodDetailByID(e.getMethodInvokedId()).getdClass().getPackage().getName()))
+                .filter(e -> e.getReturnValId() == -1 && e.getExceptionClass() != null && !e.getExceptionClass().equals(UnrecognizableException.class) && exeCanBeTested(e.getID(), 0, -1, new HashSet<>(), e.getMethodInvoked().getdClass().getPackage().getName()))
                 .map(e -> {
-                    MethodDetails m = instrumentResult.getMethodDetailByID(e.getMethodInvokedId());
+                    MethodDetails m = e.getMethodInvoked();
 
                     ExceptionTestCase testCase = new ExceptionTestCase(m.getdClass().getPackage().getName());
                     MethodInvStmt invStmt = getMethodInvStmt(e, testCase);
@@ -141,7 +141,7 @@ public class TestGenerator {
 
     public boolean exeCanBeTested(Integer methodExecutionID, int lv, int defedVar, Set<Integer> exeUnderCheck, String packageName) {
         MethodExecution execution = executionTrace.getMethodExecutionByID(methodExecutionID);
-        MethodDetails details = instrumentResult.getMethodDetailByID(execution.getMethodInvokedId());
+        MethodDetails details = execution.getMethodInvoked();
         if (passedExe.contains(methodExecutionID))
             return true;
         if (exeUnderCheck.contains(methodExecutionID)) {
@@ -368,7 +368,7 @@ public class TestGenerator {
     }
 
     private MethodInvStmt getMethodInvStmt(MethodExecution execution, TestCase testCase) {
-        MethodDetails details = instrumentResult.getMethodDetailByID(execution.getMethodInvokedId());
+        MethodDetails details = execution.getMethodInvoked();
         MethodInvStmt invokeStmt = null;
         VarStmt varStmt;
         List<Stmt> paramStmt = IntStream.range(0, details.getParameterCount()).mapToObj(i -> {
@@ -408,7 +408,7 @@ public class TestGenerator {
         int varDetailID = varDetail.getID();
         int e = executionTrace.getDefExeList(varDetailID);
         MethodExecution execution = executionTrace.getMethodExecutionByID(e);
-        MethodDetails details = instrumentResult.getMethodDetailByID(execution.getMethodInvokedId());
+        MethodDetails details = execution.getMethodInvoked();
         MethodInvStmt invokeStmt = getMethodInvStmt(execution, testCase);
         VarStmt varStmt = null;
         switch (details.getType()) {

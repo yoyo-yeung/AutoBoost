@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 
 public class MethodExecution {
     private final int ID;
-    private final int methodInvokedId;
+    private final MethodDetails methodInvoked;
     private int calleeId; // if member function
     private final List<Integer> params;
     private int returnValId; // if non void
@@ -23,9 +23,9 @@ public class MethodExecution {
     private boolean reproducible = true;
     private String test = null;
 
-    public MethodExecution(int ID, int methodInvokedId) {
+    public MethodExecution(int ID, MethodDetails methodInvoked) {
         this.ID = ID;
-        this.methodInvokedId = methodInvokedId;
+        this.methodInvoked = methodInvoked;
         this.calleeId = -1;
         this.params = new ArrayList<>();
         this.returnValId = -1;
@@ -60,12 +60,14 @@ public class MethodExecution {
         return true;
     }
 
+    public MethodDetails getMethodInvoked() {
+        return methodInvoked;
+    }
+
     public int getID() {
         return ID;
     }
 
-    public int getMethodInvokedId() {
-        return methodInvokedId;
     }
 
     public int getCalleeId() {
@@ -91,7 +93,7 @@ public class MethodExecution {
     }
 
     public void addParam(int param) {
-        if(this.params.size() == InstrumentResult.getSingleton().getMethodDetailByID(this.methodInvokedId).getParameterTypes().size())
+        if(this.params.size() == this.methodInvoked.getParameterTypes().size())
             throw new IllegalArgumentException("Params cannot be set twice");
         this.params.add(param);
     }
@@ -121,7 +123,7 @@ public class MethodExecution {
     public String toString() {
         return "MethodExecution{" +
                 "ID=" + ID +
-                ", methodInvokedId=" + methodInvokedId +
+                ", methodInvokedId=" + methodInvoked.getId() +
                 ", calleeId=" + calleeId +
                 ", params=" + params +
                 ", returnValId=" + returnValId +
@@ -134,7 +136,7 @@ public class MethodExecution {
     public String toSimpleString() {
         return "MethodExecution{" +
                 "ID=" + ID +
-                ", methodInvokedId=" + InstrumentResult.getSingleton().getMethodDetailByID(methodInvokedId).toString() +
+                ", methodInvokedId=" + methodInvoked.toString() +
                 ", calleeId=" + calleeId +
                 ", params=" + params +
                 ", returnValId=" + returnValId +
@@ -148,7 +150,7 @@ public class MethodExecution {
         ExecutionTrace trace = ExecutionTrace.getSingleton();
         return "MethodExecution{" +
                 "ID=" + ID +
-                ", methodInvokedId=" + InstrumentResult.getSingleton().getMethodDetailByID(methodInvokedId).toString() +
+                ", methodInvokedId=" +  methodInvoked.toString() +
                 ", calleeId=" + (calleeId == -1 ? "null" : trace.getVarDetailByID(calleeId).toString() )+
                 ", params=" + params.stream().map(p -> p == -1 ? "null" : trace.getVarDetailByID(p).toString()).collect(Collectors.joining(Properties.getDELIMITER())) +
                 ", returnValId=" + (returnValId == -1 ? "null" : trace.getVarDetailByID(returnValId).toString()) +
@@ -160,7 +162,7 @@ public class MethodExecution {
     }
 
     public boolean sameCalleeParamNMethod(MethodExecution ex) {
-        return this.methodInvokedId == ex.methodInvokedId && this.calleeId == ex.calleeId && this.params.equals(ex.params);
+        return this.methodInvoked.equals(ex.getMethodInvoked()) && this.calleeId == ex.calleeId && this.params.equals(ex.params);
     }
 
     public boolean sameContent(MethodExecution ex) {
@@ -188,7 +190,7 @@ public class MethodExecution {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         MethodExecution execution = (MethodExecution) o;
-        return this.calleeId == execution.calleeId && this.params.equals(execution.params) && this.methodInvokedId == execution.methodInvokedId;
+        return this.calleeId == execution.calleeId && this.params.equals(execution.params) && this.methodInvoked.equals(execution.getMethodInvoked());
     }
 
     @Override

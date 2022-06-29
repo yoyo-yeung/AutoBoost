@@ -47,8 +47,7 @@ public class ExecutionLogger {
             setThreadSkippingState(threadID, false);
             return false;
         }
-        int latestID = latestExecution.getMethodInvokedId();
-        MethodDetails latestDetails = instrumentResult.getMethodDetailByID(latestID);
+        MethodDetails latestDetails = latestExecution.getMethodInvoked();
 
         if(!getThreadSkippingState(threadID) && latestDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR)) {
             MethodDetails current = instrumentResult.getMethodDetailByID(methodId);
@@ -62,8 +61,8 @@ public class ExecutionLogger {
 
     public static int logStart(int methodId, Object callee, Object params, long threadID) throws ClassNotFoundException {
          if(!isLogging() || returnNow(methodId, LOG_ITEM.START, threadID)) return -1;
-        MethodExecution newExecution = new MethodExecution(executionTrace.getNewExeID(), methodId);
         MethodDetails details = instrumentResult.getMethodDetailByID(methodId);
+        MethodExecution newExecution = new MethodExecution(executionTrace.getNewExeID(), details);
         Stack<MethodExecution> currentExecuting = getCurrentExecuting(threadID);
         if (details.getType().equals(METHOD_TYPE.STATIC_INITIALIZER) || (currentExecuting.size() > 0 && currentExecuting.peek().getTest() == null))
             newExecution.setTest(null);
@@ -97,8 +96,8 @@ public class ExecutionLogger {
         MethodExecution execution = getLatestExecution(threadID);
         if(execution == null) return;
         if (executionID != execution.getID()) {
-            if (instrumentResult.isLibMethod(execution.getMethodInvokedId())) {
-                while(instrumentResult.isLibMethod(execution.getMethodInvokedId()) && execution.getID() != executionID) {
+            if (instrumentResult.isLibMethod(execution.getMethodInvoked().getId())) {
+                while(instrumentResult.isLibMethod(execution.getMethodInvoked().getId()) && execution.getID() != executionID) {
                     getCurrentExecuting(threadID).pop();
                     executionTrace.changeVertex(execution.getID(), getLatestExecution(threadID).getID());
                     execution = getLatestExecution(threadID);
@@ -121,7 +120,7 @@ public class ExecutionLogger {
             logEnd(executionID, callee, returnVal, threadID);
         }
         else {
-            MethodDetails details = instrumentResult.getMethodDetailByID(execution.getMethodInvokedId());
+            MethodDetails details = execution.getMethodInvoked();
             if (!details.getReturnSootType().equals(VoidType.v()) && !(instrumentResult.isLibMethod(details.getId()) && returnVal == null)) {
                 if(details.getReturnSootType() instanceof soot.PrimType)
                     setVarIDForExecution(execution, LOG_ITEM.RETURN_ITEM, executionTrace.getVarDetailID(execution, ClassUtils.wrapperToPrimitive(returnVal.getClass()), returnVal, LOG_ITEM.RETURN_ITEM));
@@ -191,8 +190,8 @@ public class ExecutionLogger {
     private static void updateSkipping(MethodExecution execution, long threadID) {
         if(getThreadSkippingState(threadID)) return;
         Stack<MethodExecution> executionStack = getCurrentExecuting(threadID);
-        if(( executionStack.size() >  1 && executionStack.stream().limit(executionStack.size() - 1).filter(e -> e.getMethodInvokedId() == execution.getMethodInvokedId()).anyMatch(e -> e.getTest() != null && e.sameCalleeParamNMethod(execution)) )|| executionTrace.getAllMethodExecs().values().stream()
-                .filter(e -> e.getMethodInvokedId() == execution.getMethodInvokedId())
+        if(( executionStack.size() >  1 && executionStack.stream().limit(executionStack.size() - 1).filter(e -> e.getMethodInvoked().equals(execution.getMethodInvoked())).anyMatch(e -> e.getTest() != null && e.sameCalleeParamNMethod(execution)) )|| executionTrace.getAllMethodExecs().values().stream()
+                .filter(e -> e.getMethodInvoked().equals(execution.getMethodInvoked()))
                 .anyMatch(e -> e.getTest() != null && e.sameCalleeParamNMethod(execution))) {
             setThreadSkippingState(threadID, true);
             logger.debug("setting skipping as true since " + execution.toDetailedString());
