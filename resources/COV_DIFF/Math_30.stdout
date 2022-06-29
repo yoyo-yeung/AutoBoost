@@ -1,5 +1,0 @@
-Method: <org.apache.commons.math3.distribution.NormalDistribution: double cumulativeProbability(double)>, Callee: {randomData={rand=null, secRand=null,}, solverAbsoluteAccuracy=1.0E-6, mean=0.0, standardDeviation=1.0, solverAbsoluteAccuracy=1.0E-9,}, Params: [NaN], Related test: test5(org.apache.commons.math3.stat.inference.Math30AB_1_Test)
-Method: <org.apache.commons.math3.util.FastMath: double sqrt(double)>, Callee: null, Params: [-1.5314038266666666E8], Related test: test4(org.apache.commons.math3.stat.inference.Math30AB_1_Test)
-Method: <org.apache.commons.math3.util.FastMath: double abs(double)>, Callee: null, Params: [NaN], Related test: test5(org.apache.commons.math3.stat.inference.Math30AB_1_Test)
-Method: <org.apache.commons.math3.special.Erf: double erf(double)>, Callee: null, Params: [NaN], Related test: test5(org.apache.commons.math3.stat.inference.Math30AB_1_Test)
-Method: <org.apache.commons.math3.special.Gamma: double regularizedGammaP(double,double,double,int)>, Callee: null, Params: [0.5,NaN,1.0E-15,10000], Related test: test5(org.apache.commons.math3.stat.inference.Math30AB_1_Test)

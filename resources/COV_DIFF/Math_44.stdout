@@ -1,4 +1,0 @@
-Method: <org.apache.commons.math.util.FastMath: double abs(double)>, Callee: null, Params: [16.01707032108809], Related test: test75(org.apache.commons.math.ode.Math44AB_1_Test)
-Method: <org.apache.commons.math.util.FastMath: int max(int,int)>, Callee: null, Params: [1,161], Related test: test78(org.apache.commons.math.ode.Math44AB_1_Test)
-Method: <org.apache.commons.math.util.FastMath: double ceil(double)>, Callee: null, Params: [160.1707032108809], Related test: test76(org.apache.commons.math.ode.Math44AB_1_Test)
-Method: <org.apache.commons.math.util.FastMath: double floor(double)>, Callee: null, Params: [160.1707032108809], Related test: test76(org.apache.commons.math.ode.Math44AB_1_Test)
