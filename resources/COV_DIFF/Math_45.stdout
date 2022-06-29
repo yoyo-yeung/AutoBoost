@@ -1,2 +1,0 @@
-Method: <org.apache.commons.math.util.FastMath: double ceil(double)>, Callee: null, Params: [32.0], Related test: test1(org.apache.commons.math.linear.Math45AB_1_Test)
-Method: <org.apache.commons.math.util.FastMath: double floor(double)>, Callee: null, Params: [32.0], Related test: test1(org.apache.commons.math.linear.Math45AB_1_Test)

@@ -1,1 +1,0 @@
-Method: <org.apache.commons.math.stat.Frequency: long getCumFreq(long)>, Callee: {freqTable={1=2, 2=2, 3=4},}, Params: [3], Related test: test10(org.apache.commons.math.stat.Math75AB_1_Test)

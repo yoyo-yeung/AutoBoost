@@ -1,1 +1,0 @@
-Method: <org.apache.commons.math3.optimization.univariate.UnivariatePointValuePair: double getPoint()>, Callee: {point=4.7123890747263015, value=-0.9999999999999956,}, Params: [], Related test: test55(org.apache.commons.math3.optimization.univariate.Math24AB_1_Test)

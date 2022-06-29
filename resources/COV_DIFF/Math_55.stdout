@@ -1,4 +1,0 @@
-Method: <org.apache.commons.math.geometry.Vector3D: void <init>(double,double,double)>, Callee: null, Params: [-1.0,2.0,0.0], Related test: test1(org.apache.commons.math.geometry.Math55AB_1_Test)
-Method: <org.apache.commons.math.geometry.Vector3D: double getZ()>, Callee: {x=-1.0, y=2.0, z=0.0,}, Params: [], Related test: test1(org.apache.commons.math.geometry.Math55AB_1_Test)
-Method: <org.apache.commons.math.geometry.Vector3D: double getY()>, Callee: {x=-1.0, y=2.0, z=0.0,}, Params: [], Related test: test2(org.apache.commons.math.geometry.Math55AB_1_Test)
-Method: <org.apache.commons.math.geometry.Vector3D: double getX()>, Callee: {x=-1.0, y=2.0, z=0.0,}, Params: [], Related test: test3(org.apache.commons.math.geometry.Math55AB_1_Test)
