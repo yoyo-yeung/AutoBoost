@@ -114,11 +114,11 @@ public class ExecutionTrace {
      * @param type     type of the object to be stored
      * @param objValue object to be stored
      * @param process the current process, e.g. logging callee? param? or return value?
-     * @return ID of the VarDetail storing the provided object
+     * @return VarDetail storing the provided object
      */
-    public int getVarDetailID(MethodExecution execution, Class<?> type, Object objValue, LOG_ITEM process) {
+    public VarDetail getVarDetail(MethodExecution execution, Class<?> type, Object objValue, LOG_ITEM process) {
         boolean artificialEnum = false;
-        if(objValue == null ) return nullVar.getID();
+        if(objValue == null ) return nullVar;
         if (type.isEnum()) {
             objValue = ((Enum) objValue).name();
         } else if (!type.isArray() && !type.equals(String.class) && !ClassUtils.isPrimitiveOrWrapper(type) && !((ArrVarDetails.availableTypeCheck(type) && ArrVarDetails.availableTypeCheck(objValue.getClass())) || (MapVarDetails.availableTypeCheck(type) && MapVarDetails.availableTypeCheck(objValue.getClass()))) ) {
@@ -179,9 +179,8 @@ public class ExecutionTrace {
                 }
             }
         }
-        int varID = findExistingVarDetailID(execution, type, objValue, process, artificialEnum);
-        VarDetail varDetail;
-        if (varID == -1) {
+        VarDetail varDetail = findExistingVarDetail(execution, type, objValue, process, artificialEnum);
+        if (varDetail == null) {
             if (type.isEnum() || artificialEnum)
                 varDetail = new EnumVarDetails(getNewVarID(), type, (String) objValue);
             else if (type.isPrimitive()) {
@@ -194,12 +193,12 @@ public class ExecutionTrace {
             } else if (type.equals(String.class))
                 varDetail = new StringVarDetails(getNewVarID(), (String) objValue);
             else if (StringBVarDetails.availableTypeCheck(type))
-                varDetail = new StringBVarDetails(getNewVarID(), type, getVarDetailID(execution, String.class, objValue.toString(), process));
+                varDetail = new StringBVarDetails(getNewVarID(), type, getVarDetail(execution, String.class, objValue.toString(), process).getID());
             else if (ArrVarDetails.availableTypeCheck(type) && ArrVarDetails.availableTypeCheck(objValue.getClass())) {
                 varDetail = new ArrVarDetails(getNewVarID(), getComponentStream(execution, type, objValue, process).collect(Collectors.toList()), objValue);
             } else if (MapVarDetails.availableTypeCheck(type) && MapVarDetails.availableTypeCheck(objValue.getClass())) {
                 varDetail = new MapVarDetails(getNewVarID(), type, ((Map<?, ?>) objValue).entrySet().stream()
-                        .map(e -> new AbstractMap.SimpleEntry<Integer, Integer>(getVarDetailID(execution, getClassOfObj(e.getKey()), e.getKey(), process), getVarDetailID(execution, getClassOfObj(e.getValue()), e.getValue(), process)))
+                        .map(e -> new AbstractMap.SimpleEntry<Integer, Integer>(getVarDetail(execution, getClassOfObj(e.getKey()), e.getKey(), process).getID(), getVarDetail(execution, getClassOfObj(e.getValue()), e.getValue(), process).getID()))
                         .collect(Collectors.<Map.Entry<Integer, Integer>>toSet()), objValue);
             }
              else if (ClassUtils.isPrimitiveWrapper(type)) {
@@ -213,18 +212,14 @@ public class ExecutionTrace {
                 addVarDetailUsage(varDetail, execution.getID());
             else
                 addNewVarDetail(varDetail, execution.getID());
-
-
-            varID = varDetail.getID();
         } else {
-            varDetail = this.getVarDetailByID(varID);
             if (setOccurrenceAsDef(varDetail, process, execution))
                 addNewVarDetail(varDetail, execution.getID());
             else
                 addVarDetailUsage(varDetail, execution.getID());
 
         }
-        return varID;
+        return varDetail;
     }
 
     /**
@@ -320,14 +315,13 @@ public class ExecutionTrace {
             throw new IllegalArgumentException("Provided Obj cannot be handled.");
         Stream<Integer> componentStream;
         if (type.isArray()) {
-            componentStream = IntStream.range(0, Array.getLength(obj)).mapToObj(i -> getVarDetailID(execution, type.getComponentType(), Array.get(obj, i), process));
+            componentStream = IntStream.range(0, Array.getLength(obj)).mapToObj(i -> getVarDetail(execution, type.getComponentType(), Array.get(obj, i), process).getID());
         } else
-            componentStream = ((Collection) obj).stream().map(v -> getVarDetailID(execution, getClassOfObj(v), v, process));
+            componentStream = ((Collection) obj).stream().map(v -> getVarDetail(execution, getClassOfObj(v), v, process).getID());
         if (Set.class.isAssignableFrom(type))
             componentStream = componentStream.sorted();
         return componentStream;
     }
-
     /**
      * If the obj was defined and stored before, return ID of the corresponding ObjVarDetails for reuse. Else return -1
      *
@@ -336,9 +330,9 @@ public class ExecutionTrace {
      * @param objValue
      * @param process
      * @param artificialEnum
-     * @return ID of ObjVarDetails if the obj was defined and stored before, -1 if not
+     * @return ObjVarDetails if the obj was defined and stored before, null if not
      */
-    private int findExistingVarDetailID(MethodExecution execution, Class<?> type, Object objValue, LOG_ITEM process, boolean artificialEnum) {
+    private VarDetail findExistingVarDetail(MethodExecution execution, Class<?> type, Object objValue, LOG_ITEM process, boolean artificialEnum) {
         Class<?> varDetailType = null;
 //        logger.debug("findExisting ");
         if (type.isEnum() || artificialEnum) {
@@ -352,7 +346,7 @@ public class ExecutionTrace {
             varDetailType = ArrVarDetails.class;
         }
         else if (MapVarDetails.availableTypeCheck(type) && MapVarDetails.availableTypeCheck(objValue.getClass())) {
-            objValue = ((Map<?, ?>) objValue).entrySet().stream().map(comp -> getVarDetailID(execution, getClassOfObj(comp.getKey()), comp.getKey(), process) + "=" + getVarDetailID(execution, getClassOfObj(comp.getValue()), comp.getValue(), process)).sorted().collect(Collectors.joining(Properties.getDELIMITER()));
+            objValue = ((Map<?, ?>) objValue).entrySet().stream().map(comp -> getVarDetail(execution, getClassOfObj(comp.getKey()), comp.getKey(), process).getID() + "=" + getVarDetail(execution, getClassOfObj(comp.getValue()), comp.getValue(), process).getID()).sorted().collect(Collectors.joining(Properties.getDELIMITER()));
             varDetailType = MapVarDetails.class;
         }
         // high chance of having the same value
@@ -377,7 +371,7 @@ public class ExecutionTrace {
                 .filter(v -> v.sameValue(type, finalObjValue1))
 
                 .findAny();
-        return result.map(VarDetail::getID).orElse(-1);
+        return result.orElse(null);
     }
 
     private Class<?> getClassOfObj(Object obj) {

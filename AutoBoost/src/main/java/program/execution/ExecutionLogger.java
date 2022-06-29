@@ -69,16 +69,16 @@ public class ExecutionLogger {
         updateExecutionRelationships(threadID, newExecution);
         addExecutionToThreadStack(threadID, newExecution);
         if(details.getType().equals(METHOD_TYPE.MEMBER)) // i.e. have callee
-            setVarIDForExecution(newExecution, LOG_ITEM.CALL_THIS, executionTrace.getVarDetailID(newExecution, callee == null ? Object.class : callee.getClass(), callee, LOG_ITEM.CALL_THIS));
+            setVarIDForExecution(newExecution, LOG_ITEM.CALL_THIS, executionTrace.getVarDetail(newExecution, callee == null ? Object.class : callee.getClass(), callee, LOG_ITEM.CALL_THIS).getID());
         if(details.getParameterCount() > 0 ) {
             if (Array.getLength(params) < details.getParameterCount())
                 throw new RuntimeException("Illegal parameter provided for logging");
             IntStream.range(0, details.getParameterCount()).forEach(i -> {
                 Object paramVal = Array.get(params, i);
                 if (details.getParameterTypes().get(i) instanceof soot.PrimType)
-                    setVarIDForExecution(newExecution, LOG_ITEM.CALL_PARAM, executionTrace.getVarDetailID(newExecution, ClassUtils.wrapperToPrimitive(paramVal.getClass()), paramVal, LOG_ITEM.CALL_PARAM));
+                    setVarIDForExecution(newExecution, LOG_ITEM.CALL_PARAM, executionTrace.getVarDetail(newExecution, ClassUtils.wrapperToPrimitive(paramVal.getClass()), paramVal, LOG_ITEM.CALL_PARAM).getID());
                 else
-                    setVarIDForExecution(newExecution,  LOG_ITEM.CALL_PARAM, executionTrace.getVarDetailID(newExecution, paramVal == null ? Object.class : paramVal.getClass(), paramVal, LOG_ITEM.CALL_PARAM));
+                    setVarIDForExecution(newExecution,  LOG_ITEM.CALL_PARAM, executionTrace.getVarDetail(newExecution, paramVal == null ? Object.class : paramVal.getClass(), paramVal, LOG_ITEM.CALL_PARAM).getID());
             });
 
         }
@@ -123,13 +123,13 @@ public class ExecutionLogger {
             MethodDetails details = execution.getMethodInvoked();
             if (!details.getReturnSootType().equals(VoidType.v()) && !(instrumentResult.isLibMethod(details.getId()) && returnVal == null)) {
                 if(details.getReturnSootType() instanceof soot.PrimType)
-                    setVarIDForExecution(execution, LOG_ITEM.RETURN_ITEM, executionTrace.getVarDetailID(execution, ClassUtils.wrapperToPrimitive(returnVal.getClass()), returnVal, LOG_ITEM.RETURN_ITEM));
+                    setVarIDForExecution(execution, LOG_ITEM.RETURN_ITEM, executionTrace.getVarDetail(execution, ClassUtils.wrapperToPrimitive(returnVal.getClass()), returnVal, LOG_ITEM.RETURN_ITEM).getID());
                 else {
-                    setVarIDForExecution(execution, LOG_ITEM.RETURN_ITEM, executionTrace.getVarDetailID(execution, (returnVal == null ? Object.class : returnVal.getClass()), returnVal, LOG_ITEM.RETURN_ITEM));
+                    setVarIDForExecution(execution, LOG_ITEM.RETURN_ITEM, executionTrace.getVarDetail(execution, (returnVal == null ? Object.class : returnVal.getClass()), returnVal, LOG_ITEM.RETURN_ITEM).getID());
                 }
             }
             if(details.getType().equals(METHOD_TYPE.CONSTRUCTOR) || details.getType().equals(METHOD_TYPE.MEMBER))
-                setVarIDForExecution(execution, LOG_ITEM.RETURN_THIS, executionTrace.getVarDetailID(execution, callee ==null? Object.class : callee.getClass(), callee, LOG_ITEM.RETURN_THIS));
+                setVarIDForExecution(execution, LOG_ITEM.RETURN_THIS, executionTrace.getVarDetail(execution, callee ==null? Object.class : callee.getClass(), callee, LOG_ITEM.RETURN_THIS).getID());
             endLogMethod(threadID, execution);
 
         }
@@ -181,6 +181,7 @@ public class ExecutionLogger {
                 throw new RuntimeException("Invalid value provided for process " + process);
         }
     }
+
 
 
     public static void clearExecutingStack() {
