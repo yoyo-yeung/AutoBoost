@@ -319,7 +319,13 @@ public class TestGenerator {
     }
 
     private boolean containsFaultyDef(Integer exeID) {
-        return Properties.getSingleton().getFaultyFuncIds().stream().anyMatch(s -> s == executionTrace.getMethodExecutionByID(exeID).getMethodInvokedId() || executionTrace.getAllChildren(exeID).stream().anyMatch(e -> executionTrace.getMethodExecutionByID(e).getMethodInvokedId() == s));
+        MethodExecution execution = executionTrace.getMethodExecutionByID(exeID);
+        MethodDetails details = execution.getMethodInvoked();
+
+        return Properties.getSingleton().getFaultyFuncIds().stream()
+                .map(instrumentResult::getMethodDetailByID)
+                .anyMatch(s -> s.equals(details) || (execution.getCalleeId()!=-1 && s.getName().equals(details.getName()) && executionTrace.getVarDetailByID(execution.getCalleeId()).getType().equals(s.getdClass()))) || executionTrace.getAllChildren(exeID).stream().anyMatch(this::containsFaultyDef);
+
     }
 
     public Stmt generateDefStmt(Integer varDetailsID, TestCase testCase, boolean checkExisting, boolean store) throws IllegalArgumentException {
