@@ -324,7 +324,7 @@ public class TestGenerator {
 
         return Properties.getSingleton().getFaultyFuncIds().stream()
                 .map(instrumentResult::getMethodDetailByID)
-                .anyMatch(s -> s.equals(details) || (execution.getCalleeId()!=-1 && s.getName().equals(details.getName()) && executionTrace.getVarDetailByID(execution.getCalleeId()).getType().equals(s.getdClass()))) || executionTrace.getAllChildren(exeID).stream().anyMatch(this::containsFaultyDef);
+                .anyMatch(s -> s.equals(details) || (execution.getCalleeId()!=-1 && s.getName().equals(details.getName()) && executionTrace.getVarDetailByID(execution.getCalleeId()).getType().equals(s.getdClass()))) || executionTrace.getChildren(exeID).stream().anyMatch(this::containsFaultyDef);
 
     }
 

@@ -447,11 +447,10 @@ public class ExecutionTrace {
         this.callGraph.removeVertex(vertex);
     }
 
-    public Set<Integer> getAllChildren(int father) {
+    public Set<Integer> getChildren(int father) {
         Set<Integer> results = new HashSet<>();
         this.callGraph.outgoingEdgesOf(father).stream().filter(e -> this.callGraph.getEdgeTarget(e)!=father).forEach(e -> {
             results.add(this.callGraph.getEdgeTarget(e));
-            results.addAll(getAllChildren(this.callGraph.getEdgeTarget(e)));
         });
         return results;
     }

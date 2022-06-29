@@ -8,3 +8,4 @@ TestInspector/*
 *.log
 *.sh
 AutoBoost/src/main/resources/log4j2.xml
+AutoBoost/dependency-reduced-pom.xml
