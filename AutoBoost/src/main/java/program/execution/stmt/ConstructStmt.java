@@ -27,7 +27,7 @@ public class ConstructStmt extends Stmt{
             throw new IllegalArgumentException("Missing execution details");
         if(methodExecutionID !=null && methodExecutionID != -1 ) {
             this.methodExecutionID = methodExecutionID;
-            this.methodID = trace.getMethodExecutionByID(methodExecutionID).getMethodInvokedId();
+            this.methodID = trace.getMethodExecutionByID(methodExecutionID).getMethodInvoked().getId();
             if(InstrumentResult.getSingleton().getMethodDetailByID(this.methodID).getParameterTypes().size()<paramStmtIDs.size())
                 throw new IllegalArgumentException("No. of params provided does not match provided constructor");
         }

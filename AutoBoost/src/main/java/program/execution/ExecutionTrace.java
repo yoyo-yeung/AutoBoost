@@ -240,7 +240,7 @@ public class ExecutionTrace {
         if (!(varDetail instanceof ObjVarDetails) || execution.getTest() == null)
             return true;
 
-        MethodDetails details = InstrumentResult.getSingleton().getMethodDetailByID(execution.getMethodInvokedId());
+        MethodDetails details = execution.getMethodInvoked();
         if (details.getAccess().equals(ACCESS.PRIVATE))
             return true;
         switch (process) {
@@ -270,11 +270,11 @@ public class ExecutionTrace {
         if (!(varDetail instanceof ObjVarDetails) || execution.getTest() == null)
             return false;
         if (!process.equals(LOG_ITEM.RETURN_THIS) && !process.equals(LOG_ITEM.RETURN_ITEM)) return false;
-        MethodDetails details = InstrumentResult.getSingleton().getMethodDetailByID(execution.getMethodInvokedId());
+        MethodDetails details = execution.getMethodInvoked();
         MethodExecution existingDefEx = getDefExeList(varDetail.getID()) == null ? null : getMethodExecutionByID(getDefExeList(varDetail.getID()));
-        MethodDetails existingDef = existingDefEx == null ? null : InstrumentResult.getSingleton().getMethodDetailByID(existingDefEx.getMethodInvokedId());
+        MethodDetails existingDef = existingDefEx == null ? null : existingDefEx.getMethodInvoked();
         // return false if its essentially the same execution
-        if(existingDefEx != null && existingDefEx.getMethodInvokedId() == execution.getMethodInvokedId() && existingDefEx.getParams().equals(execution.getParams()) && existingDefEx.getCalleeId() == execution.getCalleeId() && (!process.equals(LOG_ITEM.RETURN_THIS) || existingDefEx.getResultThisId() == varDetail.getID()) && (!process.equals(LOG_ITEM.RETURN_ITEM) || existingDefEx.getReturnValId() == varDetail.getID()) )
+        if(existingDefEx != null && existingDefEx.getMethodInvoked().equals(execution.getMethodInvoked()) && existingDefEx.getParams().equals(execution.getParams()) && existingDefEx.getCalleeId() == execution.getCalleeId() && (!process.equals(LOG_ITEM.RETURN_THIS) || existingDefEx.getResultThisId() == varDetail.getID()) && (!process.equals(LOG_ITEM.RETURN_ITEM) || existingDefEx.getReturnValId() == varDetail.getID()) )
             return false;
         if (details.getAccess().equals(ACCESS.PRIVATE))
             return false;
