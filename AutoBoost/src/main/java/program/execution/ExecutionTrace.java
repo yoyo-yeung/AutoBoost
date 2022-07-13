@@ -114,9 +114,10 @@ public class ExecutionTrace {
      * @param type     type of the object to be stored
      * @param objValue object to be stored
      * @param process the current process, e.g. logging callee? param? or return value?
+     * @param subElement
      * @return VarDetail storing the provided object
      */
-    public VarDetail getVarDetail(MethodExecution execution, Class<?> type, Object objValue, LOG_ITEM process) {
+    public VarDetail getVarDetail(MethodExecution execution, Class<?> type, Object objValue, LOG_ITEM process, boolean subElement) {
         boolean artificialEnum = false;
         if(objValue == null ) return nullVar;
         if (type.isEnum()) {
@@ -193,12 +194,12 @@ public class ExecutionTrace {
             } else if (type.equals(String.class))
                 varDetail = new StringVarDetails(getNewVarID(), (String) objValue);
             else if (StringBVarDetails.availableTypeCheck(type))
-                varDetail = new StringBVarDetails(getNewVarID(), type, getVarDetail(execution, String.class, objValue.toString(), process).getID());
+                varDetail = new StringBVarDetails(getNewVarID(), type, getVarDetail(execution, String.class, objValue.toString(), process, true).getID());
             else if (ArrVarDetails.availableTypeCheck(type) && ArrVarDetails.availableTypeCheck(objValue.getClass())) {
                 varDetail = new ArrVarDetails(getNewVarID(), getComponentStream(execution, type, objValue, process).collect(Collectors.toList()), objValue);
             } else if (MapVarDetails.availableTypeCheck(type) && MapVarDetails.availableTypeCheck(objValue.getClass())) {
                 varDetail = new MapVarDetails(getNewVarID(), type, ((Map<?, ?>) objValue).entrySet().stream()
-                        .map(e -> new AbstractMap.SimpleEntry<Integer, Integer>(getVarDetail(execution, getClassOfObj(e.getKey()), e.getKey(), process).getID(), getVarDetail(execution, getClassOfObj(e.getValue()), e.getValue(), process).getID()))
+                        .map(e -> new AbstractMap.SimpleEntry<Integer, Integer>(getVarDetail(execution, getClassOfObj(e.getKey()), e.getKey(), process, true).getID(), getVarDetail(execution, getClassOfObj(e.getValue()), e.getValue(), process, true).getID()))
                         .collect(Collectors.<Map.Entry<Integer, Integer>>toSet()), objValue);
             }
              else if (ClassUtils.isPrimitiveWrapper(type)) {
@@ -208,16 +209,20 @@ public class ExecutionTrace {
                 varDetail = new ObjVarDetails(getNewVarID(), type, (String) objValue);
             }
             assert varDetail != null; // if null, then fail to generate test
-            if (setFirstOccurrenceAsUse(varDetail, process, execution))
-                addVarDetailUsage(varDetail, execution.getID());
-            else
-                addNewVarDetail(varDetail, execution.getID());
+            addNewVarDetail(varDetail);
+            if(!subElement) {
+                if (setFirstOccurrenceAsUse(varDetail, process, execution))
+                    addVarDetailUsage(varDetail, execution.getID());
+                else
+                    addNewVarDetailDef(varDetail, execution.getID());
+            }
         } else {
-            if (setOccurrenceAsDef(varDetail, process, execution))
-                addNewVarDetail(varDetail, execution.getID());
-            else
-                addVarDetailUsage(varDetail, execution.getID());
-
+            if(!subElement) {
+                if (setOccurrenceAsDef(varDetail, process, execution))
+                    addNewVarDetailDef(varDetail, execution.getID());
+                else
+                    addVarDetailUsage(varDetail, execution.getID());
+            }
         }
         return varDetail;
     }
@@ -315,9 +320,9 @@ public class ExecutionTrace {
             throw new IllegalArgumentException("Provided Obj cannot be handled.");
         Stream<Integer> componentStream;
         if (type.isArray()) {
-            componentStream = IntStream.range(0, Array.getLength(obj)).mapToObj(i -> getVarDetail(execution, type.getComponentType(), Array.get(obj, i), process).getID());
+            componentStream = IntStream.range(0, Array.getLength(obj)).mapToObj(i -> getVarDetail(execution, type.getComponentType(), Array.get(obj, i), process, true).getID());
         } else
-            componentStream = ((Collection) obj).stream().map(v -> getVarDetail(execution, getClassOfObj(v), v, process).getID());
+            componentStream = ((Collection) obj).stream().map(v -> getVarDetail(execution, getClassOfObj(v), v, process, true).getID());
         if (Set.class.isAssignableFrom(type))
             componentStream = componentStream.sorted();
         return componentStream;
@@ -346,7 +351,7 @@ public class ExecutionTrace {
             varDetailType = ArrVarDetails.class;
         }
         else if (MapVarDetails.availableTypeCheck(type) && MapVarDetails.availableTypeCheck(objValue.getClass())) {
-            objValue = ((Map<?, ?>) objValue).entrySet().stream().map(comp -> getVarDetail(execution, getClassOfObj(comp.getKey()), comp.getKey(), process).getID() + "=" + getVarDetail(execution, getClassOfObj(comp.getValue()), comp.getValue(), process).getID()).sorted().collect(Collectors.joining(Properties.getDELIMITER()));
+            objValue = ((Map<?, ?>) objValue).entrySet().stream().map(comp -> getVarDetail(execution, getClassOfObj(comp.getKey()), comp.getKey(), process, true).getID() + "=" + getVarDetail(execution, getClassOfObj(comp.getValue()), comp.getValue(), process, true).getID()).sorted().collect(Collectors.joining(Properties.getDELIMITER()));
             varDetailType = MapVarDetails.class;
         }
         // high chance of having the same value
@@ -378,7 +383,6 @@ public class ExecutionTrace {
         if (obj != null) return obj.getClass();
         else return Object.class;
     }
-
     /**
      * Set up all maps using VarDetail key as ID
      *
@@ -389,6 +393,10 @@ public class ExecutionTrace {
             this.varToDefMap.put(varID, null);
     }
 
+    public void addNewVarDetail(VarDetail detail) {
+        if (!this.allVars.containsKey(detail.getID()))
+            this.allVars.put(detail.getID(), detail);
+    }
 
     /**
      * Add a newly created VarDetail to the collection
@@ -397,9 +405,7 @@ public class ExecutionTrace {
      * @param detail      Newly created VarDetail to document
      * @param executionID ID of MethodExecution that define a new VarDetail
      */
-    public void addNewVarDetail(VarDetail detail, int executionID) {
-        if (!this.allVars.containsKey(detail.getID()))
-            this.allVars.put(detail.getID(), detail);
+    public void addNewVarDetailDef(VarDetail detail, int executionID) {
         this.setUpVarMap(detail.getID());
         // only store it as a def if it is an object (need construction)
         if (detail instanceof ObjVarDetails)
@@ -413,8 +419,6 @@ public class ExecutionTrace {
      * @param executionID ID of a method execution
      */
     public void addVarDetailUsage(VarDetail detail, int executionID) {
-        if (!this.allVars.containsKey(detail.getID()))
-            this.allVars.put(detail.getID(), detail);
         this.setUpVarMap(detail.getID());
     }
 
@@ -474,18 +478,19 @@ public class ExecutionTrace {
 
     private String toStringWithAttr(Object obj) {
         if (obj == null) return "null";
-        StringBuilder result = new StringBuilder();
+        StringBuilder result = new StringBuilder(1000);
         toCustomString("this", obj, 7, result, new HashMap<>());
+        result.trimToSize();
         return result.toString();
     }
 
     private void toCustomString(String fieldName, Object obj, int depth, StringBuilder result, Map<Integer, String> hashCodeToFieldMap) {
         if (obj == null) {
-            result.append("null");
+            result.append(nullVar.getID());
             return;
         }
         else if (ClassUtils.isPrimitiveOrWrapper(obj.getClass()) || obj.getClass().equals(String.class)) {
-            result.append(obj);
+            result.append(getVarDetail(null, obj.getClass(), obj, null, true).getID());
             return;
         }
         if (hashCodeToFieldMap.containsKey(System.identityHashCode(obj))) {
@@ -498,11 +503,6 @@ public class ExecutionTrace {
             return;
         }
         else if (obj.getClass().isArray()) {
-            if(ClassUtils.isPrimitiveWrapper(obj.getClass().getComponentType()) || obj.getClass().getComponentType().equals(String.class))
-                result.append(Arrays.toString((Object[]) obj));
-            else if(obj.getClass().getComponentType().isPrimitive())
-                result.append("["+IntStream.range(0, Array.getLength(obj)).mapToObj(i -> Array.get(obj,i).toString()).collect(Collectors.joining(","))+"]");
-            else {
                 result.append("[");
                 IntStream.range(0, Array.getLength(obj)).forEach(i -> {
                     if (Array.get(obj, i) == null) result.append("null");
@@ -510,9 +510,9 @@ public class ExecutionTrace {
                     if (i < Array.getLength(obj) - 1) result.append(",");
                 });
                 result.append("]");
-            }
             return;
         } else if (MapVarDetails.availableTypeCheck(obj.getClass())) {
+
             result.append("{");
             AtomicInteger i = new AtomicInteger();
             ((Map<?, ?>) obj).forEach((key, value) -> {
@@ -533,6 +533,7 @@ public class ExecutionTrace {
             });
             result.deleteCharAt(result.length() - 1);
             result.append("}");
+
         }
 
         if (!InstrumentResult.getSingleton().getClassDetailsMap().containsKey(obj.getClass().getName())) {
