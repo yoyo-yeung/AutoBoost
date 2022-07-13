@@ -261,7 +261,7 @@ public class ExecutionTrace {
      * @return if this occurance should be stored as DEF
      */
     private boolean setOccurrenceAsDef(VarDetail varDetail, LOG_ITEM process, MethodExecution execution) {
-        logger.debug(varDetail.toDetailedString() + "\t" + getDefExeList(varDetail.getID()));
+//        logger.debug(varDetail.toDetailedString() + "\t" + getDefExeList(varDetail.getID()));
         if (!(varDetail instanceof ObjVarDetails) || execution.getTest() == null)
             return false;
         if (!process.equals(LOG_ITEM.RETURN_THIS) && !process.equals(LOG_ITEM.RETURN_ITEM)) return false;

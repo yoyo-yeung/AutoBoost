@@ -84,7 +84,7 @@ public class ExecutionLogger {
 
         }
         updateSkipping(newExecution, threadID);
-        logger.debug("started " + newExecution.toDetailedString() + "\t" + threadID);
+//        logger.debug("started " + newExecution.toDetailedString() + "\t" + threadID);
         return newExecution.getID();
     }
 
@@ -151,10 +151,10 @@ public class ExecutionLogger {
      * called when method has finished logging
      */
     private static void endLogMethod(long threadID, MethodExecution execution) {
-        logger.debug("ended method " + execution.toDetailedString());
+//        logger.debug("ended method " + execution.toDetailedString());
         Optional<MethodExecution> duplicate = executionTrace.getAllMethodExecs().values().stream().filter(execution::sameContent).findFirst();
         if(duplicate.isPresent()) {
-            logger.debug(execution.toDetailedString() +"\t" + duplicate.get().toDetailedString());
+//            logger.debug(execution.toDetailedString() +"\t" + duplicate.get().toDetailedString());
             executionTrace.replacePossibleDefExe(execution, duplicate.get());
             executionTrace.changeVertex(execution.getID(), duplicate.get().getID());
         }
@@ -204,7 +204,7 @@ public class ExecutionLogger {
                 .filter(e -> e.getMethodInvoked().equals(execution.getMethodInvoked()))
                 .anyMatch(e -> e.getTest() != null && e.sameCalleeParamNMethod(execution))) {
             setThreadSkippingState(threadID, true);
-            logger.debug("setting skipping as true since " + execution.toDetailedString());
+//            logger.debug("setting skipping as true since " + execution.toDetailedString());
         }
     }
 

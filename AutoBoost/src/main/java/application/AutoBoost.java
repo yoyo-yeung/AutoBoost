@@ -77,8 +77,8 @@ public class AutoBoost {
             }
             @Override
             public void testRunFinished(Result result) {
-                logger.debug(result.getRunCount() + " tests executed");
-                logger.debug(result.getFailureCount() + " tests failed");
+                logger.info(result.getRunCount() + " tests executed");
+                logger.info(result.getFailureCount() + " tests failed");
             }
             @Override
             public void testStarted(Description description) {
