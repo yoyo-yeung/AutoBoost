@@ -70,16 +70,16 @@ public class ExecutionLogger {
         updateExecutionRelationships(threadID, newExecution);
         addExecutionToThreadStack(threadID, newExecution);
         if(details.getType().equals(METHOD_TYPE.MEMBER)) // i.e. have callee
-            setVarForExecution(newExecution, LOG_ITEM.CALL_THIS, executionTrace.getVarDetail(newExecution, callee == null ? Object.class : callee.getClass(), callee, LOG_ITEM.CALL_THIS));
+            setVarForExecution(newExecution, LOG_ITEM.CALL_THIS, executionTrace.getVarDetail(newExecution, callee == null ? Object.class : callee.getClass(), callee, LOG_ITEM.CALL_THIS, false));
         if(details.getParameterCount() > 0 ) {
             if (Array.getLength(params) < details.getParameterCount())
                 throw new RuntimeException("Illegal parameter provided for logging");
             IntStream.range(0, details.getParameterCount()).forEach(i -> {
                 Object paramVal = Array.get(params, i);
                 if (details.getParameterTypes().get(i) instanceof soot.PrimType)
-                    setVarIDForExecution(newExecution, LOG_ITEM.CALL_PARAM, executionTrace.getVarDetail(newExecution, ClassUtils.wrapperToPrimitive(paramVal.getClass()), paramVal, LOG_ITEM.CALL_PARAM).getID());
+                    setVarIDForExecution(newExecution, LOG_ITEM.CALL_PARAM, executionTrace.getVarDetail(newExecution, ClassUtils.wrapperToPrimitive(paramVal.getClass()), paramVal, LOG_ITEM.CALL_PARAM, false).getID());
                 else
-                    setVarIDForExecution(newExecution,  LOG_ITEM.CALL_PARAM, executionTrace.getVarDetail(newExecution, paramVal == null ? Object.class : paramVal.getClass(), paramVal, LOG_ITEM.CALL_PARAM).getID());
+                    setVarIDForExecution(newExecution,  LOG_ITEM.CALL_PARAM, executionTrace.getVarDetail(newExecution, paramVal == null ? Object.class : paramVal.getClass(), paramVal, LOG_ITEM.CALL_PARAM, false).getID());
             });
 
         }
@@ -124,13 +124,13 @@ public class ExecutionLogger {
             MethodDetails details = execution.getMethodInvoked();
             if (!details.getReturnSootType().equals(VoidType.v()) && !(instrumentResult.isLibMethod(details.getId()) && returnVal == null)) {
                 if(details.getReturnSootType() instanceof soot.PrimType)
-                    setVarIDForExecution(execution, LOG_ITEM.RETURN_ITEM, executionTrace.getVarDetail(execution, ClassUtils.wrapperToPrimitive(returnVal.getClass()), returnVal, LOG_ITEM.RETURN_ITEM).getID());
+                    setVarIDForExecution(execution, LOG_ITEM.RETURN_ITEM, executionTrace.getVarDetail(execution, ClassUtils.wrapperToPrimitive(returnVal.getClass()), returnVal, LOG_ITEM.RETURN_ITEM, false).getID());
                 else {
-                    setVarIDForExecution(execution, LOG_ITEM.RETURN_ITEM, executionTrace.getVarDetail(execution, (returnVal == null ? Object.class : returnVal.getClass()), returnVal, LOG_ITEM.RETURN_ITEM).getID());
+                    setVarIDForExecution(execution, LOG_ITEM.RETURN_ITEM, executionTrace.getVarDetail(execution, (returnVal == null ? Object.class : returnVal.getClass()), returnVal, LOG_ITEM.RETURN_ITEM, false).getID());
                 }
             }
             if(details.getType().equals(METHOD_TYPE.CONSTRUCTOR) || details.getType().equals(METHOD_TYPE.MEMBER))
-                setVarIDForExecution(execution, LOG_ITEM.RETURN_THIS, executionTrace.getVarDetail(execution, callee ==null? Object.class : callee.getClass(), callee, LOG_ITEM.RETURN_THIS).getID());
+                setVarIDForExecution(execution, LOG_ITEM.RETURN_THIS, executionTrace.getVarDetail(execution, callee ==null? Object.class : callee.getClass(), callee, LOG_ITEM.RETURN_THIS, false).getID());
             endLogMethod(threadID, execution);
 
         }
