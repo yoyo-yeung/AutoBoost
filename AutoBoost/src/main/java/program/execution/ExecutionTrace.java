@@ -490,7 +490,10 @@ public class ExecutionTrace {
             return;
         }
         else if (ClassUtils.isPrimitiveOrWrapper(obj.getClass()) || obj.getClass().equals(String.class)) {
-            result.append(getVarDetail(null, obj.getClass(), obj, null, true).getID());
+            if(obj.getClass().equals(String.class) && ((String)obj).length()>100)
+                result.append("ID:").append(getVarDetail(null, obj.getClass(), obj, null, true).getID());
+            else
+                result.append(obj);
             return;
         }
         if (hashCodeToFieldMap.containsKey(System.identityHashCode(obj))) {
