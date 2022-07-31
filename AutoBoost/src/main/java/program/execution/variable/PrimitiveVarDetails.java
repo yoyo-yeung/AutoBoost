@@ -2,11 +2,7 @@ package program.execution.variable;
 
 import entity.CREATION_TYPE;
 import org.apache.commons.lang3.ClassUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
-
-import java.lang.reflect.Field;
-import java.util.Objects;
 
 public class PrimitiveVarDetails extends VarDetail{
     private static final CREATION_TYPE createdBy = CREATION_TYPE.DIRECT_ASSIGN;
