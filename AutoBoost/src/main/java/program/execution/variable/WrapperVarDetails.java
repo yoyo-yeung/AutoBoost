@@ -1,7 +1,6 @@
 package program.execution.variable;
 
 import entity.CREATION_TYPE;
-import org.apache.commons.text.StringEscapeUtils;
 
 import java.util.Objects;
 
@@ -34,7 +33,7 @@ public class WrapperVarDetails extends VarDetail{
     @Override
     public Object getGenValue() {
         return
-                type.equals(Long.class)? value + "L" : (type.equals(Character.class )? "'"+ StringEscapeUtils.escapeJava(this.value.toString()) +"'" : value);
+                type.equals(Long.class)? value + "L" : (type.equals(Character.class )? "'"+value +"'" : value);
     }
 
     @Override
