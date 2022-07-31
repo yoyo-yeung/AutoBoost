@@ -2,9 +2,12 @@ package program.instrumentation;
 
 import program.analysis.ClassDetails;
 import program.analysis.MethodDetails;
+import soot.SootClass;
+import soot.SootField;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 public class InstrumentResult {
     private static final InstrumentResult singleton = new InstrumentResult();
@@ -74,4 +77,12 @@ public class InstrumentResult {
         return classPublicFieldsMap;
     }
 
+    public void addClassPublicFields(String className, SootClass sootClass) {
+        if(this.getClassPublicFieldsMap().containsKey(className)) return;
+        this.getClassPublicFieldsMap().put(className, sootClass.getFields().stream()
+                        .filter(f -> f.isPublic() && f.isStatic())
+                        .map(SootField::getName)
+                        .collect(Collectors.toSet())
+                );
+    }
 }
