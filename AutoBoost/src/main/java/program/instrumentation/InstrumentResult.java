@@ -2,15 +2,19 @@ package program.instrumentation;
 
 import program.analysis.ClassDetails;
 import program.analysis.MethodDetails;
+import soot.SootClass;
+import soot.SootField;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 public class InstrumentResult {
     private static final InstrumentResult singleton = new InstrumentResult();
     private final Map<Integer, MethodDetails> methodDetailsMap = new ConcurrentHashMap<>();
     private final Map<String, ClassDetails> classDetailsMap = new HashMap<>();
     private final Map<String, Integer> libMethSignToMethIDMap = new ConcurrentHashMap<>();
+    private final Map<String, Set<String>> classPublicFieldsMap = new HashMap<>();
 
     public static InstrumentResult getSingleton() {
         return singleton;
@@ -67,5 +71,18 @@ public class InstrumentResult {
 
     public boolean isLibMethod(Integer methodID) {
         return this.libMethSignToMethIDMap.containsValue(methodID);
+    }
+
+    public Map<String, Set<String>> getClassPublicFieldsMap() {
+        return classPublicFieldsMap;
+    }
+
+    public void addClassPublicFields(String className, SootClass sootClass) {
+        if(this.getClassPublicFieldsMap().containsKey(className)) return;
+        this.getClassPublicFieldsMap().put(className, sootClass.getFields().stream()
+                        .filter(f -> f.isPublic() && f.isStatic())
+                        .map(SootField::getName)
+                        .collect(Collectors.toSet())
+                );
     }
 }

@@ -17,11 +17,13 @@ public abstract class TestCase {
     private final List<Stmt> stmtList = new ArrayList<>();
     private final List<VarStmt> varAvailable = new ArrayList<VarStmt>();
     private final Set<Class<?>> allImports = new HashSet<>();
+    private String packageName = null;
 
-    public TestCase() {
+    public TestCase(String packageName) {
         this.ID = testIDGenerator.incrementAndGet();
         if (Properties.getSingleton().getJunitVer() != 3)
             this.allImports.add(org.junit.Test.class);
+        this.packageName = packageName;
     }
 
 
@@ -44,7 +46,7 @@ public abstract class TestCase {
 
     public void addStmt(Stmt stmt) {
         this.stmtList.add(stmt);
-        this.addImports(stmt.getImports());
+        this.addImports(stmt.getImports(packageName));
     }
 
     public List<VarStmt> getVarAvailable() {
@@ -55,6 +57,13 @@ public abstract class TestCase {
         return allImports;
     }
 
+    public String getPackageName() {
+        return packageName;
+    }
+
+    public void setPackageName(String packageName) {
+        this.packageName = packageName;
+    }
 
     public void addImports(Set<Class<?>> imports) {
         this.allImports.addAll(imports);
@@ -69,7 +78,7 @@ public abstract class TestCase {
     public void addOrUpdateVar(Integer varDetailID, VarStmt stmt) {
         if (!this.varAvailable.contains(stmt)) {
             this.varAvailable.add(stmt);
-            this.addImports(stmt.getImports());
+            this.addImports(stmt.getImports(packageName));
         }
         if (!this.detailToStmtMap.containsKey(varDetailID))
             this.detailToStmtMap.put(varDetailID, new ArrayList<>());

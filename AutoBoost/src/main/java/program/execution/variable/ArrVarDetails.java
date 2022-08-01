@@ -2,8 +2,8 @@ package program.execution.variable;
 
 import entity.CREATION_TYPE;
 import helper.Properties;
-import org.apache.commons.lang3.ClassUtils;
 import program.execution.ExecutionTrace;
+import soot.Modifier;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -69,7 +69,6 @@ public class ArrVarDetails extends VarDetail{
                 ", componentType=" + (componentType == null ? "null" : componentType.getSimpleName()) +
                 ", type=" + (type == null ? "null" : type.getSimpleName())  +
                 ", components=" + (components == null ? "null" : components.toString()) +
-                ", value=" + (value == null ? "null" : value.toString()) +
                 '}';
     }
 
@@ -80,13 +79,12 @@ public class ArrVarDetails extends VarDetail{
                 ", componentType=" + (componentType == null ? "null" : componentType.getSimpleName()) +
                 ", type=" + (type == null ? "null" : type.getSimpleName()) +
                 ", components=" + (components == null ? "null" : components.stream().filter(c -> c!= -1).map(c -> ExecutionTrace.getSingleton().getVarDetailByID(c).toDetailedString()).collect(Collectors.joining(Properties.getDELIMITER()))) +
-                ", value=" + (value == null ? "null" : value.toString()) +
                 '}';
 
     }
 
     public static boolean availableTypeCheck(Class<?> type ){
-        return type.isArray() || List.class.isAssignableFrom(type)|| Set.class.isAssignableFrom(type);
+        return type.isArray() || ((List.class.isAssignableFrom(type)|| Set.class.isAssignableFrom(type)) && type.getName().startsWith("java.") && Modifier.isPublic(type.getModifiers()));
     }
 
     public CREATION_TYPE getCreatedBy() {

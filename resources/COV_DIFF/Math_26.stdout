@@ -1,1 +1,0 @@
-Method: <org.apache.commons.math3.util.FastMath: double abs(double)>, Callee: null, Params: [0.0], Related test: test11(org.apache.commons.math3.fraction.Math26AB_1_Test)

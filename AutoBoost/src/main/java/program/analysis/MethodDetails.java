@@ -5,7 +5,6 @@ import entity.METHOD_TYPE;
 import org.apache.commons.lang3.ClassUtils;
 import soot.SootClass;
 import soot.SootMethod;
-import soot.SootMethodRef;
 import soot.Type;
 
 import java.util.List;

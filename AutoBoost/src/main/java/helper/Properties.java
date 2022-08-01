@@ -3,11 +3,7 @@ package helper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.lang.reflect.Array;
-import java.lang.reflect.Field;
 import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public class Properties {
     private static final Logger logger = LogManager.getLogger(Properties.class);
@@ -16,9 +12,9 @@ public class Properties {
     private String[] testCases = null;
     private List<String> faultyFunc = new ArrayList<>();
     private List<Integer> faultyFuncIds = new ArrayList<>();
-    private String generatedPackage = null;
     private String testSourceDir = null;
     private String testSuitePrefix = "AB";
+    private int casePerClass =200;
     private int junitVer = 4;
     private static final String classMethSep = "::";
     private static final String classSep = ",";
@@ -49,7 +45,7 @@ public class Properties {
     }
 
     private void logProperty(String name, Object value){
-        logger.debug(String.format("Argument set for %-15s:", name) + (value == null ? "null" : String.format(" %s", value)));
+        logger.info(String.format("Argument set for %-15s:", name) + (value == null ? "null" : String.format(" %s", value)));
     }
 
     public String[] getTestCases() {
@@ -61,13 +57,6 @@ public class Properties {
 
     }
 
-    public String getGeneratedPackage() {
-        return generatedPackage;
-    }
-
-    public void setGeneratedPackage(String generatedPackage) {
-        this.generatedPackage = generatedPackage;
-    }
 
     public static String getDELIMITER() {
         return DELIMITER;
@@ -114,7 +103,6 @@ public class Properties {
     public void logProperties() {
         logProperty("insBinPath", this.insBinPath);
         logProperty("testCases", String.join(",", this.testCases));
-        logProperty("generatedPackage", this.generatedPackage);
         logProperty("faultyFunc", String.join(",", this.faultyFunc));
         logProperty("testSourceDir", this.testSourceDir);
         logProperty("testClassPrefix", this.testSuitePrefix);
@@ -133,5 +121,13 @@ public class Properties {
 
     public void addFaultyFuncId(Integer faultyFuncId) {
         this.faultyFuncIds.add(faultyFuncId);
+    }
+
+    public int getCasePerClass() {
+        return casePerClass;
+    }
+
+    public void setCasePerClass(int casePerClass) {
+        this.casePerClass = casePerClass;
     }
 }

@@ -4,14 +4,13 @@ import helper.Properties;
 import program.execution.stmt.AssertStmt;
 
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class ValueTestCase extends TestCase{
 
     private AssertStmt assertion;
 
-    public ValueTestCase() {
-        super();
+    public ValueTestCase(String packageName) {
+        super(packageName);
     }
 
     public AssertStmt getAssertion() {
@@ -20,7 +19,7 @@ public class ValueTestCase extends TestCase{
 
     public void setAssertion(AssertStmt assertion) {
         this.assertion = assertion;
-        this.addImports(assertion.getImports());
+        this.addImports(assertion.getImports(this.getPackageName()));
     }
 
     public String output(Set<Class<?>>fullCNameNeeded) {

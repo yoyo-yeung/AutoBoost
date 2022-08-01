@@ -1,2 +1,0 @@
-Method: <org.apache.commons.math.util.MathUtils: int gcd(int,int)>, Callee: null, Params: [4,3], Related test: test6(org.apache.commons.math.fraction.Math106AB_1_Test)
-Method: <org.apache.commons.math.util.MathUtils: int sign(int)>, Callee: null, Params: [2], Related test: test5(org.apache.commons.math.fraction.Math106AB_1_Test)

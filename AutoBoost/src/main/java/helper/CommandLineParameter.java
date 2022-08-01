@@ -18,11 +18,11 @@ public class CommandLineParameter {
 //        options.addOption("CUTs", true, "Required. Classes under test, will be instrumented. Separated by " + Properties.getClassSep());
         options.addOption(Help.getOption());
         options.addOption("testCases", true, "Required. Failing test case's name. It should be in the format of testClass" + Properties.getClassMethSep() +"testCaseName. Separated by " + Properties.getClassSep());
-        options.addOption("generatedPackage", true, "Required. Package of the generated test cases");
         options.addOption("faultyFunc", true, "Required. Faulty function's subsignatures, each enclosed by <>. Separated by "+ Properties.getClassMethSep() + "e.g. <org.apache.commons.math.analysis.integration.SimpsonIntegrator: double integrate(double,double)>" + Properties.getClassMethSep()+"<org.apache.commons.math.optimization.linear.SimplexTableau: org.apache.commons.math.optimization.RealPointValuePair getSolution()>");
         options.addOption("testSourceDir", true, "Required. Directory storing generated test .java");
         options.addOption("testSuitePrefix", true, "Optional. Prefix of generated test classes. Default: AB");
         options.addOption("junitVer" , true, "Optional. Expected JUnit Version: 3/4. Default: 4");
+        options.addOption("casePerClass", true, "Optional. Number of test cases per class");
         options.addOption(Help.getOption());
         return options;
     }
@@ -61,9 +61,6 @@ public class CommandLineParameter {
 
     private static void processGenerationCommand(CommandLine line) throws MissingArgumentException {
         Properties properties = Properties.getSingleton();
-        if(!line.hasOption("generatedPackage"))
-            throw new MissingArgumentException("Missing argument for generatedPackage");
-        properties.setGeneratedPackage(line.getOptionValue("generatedPackage"));
         if(!line.hasOption("testSourceDir"))
             throw new MissingArgumentException("Missing argument for testSourceDir");
         properties.setTestSourceDir(line.getOptionValue("testSourceDir"));
@@ -74,6 +71,9 @@ public class CommandLineParameter {
         }
         if(line.hasOption("junitVer"))
             properties.setJunitVer(Integer.parseInt(line.getOptionValue("junitVer")));
+
+        if(line.hasOption("casePerClass"))
+            properties.setCasePerClass(Integer.parseInt(line.getOptionValue("casePerClass")));
 
     }
 }

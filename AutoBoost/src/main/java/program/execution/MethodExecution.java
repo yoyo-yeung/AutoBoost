@@ -14,8 +14,8 @@ import java.util.stream.Collectors;
 
 public class MethodExecution {
     private final int ID;
-    private final int methodInvokedId;
-    private int calleeId; // if member function
+    private final MethodDetails methodInvoked;
+    private VarDetail callee = null;
     private final List<Integer> params;
     private int returnValId; // if non void
     private int resultThisId; // if member function, object after executing its member function
@@ -23,10 +23,9 @@ public class MethodExecution {
     private boolean reproducible = true;
     private String test = null;
 
-    public MethodExecution(int ID, int methodInvokedId) {
+    public MethodExecution(int ID, MethodDetails methodInvoked) {
         this.ID = ID;
-        this.methodInvokedId = methodInvokedId;
-        this.calleeId = -1;
+        this.methodInvoked = methodInvoked;
         this.params = new ArrayList<>();
         this.returnValId = -1;
         this.resultThisId = -1;
@@ -34,22 +33,6 @@ public class MethodExecution {
         this.test = AutoBoost.getExecutingTest();
     }
 
-    public MethodExecution(int ID, int methodInvokedId, int calleeId, List<Integer> params, int returnValId, int resultThisId, Class<?> e) {
-        if(!relationshipCheck(methodInvokedId, calleeId, params, returnValId, resultThisId))
-            throw new IllegalArgumentException("Arguments not matched");
-        this.ID = ID;
-        this.methodInvokedId = methodInvokedId;
-        this.calleeId = calleeId;
-        this.params = params == null ? new ArrayList<>() : params;
-        this.returnValId = returnValId;
-        this.resultThisId = resultThisId;
-        this.exceptionClass = e;
-        this.test = AutoBoost.getExecutingTest();
-    }
-
-    public boolean relationshipCheck() {
-        return relationshipCheck(this.methodInvokedId, this.calleeId, this.params, this.returnValId, this.resultThisId);
-    }
 
     private boolean relationshipCheck(int methodInvokedId, int calleeId, List<Integer> params, int returnValId, int resultThisId) {
         MethodDetails methodInvoked = InstrumentResult.getSingleton().getMethodDetailByID(methodInvokedId);
@@ -76,21 +59,31 @@ public class MethodExecution {
         return true;
     }
 
+    public MethodDetails getMethodInvoked() {
+        return methodInvoked;
+    }
+
+
     public int getID() {
         return ID;
     }
 
-    public int getMethodInvokedId() {
-        return methodInvokedId;
+
+    public VarDetail getCallee() {
+        return callee;
     }
 
-    public int getCalleeId() {
-        return calleeId;
-    }
 
+    public void setCallee(VarDetail callee) {
+        this.callee = callee;
+    }
     public List<Integer> getParams() {
         return params;
     }
+    public int getCalleeId() {
+        return this.callee == null? -1 : this.callee.getID();
+    }
+
 
     public int getReturnValId() {
         return returnValId;
@@ -100,14 +93,8 @@ public class MethodExecution {
         return resultThisId;
     }
 
-    public void setCalleeId(int calleeId) {
-        if(this.calleeId != -1)
-            throw new IllegalArgumentException("Callee cannot be set twice");
-        this.calleeId = calleeId;
-    }
-
     public void addParam(int param) {
-        if(this.params.size() == InstrumentResult.getSingleton().getMethodDetailByID(this.methodInvokedId).getParameterTypes().size())
+        if(this.params.size() == this.methodInvoked.getParameterTypes().size())
             throw new IllegalArgumentException("Params cannot be set twice");
         this.params.add(param);
     }
@@ -137,8 +124,8 @@ public class MethodExecution {
     public String toString() {
         return "MethodExecution{" +
                 "ID=" + ID +
-                ", methodInvokedId=" + methodInvokedId +
-                ", calleeId=" + calleeId +
+                ", methodInvokedId=" + methodInvoked.getId() +
+                ", calleeId=" + this.getCalleeId() +
                 ", params=" + params +
                 ", returnValId=" + returnValId +
                 ", resultThisId=" + resultThisId +
@@ -150,8 +137,8 @@ public class MethodExecution {
     public String toSimpleString() {
         return "MethodExecution{" +
                 "ID=" + ID +
-                ", methodInvokedId=" + InstrumentResult.getSingleton().getMethodDetailByID(methodInvokedId).toString() +
-                ", calleeId=" + calleeId +
+                ", methodInvokedId=" + methodInvoked.toString() +
+                ", calleeId=" + this.getCalleeId() +
                 ", params=" + params +
                 ", returnValId=" + returnValId +
                 ", resultThisId=" + resultThisId +
@@ -164,8 +151,8 @@ public class MethodExecution {
         ExecutionTrace trace = ExecutionTrace.getSingleton();
         return "MethodExecution{" +
                 "ID=" + ID +
-                ", methodInvokedId=" + InstrumentResult.getSingleton().getMethodDetailByID(methodInvokedId).toString() +
-                ", calleeId=" + (calleeId == -1 ? "null" : trace.getVarDetailByID(calleeId).toString() )+
+                ", methodInvokedId=" +  methodInvoked.toString() +
+                ", calleeId=" + (callee == null ? "null": callee.toDetailedString() )+
                 ", params=" + params.stream().map(p -> p == -1 ? "null" : trace.getVarDetailByID(p).toString()).collect(Collectors.joining(Properties.getDELIMITER())) +
                 ", returnValId=" + (returnValId == -1 ? "null" : trace.getVarDetailByID(returnValId).toString()) +
                 ", resultThisId=" + (resultThisId == -1 ? "null" : trace.getVarDetailByID(resultThisId).toString()) +
@@ -176,8 +163,11 @@ public class MethodExecution {
     }
 
     public boolean sameCalleeParamNMethod(MethodExecution ex) {
-        return this.methodInvokedId == ex.methodInvokedId && this.calleeId == ex.calleeId && this.params.equals(ex.params);
+        return this.methodInvoked.equals(ex.getMethodInvoked()) && this.getCalleeId() == ex.getCalleeId() && this.params.equals(ex.params);
+    }
 
+    public boolean sameContent(MethodExecution ex) {
+        return sameCalleeParamNMethod(ex) && this.returnValId == ex.returnValId && this.resultThisId == ex.resultThisId;
     }
 
     public void setReproducible(boolean reproducible) {
@@ -201,11 +191,11 @@ public class MethodExecution {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         MethodExecution execution = (MethodExecution) o;
-        return this.calleeId == execution.calleeId && this.params.equals(execution.params) && this.methodInvokedId == execution.methodInvokedId;
+        return this.getCalleeId() == execution.getCalleeId() && this.params.equals(execution.params) && this.methodInvoked.equals(execution.getMethodInvoked());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(calleeId, params, returnValId, resultThisId, exceptionClass);
+        return Objects.hash(callee, params, returnValId, resultThisId, exceptionClass);
     }
 }

@@ -27,13 +27,13 @@ public class VarStmt extends Stmt{
     }
 
     public String getDeclarationStmt(Set<Class<?>> fullCNameNeeded) {
-        return "final "+ (fullCNameNeeded.contains(varType)? varType.getName() : varType.getSimpleName()) + " " + varName;
+        return "final "+ (fullCNameNeeded.contains(varType)? varType.getName().replace("$", ".") : varType.getSimpleName()) + " " + varName;
     }
 
     @Override
-    public Set<Class<?>> getImports() {
+    public Set<Class<?>> getImports(String packageName) {
         Set<Class<?>> imports = new HashSet<>();
-        imports.add(getTypeToImport(varType));
+        imports.add(getTypeToImport(varType, packageName));
         imports.remove(null);
         return imports;
     }

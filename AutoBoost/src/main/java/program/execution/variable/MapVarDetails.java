@@ -3,27 +3,29 @@ package program.execution.variable;
 import entity.CREATION_TYPE;
 import helper.Properties;
 import program.execution.ExecutionTrace;
+import soot.Modifier;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class MapVarDetails extends VarDetail{
     private static final CREATION_TYPE createdBy = CREATION_TYPE.CONSTRUCTOR;
     private final Class<?> type;
-    private final Map<Integer, Integer> keyValuePairs;
+    private final Set<Map.Entry<Integer, Integer>> keyValuePairs;
     private final String keyValuePairValue;
     private final Object value;
 
-    public MapVarDetails(int ID, Class<?> type, Map<Integer, Integer> keyValuePairs, Object value) {
+    public MapVarDetails(int ID, Class<?> type,  Set<Map.Entry<Integer, Integer>> keyValuePairs, Object value) {
         super(ID);
         this.type = type;
         this.keyValuePairs = keyValuePairs;
-        this.keyValuePairValue = keyValuePairs == null? null : keyValuePairs.entrySet().stream().map(e -> e.getKey()+"="+e.getValue()).sorted().collect(Collectors.joining(Properties.getDELIMITER()));
+        this.keyValuePairValue = keyValuePairs == null? null : keyValuePairs.stream().map(e -> e.getKey()+"="+e.getValue()).sorted().collect(Collectors.joining(Properties.getDELIMITER()));
         this.value = value;
     }
 
 
-    public Map<Integer, Integer> getKeyValuePairs() {
+    public  Set<Map.Entry<Integer, Integer>> getKeyValuePairs() {
         return keyValuePairs;
     }
 
@@ -51,8 +53,7 @@ public class MapVarDetails extends VarDetail{
     public String toString() {
         return "MapVarDetails{" +
                 "type=" + (type == null ? "null" : type.getName()) +
-                ", keyValuePairs=" + (keyValuePairs == null ? "null" : keyValuePairs.entrySet().stream().map(e -> e.getKey()+"=" +e.getValue()).collect(Collectors.joining(","))) +
-                ", value=" + (value == null ? "null" : value) +
+                ", keyValuePairs=" + (keyValuePairs == null ? "null" : keyValuePairs.stream().map(e -> e.getKey()+"=" +e.getValue()).collect(Collectors.joining(","))) +
                 '}';
     }
 
@@ -61,8 +62,11 @@ public class MapVarDetails extends VarDetail{
         ExecutionTrace trace = ExecutionTrace.getSingleton();
         return "MapVarDetails{" +
                 "type=" + (type == null ? "null" : type.getName()) +
-                ", keyValuePairs=" + (keyValuePairs == null ? "null" : keyValuePairs.entrySet().stream().map(e -> trace.getVarDetailByID(e.getKey()).toDetailedString()+"=" +trace.getVarDetailByID(e.getValue()).toDetailedString()).collect(Collectors.joining(","))) +
-                ", value=" + (value == null ? "null" : value) +
+                ", keyValuePairs=" + (keyValuePairs == null ? "null" : keyValuePairs.stream().map(e -> trace.getVarDetailByID(e.getKey()).toDetailedString()+"=" +trace.getVarDetailByID(e.getValue()).toDetailedString()).collect(Collectors.joining(","))) +
                 '}';
     }
+    public static boolean availableTypeCheck(Class<?> type ){
+        return Map.class.isAssignableFrom(type) && type.getName().startsWith("java.")&& Modifier.isPublic(type.getModifiers());
+    }
+
 }
