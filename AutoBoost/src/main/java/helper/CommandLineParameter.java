@@ -17,7 +17,6 @@ public class CommandLineParameter {
         Options options = new Options();
         options.addOption("instrumentedBinPath", true, "Required. Path to store instrumented binary files. Existing binaries inside will be overwritten");
 //        options.addOption("CUTs", true, "Required. Classes under test, will be instrumented. Separated by " + Properties.getClassSep());
-        options.addOption(Help.getOption());
         options.addOption("testCases", true, "Required. Failing test case's name. It should be in the format of testClass" + Properties.getClassMethSep() +"testCaseName. Separated by " + Properties.getClassSep());
         options.addOption("faultyFunc", true, "Required. Faulty function's subsignatures, each enclosed by <>. Separated by "+ Properties.getClassMethSep() + "e.g. <org.apache.commons.math.analysis.integration.SimpsonIntegrator: double integrate(double,double)>" + Properties.getClassMethSep()+"<org.apache.commons.math.optimization.linear.SimplexTableau: org.apache.commons.math.optimization.RealPointValuePair getSolution()>");
         options.addOption("testSourceDir", true, "Required. Directory storing generated test .java");
