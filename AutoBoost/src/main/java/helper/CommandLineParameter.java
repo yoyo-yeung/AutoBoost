@@ -12,6 +12,7 @@ import java.util.regex.Pattern;
 
 public class CommandLineParameter {
     private static final Logger logger = LogManager.getLogger(CommandLineParameter.class);
+    private static final Properties properties = Properties.getSingleton();
     public static Options getCommandLineOptions() {
         Options options = new Options();
         options.addOption("instrumentedBinPath", true, "Required. Path to store instrumented binary files. Existing binaries inside will be overwritten");
@@ -34,7 +35,6 @@ public class CommandLineParameter {
         Properties.getSingleton().logProperties();
     }
     private static void processInstrumentationCommand(CommandLine line) throws MissingArgumentException {
-        Properties properties = Properties.getSingleton();
         // process instrumentedBinPath option
         if(!line.hasOption("instrumentedBinPath"))
             throw new MissingArgumentException("Missing argument for instrumentedBinPath");
@@ -51,7 +51,6 @@ public class CommandLineParameter {
 
     }
     private static void processTestingCommand(CommandLine line) throws MissingArgumentException {
-        Properties properties = Properties.getSingleton();
         if(!line.hasOption("testCases"))
             throw new MissingArgumentException("Missing argument for testCases");
         properties.setTestCases(line.getOptionValue("testCases").split(Properties.getClassSep()));
@@ -61,7 +60,6 @@ public class CommandLineParameter {
     }
 
     private static void processGenerationCommand(CommandLine line) throws MissingArgumentException {
-        Properties properties = Properties.getSingleton();
         if(!line.hasOption("testSourceDir"))
             throw new MissingArgumentException("Missing argument for testSourceDir");
         properties.setTestSourceDir(line.getOptionValue("testSourceDir"));
