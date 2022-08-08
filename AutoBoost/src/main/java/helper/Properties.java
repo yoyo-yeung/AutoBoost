@@ -16,6 +16,7 @@ public class Properties {
     private String testSuitePrefix = "AB";
     private int casePerClass =200;
     private int junitVer = 4;
+    private String PUT;
     private static final String classMethSep = "::";
     private static final String classSep = ",";
     private static final String NEW_LINE = "\n";
@@ -129,5 +130,13 @@ public class Properties {
 
     public void setCasePerClass(int casePerClass) {
         this.casePerClass = casePerClass;
+    }
+
+    public String getPUT() {
+        return PUT;
+    }
+
+    public void setPUT(String PUT) {
+        this.PUT = PUT;
     }
 }

@@ -23,6 +23,7 @@ public class CommandLineParameter {
         options.addOption("testSuitePrefix", true, "Optional. Prefix of generated test classes. Default: AB");
         options.addOption("junitVer" , true, "Optional. Expected JUnit Version: 3/4. Default: 4");
         options.addOption("casePerClass", true, "Optional. Number of test cases per class");
+        options.addOption("PUT", true, "Package under test generation ");
         options.addOption(Help.getOption());
         return options;
     }
@@ -74,6 +75,10 @@ public class CommandLineParameter {
 
         if(line.hasOption("casePerClass"))
             properties.setCasePerClass(Integer.parseInt(line.getOptionValue("casePerClass")));
+
+        if(!line.hasOption("PUT"))
+            throw new MissingArgumentException("Missing argument for PUT");
+        properties.setPUT(line.getOptionValue("PUT"));
 
     }
 }
