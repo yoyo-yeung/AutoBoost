@@ -39,17 +39,9 @@ public class Instrumenter extends BodyTransformer {
     private static final SootMethodRef getTIDmRef;
     private static final SootClass threadClass;
 
-    private static final Tag NEWLY_ADDED_TAG = new Tag() {
-        @Override
-        public String getName() {
-            return "NEWLY_ADDED";
-        }
+    private static final Set<Type> notMockingTypeSet = new HashSet<>();
+    private static final Map<Class<?>, Set<String>> safeJavaLibMethodMap = new HashMap<>(); // adding list of java lib methods that allow using method inputs as inputs, without declaring calling method as unmockable
 
-        @Override
-        public byte[] getValue() throws AttributeValueException {
-            return new byte[0];
-        }
-    };
     static {
         loggerClass = Scene.v().loadClassAndSupport("program.execution.ExecutionLogger");
         logStartMethod = loggerClass.getMethod("int logStart(int,java.lang.Object,java.lang.Object,long)");
