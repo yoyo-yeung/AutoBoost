@@ -71,6 +71,8 @@ public class Instrumenter extends BodyTransformer {
             } else
                 toInsert.add(Jimple.v().newAssignStmt(Jimple.v().newArrayRef(paramArrLocal, IntConstant.v(i)), paramLocal));
         });
+        toInsert.forEach(t -> t.addTag(CUSTOM_TAGS.NEWLY_ADDED_TAG.getTag()));
+
         return toInsert;
 
     }
@@ -150,6 +152,8 @@ public class Instrumenter extends BodyTransformer {
         List<Stmt> toInsert = new ArrayList<>();
         toInsert.add(Jimple.v().newAssignStmt(threadClassLocal, Jimple.v().newStaticInvokeExpr(getCurrentThreadmRef)));
         toInsert.add(Jimple.v().newAssignStmt(threadIDLocal, Jimple.v().newVirtualInvokeExpr(threadClassLocal, getTIDmRef)));
+        toInsert.forEach(t -> t.addTag(CUSTOM_TAGS.NEWLY_ADDED_TAG.getTag()));
+
         return toInsert;
     }
 
@@ -158,16 +162,19 @@ public class Instrumenter extends BodyTransformer {
         if (method.getParameterCount() == 0)
             return toInsert;
         toInsert.addAll(createArrForParams(localGenerator, (Local) paramLocal, paramTypes, originalParamLocals));
+        toInsert.forEach(t -> t.addTag(CUSTOM_TAGS.NEWLY_ADDED_TAG.getTag()));
+
         return toInsert;
     }
 
-
     private List<Unit> getLogStartStmts(SootMethod method, LocalGenerator localGenerator, MethodDetails methodDetails, Value threadIDLocal, Value exeIDLocal, Value thisLocal, List<?> originalParamLocals) {
-        Value paramLocal = method.getParameterCount() == 0 ? NullConstant.v(): localGenerator.generateLocal(ArrayType.v(RefType.v(Object.class.getName()), method.getParameterCount()));
+        Value paramLocal = method.getParameterCount() == 0 ? NullConstant.v() : localGenerator.generateLocal(ArrayType.v(RefType.v(Object.class.getName()), method.getParameterCount()));
         List<Unit> toInsert = new ArrayList<>(getParamLocalSetupStmts(method, localGenerator, paramLocal, method.getParameterTypes(), originalParamLocals));
         Expr logExpr = Jimple.v().newStaticInvokeExpr(logStartMethod.makeRef(), IntConstant.v(methodDetails.getId()), thisLocal, paramLocal, threadIDLocal);
 
         toInsert.add(Jimple.v().newAssignStmt(exeIDLocal, logExpr));
+        toInsert.forEach(t -> t.addTag(CUSTOM_TAGS.NEWLY_ADDED_TAG.getTag()));
+
         return toInsert;
     }
 
@@ -175,6 +182,7 @@ public class Instrumenter extends BodyTransformer {
         List<Unit> toInsert = new ArrayList<>();
         Expr logExpr = Jimple.v().newStaticInvokeExpr(logExceptionMethod.makeRef(), throwing, threadIDLocal);
         toInsert.add(Jimple.v().newInvokeStmt(logExpr));
+        toInsert.forEach(t -> t.addTag(CUSTOM_TAGS.NEWLY_ADDED_TAG.getTag()));
         return toInsert;
     }
 
@@ -184,19 +192,20 @@ public class Instrumenter extends BodyTransformer {
         SootMethodRef ref = Scene.v().makeMethodRef(((PrimType) sootMethod.getReturnType()).boxedType().getSootClass(), "valueOf",
                 Collections.singletonList(sootMethod.getReturnType()), returnLocal.getType(), true);
         toInsert.add(Jimple.v().newAssignStmt(returnLocal, Jimple.v().newStaticInvokeExpr(ref, originalReturnLocal)));
+        toInsert.forEach(t -> t.addTag(CUSTOM_TAGS.NEWLY_ADDED_TAG.getTag()));
         return toInsert;
     }
-
 
     private List<Unit> getLogEndStmts(SootMethod method, LocalGenerator localGenerator, MethodDetails methodDetails, Value threadIDLocal, Value exeIDLocal, Value thisLocal, Stmt retStmt) {
         List<Unit> toInsert = new ArrayList<>();
         Value returnVal = NullConstant.v();
-        if(retStmt instanceof ReturnStmt) {
-            returnVal = (method.getReturnType() instanceof PrimType) ? localGenerator.generateLocal(((PrimType) method.getReturnType()).boxedType()):((ReturnStmt)retStmt).getOp();
+        if (retStmt instanceof ReturnStmt) {
+            returnVal = (method.getReturnType() instanceof PrimType) ? localGenerator.generateLocal(((PrimType) method.getReturnType()).boxedType()) : ((ReturnStmt) retStmt).getOp();
             toInsert.addAll(getReturnLocalSetupStmt(localGenerator, method, returnVal, ((ReturnStmt) retStmt).getOp()));
         }
         Expr logExpr = Jimple.v().newStaticInvokeExpr(logEndMethod.makeRef(), exeIDLocal, thisLocal, returnVal, threadIDLocal);
         toInsert.add(Jimple.v().newInvokeStmt(logExpr));
+        toInsert.forEach(t -> t.addTag(CUSTOM_TAGS.NEWLY_ADDED_TAG.getTag()));
         return toInsert;
     }
 
@@ -210,6 +219,7 @@ public class Instrumenter extends BodyTransformer {
 
         Expr logExpr = Jimple.v().newStaticInvokeExpr(logEndMethod.makeRef(), exeIDLocal, thisLocal, returnVal, threadIDLocal);
         toInsert.add(Jimple.v().newInvokeStmt(logExpr));
+        toInsert.forEach(t -> t.addTag(CUSTOM_TAGS.NEWLY_ADDED_TAG.getTag()));
         return toInsert;
     }
 
