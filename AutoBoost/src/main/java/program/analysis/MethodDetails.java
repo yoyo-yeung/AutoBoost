@@ -23,6 +23,7 @@ public class MethodDetails {
     private Class<?> dClass;
     private final String signature;
     private final String subSignature;
+    private boolean canMockInputs = false;
 
     public MethodDetails(SootMethod method) {
         this.id = methodIdGenerator.incrementAndGet();
@@ -101,6 +102,14 @@ public class MethodDetails {
 
     public String getSubSignature() {
         return subSignature;
+    }
+
+    public boolean isCanMockInputs() {
+        return canMockInputs;
+    }
+
+    public void setCanMockInputs(boolean canMockInputs) {
+        this.canMockInputs = canMockInputs;
     }
 
     @Override
