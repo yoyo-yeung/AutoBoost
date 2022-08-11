@@ -14,6 +14,10 @@ import soot.jimple.*;
 import soot.jimple.internal.JIdentityStmt;
 import soot.tagkit.AttributeValueException;
 import soot.tagkit.Tag;
+import soot.toolkits.graph.CompleteUnitGraph;
+import soot.toolkits.scalar.SimpleLocalDefs;
+import soot.toolkits.scalar.SimpleLocalUses;
+import soot.toolkits.scalar.UnitValueBoxPair;
 
 import java.lang.reflect.Array;
 import java.util.*;
@@ -243,6 +247,31 @@ public class Instrumenter extends BodyTransformer {
             e.printStackTrace();
         }
         return (invokedMethod.isConstructor() || (invokeExpr instanceof InstanceInvokeExpr) || invokedMethod.isStatic() );
+
+    private enum CUSTOM_TAGS {
+        NEWLY_ADDED_TAG("NEWLY_ADDED_TAG"),
+        INV_TO_LOG_TAG("INV_TO_LOG_TAG"),
+        DAN_FIELD_ACCESS_TO_LOG_TAG("DAN_FIELD_ACCESS_TO_LOG_TAG"),
+        DAN_LIB_CALL_TO_LOG_TAG("DAN_LIB_CALL_TO_LOG_TAG");
+        private final Tag tag;
+
+        CUSTOM_TAGS(String name) {
+            tag = new Tag() {
+                @Override
+                public String getName() {
+                    return name;
+                }
+
+                @Override
+                public byte[] getValue() throws AttributeValueException {
+                    return new byte[0];
+                }
+            };
+        }
+
+        public Tag getTag() {
+            return tag;
+        }
     }
 
 }
