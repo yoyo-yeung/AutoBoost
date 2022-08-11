@@ -52,23 +52,23 @@ public class Instrumenter extends BodyTransformer {
         getTIDmRef = Scene.v().makeMethodRef(threadClass, "getId", new ArrayList<>(), LongType.v(), false);
 
     }
-    private List<Unit> createArrForParams( LocalGenerator localGenerator, Local paramArrLocal,  List<Type> paramTypes, List<?> params) {
+
+    private List<Unit> createArrForParams(LocalGenerator localGenerator, Local paramArrLocal, List<Type> paramTypes, List<?> params) {
         List<Unit> toInsert = new ArrayList<>();
-        if(params.size() == 0 ) return toInsert;
+        if (params.size() == 0) return toInsert;
         Unit defArrUnit = Jimple.v().newAssignStmt(paramArrLocal, Jimple.v().newNewArrayExpr(RefType.v(Object.class.getName()), IntConstant.v(params.size())));
         toInsert.add(defArrUnit);
         IntStream.range(0, params.size()).forEach(i -> {
             Value paramLocal = (Value) params.get(i);
             // cast to object type
-            if(paramTypes.get(i) instanceof PrimType) {
-                Local castLocal = localGenerator.generateLocal(((PrimType)paramTypes.get(i)).boxedType());
+            if (paramTypes.get(i) instanceof PrimType) {
+                Local castLocal = localGenerator.generateLocal(((PrimType) paramTypes.get(i)).boxedType());
                 SootMethodRef ref = Scene.v().makeMethodRef(((PrimType) paramTypes.get(i)).boxedType().getSootClass(), "valueOf",
                         Collections.singletonList(paramTypes.get(i)), castLocal.getType(), true);
                 Unit castUnit = Jimple.v().newAssignStmt(castLocal, Jimple.v().newStaticInvokeExpr(ref, paramLocal));
                 toInsert.add(castUnit);
-                toInsert.add( Jimple.v().newAssignStmt(Jimple.v().newArrayRef(paramArrLocal, IntConstant.v(i)), castLocal));
-            }
-            else
+                toInsert.add(Jimple.v().newAssignStmt(Jimple.v().newArrayRef(paramArrLocal, IntConstant.v(i)), castLocal));
+            } else
                 toInsert.add(Jimple.v().newAssignStmt(Jimple.v().newArrayRef(paramArrLocal, IntConstant.v(i)), paramLocal));
         });
         return toInsert;
@@ -83,25 +83,26 @@ public class Instrumenter extends BodyTransformer {
 
         // method info
         SootMethod currentSootMethod = body.getMethod();
-        if(currentSootMethod.getName().contains("$") || currentSootMethod.isStaticInitializer()) return; // if name contains $, not written manually
+        if (currentSootMethod.getName().contains("$") || currentSootMethod.isStaticInitializer())
+            return; // if name contains $, not written manually
         SootClass currentDeclaringClass = currentSootMethod.getDeclaringClass();
         instrumentResult.addClassPublicFields(currentDeclaringClass.getName(), currentDeclaringClass); // store set of public static fields before modifying them for storing at run time
         currentDeclaringClass.getFields()
-                .forEach(f -> f.setModifiers(f.getModifiers() & ~ Modifier.TRANSIENT & ~ Modifier.PRIVATE & ~ Modifier.PROTECTED | Modifier.PUBLIC)); // set all fields as non transient and public such that their value can be stored during runtime
+                .forEach(f -> f.setModifiers(f.getModifiers() & ~Modifier.TRANSIENT & ~Modifier.PRIVATE & ~Modifier.PROTECTED | Modifier.PUBLIC)); // set all fields as non transient and public such that their value can be stored during runtime
         MethodDetails methodDetails = new MethodDetails(currentSootMethod);
 
         // store ID of faulty methods
-        if(properties.getFaultyFunc().contains(currentSootMethod.getSignature()))
+        if (properties.getFaultyFunc().contains(currentSootMethod.getSignature()))
             properties.addFaultyFuncId(methodDetails.getId());
 
         // Prepare for statements adding
         LocalGenerator localGenerator = new LocalGenerator(currentSootMethod.getActiveBody());
-        boolean paramLogged = false;
-        boolean threadRetrieved = false;
-        Value exeIDLocal = localGenerator.generateLocal(IntType.v());
-        Value threadIDLocal = localGenerator.generateLocal(LongType.v());
+        boolean paramLogged = false, threadRetrieved = false;
+        Value exeIDLocal = localGenerator.generateLocal(IntType.v()), threadIDLocal = localGenerator.generateLocal(LongType.v());
         Local threadClassLocal = localGenerator.generateLocal(threadClass.getType());
-        while(stmtIt.hasNext()) {
+        Comparator<Unit> unitComparator = (o1, o2) -> o1.equals(o2) ? 0 : 1;
+        Queue<DefinitionStmt> inputUnits = new PriorityQueue<>(unitComparator); // for tracking input arguments and this instance separately
+        while (stmtIt.hasNext()) {
             Stmt stmt = (Stmt) stmtIt.next();
             if(stmt instanceof JIdentityStmt) continue;
             if(!threadRetrieved) {
@@ -114,24 +115,26 @@ public class Instrumenter extends BodyTransformer {
                         .forEach(s -> units.insertBeforeNoRedirect(s, stmt));
                 paramLogged = true;
             }
-            if(stmt instanceof ThrowStmt)
-                getLogThrowExcStmts(((ThrowStmt)stmt).getOp(), threadIDLocal)
+            // log exception
+            if (stmt instanceof ThrowStmt)
+                getLogThrowExcStmts(((ThrowStmt) stmt).getOp(), threadIDLocal)
                         .forEach(s -> units.insertBefore(s, stmt));
-            if(stmt instanceof ReturnStmt || stmt instanceof ReturnVoidStmt)
+            // log normal return of methods
+            if (stmt instanceof ReturnStmt || stmt instanceof ReturnVoidStmt)
                 getLogEndStmts(currentSootMethod, localGenerator, methodDetails, threadIDLocal, exeIDLocal, methodDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR) || methodDetails.getType().equals(METHOD_TYPE.MEMBER) ? currentSootMethod.getActiveBody().getThisLocal() : NullConstant.v(), stmt)
                         .forEach(s -> units.insertBefore(s, stmt));
 
             if(stmt.containsInvokeExpr() && toLogInvokedMethod(stmt.getInvokeExpr(), currentSootMethod, stmt.getInvokeExpr().getMethodRef())) {
                 InvokeExpr invokeExpr = stmt.getInvokeExpr();
                 MethodDetails invokedMethodDetails = instrumentResult.findExistingLibMethod(invokeExpr.getMethod().getSignature());
-                if(invokedMethodDetails == null) {
+                if (invokedMethodDetails == null) {
                     invokedMethodDetails = new MethodDetails(invokeExpr.getMethod());
                     instrumentResult.addLibMethod(invokedMethodDetails);
                 }
                 Local invokedIDLocal = localGenerator.generateLocal(IntType.v());
                 getLogStartStmts(invokeExpr.getMethod(), localGenerator, invokedMethodDetails, threadIDLocal, invokedIDLocal, invokedMethodDetails.getType().equals(METHOD_TYPE.MEMBER) && invokeExpr instanceof InstanceInvokeExpr ? ((InstanceInvokeExpr) invokeExpr).getBase() : NullConstant.v(), invokeExpr.getArgs()).forEach(s -> units.insertBefore(s, stmt));
 //
-                reverse(getLogInvEndStmts(invokeExpr.getMethod(), localGenerator, invokedMethodDetails, threadIDLocal, invokedIDLocal,(invokedMethodDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR) || invokedMethodDetails.getType().equals(METHOD_TYPE.MEMBER)) && invokeExpr instanceof InstanceInvokeExpr ? ((InstanceInvokeExpr) invokeExpr).getBase() : NullConstant.v(), stmt )).forEach(s -> units.insertAfter(s, stmt ));
+                reverse(getLogInvEndStmts(invokeExpr.getMethod(), localGenerator, invokedMethodDetails, threadIDLocal, invokedIDLocal, (invokedMethodDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR) || invokedMethodDetails.getType().equals(METHOD_TYPE.MEMBER)) && invokeExpr instanceof InstanceInvokeExpr ? ((InstanceInvokeExpr) invokeExpr).getBase() : NullConstant.v(), stmt)).forEach(s -> units.insertAfter(s, stmt));
             }
 
 
@@ -152,9 +155,9 @@ public class Instrumenter extends BodyTransformer {
 
     private List<Unit> getParamLocalSetupStmts(SootMethod method, LocalGenerator localGenerator, Value paramLocal, List<Type> paramTypes, List<?> originalParamLocals) {
         List<Unit> toInsert = new ArrayList<>();
-        if(method.getParameterCount() == 0 )
+        if (method.getParameterCount() == 0)
             return toInsert;
-        toInsert.addAll(createArrForParams(localGenerator, (Local)paramLocal, paramTypes, originalParamLocals));
+        toInsert.addAll(createArrForParams(localGenerator, (Local) paramLocal, paramTypes, originalParamLocals));
         return toInsert;
     }
 
@@ -177,7 +180,7 @@ public class Instrumenter extends BodyTransformer {
 
     private List<Unit> getReturnLocalSetupStmt(LocalGenerator localGenerator, SootMethod sootMethod, Value returnLocal, Value originalReturnLocal) {
         List<Unit> toInsert = new ArrayList<>();
-        if(!(sootMethod.getReturnType() instanceof PrimType)) return toInsert;
+        if (!(sootMethod.getReturnType() instanceof PrimType)) return toInsert;
         SootMethodRef ref = Scene.v().makeMethodRef(((PrimType) sootMethod.getReturnType()).boxedType().getSootClass(), "valueOf",
                 Collections.singletonList(sootMethod.getReturnType()), returnLocal.getType(), true);
         toInsert.add(Jimple.v().newAssignStmt(returnLocal, Jimple.v().newStaticInvokeExpr(ref, originalReturnLocal)));
@@ -200,9 +203,9 @@ public class Instrumenter extends BodyTransformer {
     private List<Unit> getLogInvEndStmts(SootMethod method, LocalGenerator localGenerator, MethodDetails methodDetails, Value threadIDLocal, Value exeIDLocal, Value thisLocal, Stmt callStmt) {
         List<Unit> toInsert = new ArrayList<>();
         Value returnVal = NullConstant.v();
-        if(!methodDetails.getReturnSootType().equals(VoidType.v()) && callStmt instanceof AssignStmt) {
-            returnVal = (method.getReturnType() instanceof PrimType) ? localGenerator.generateLocal(((PrimType) method.getReturnType()).boxedType()):((AssignStmt) callStmt).getLeftOp();
-            toInsert.addAll(getReturnLocalSetupStmt(localGenerator, method, returnVal, ((AssignStmt)callStmt).getLeftOp()));
+        if (!methodDetails.getReturnSootType().equals(VoidType.v()) && callStmt instanceof AssignStmt) {
+            returnVal = (method.getReturnType() instanceof PrimType) ? localGenerator.generateLocal(((PrimType) method.getReturnType()).boxedType()) : ((AssignStmt) callStmt).getLeftOp();
+            toInsert.addAll(getReturnLocalSetupStmt(localGenerator, method, returnVal, ((AssignStmt) callStmt).getLeftOp()));
         }
 
         Expr logExpr = Jimple.v().newStaticInvokeExpr(logEndMethod.makeRef(), exeIDLocal, thisLocal, returnVal, threadIDLocal);
