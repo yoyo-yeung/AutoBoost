@@ -11,7 +11,8 @@ import java.util.stream.Collectors;
 
 public class InstrumentResult {
     private static final InstrumentResult singleton = new InstrumentResult();
-    private final Map<Integer, MethodDetails> methodDetailsMap = new ConcurrentHashMap<>();
+    private static final String FIELD_ACCESS_SIGNATURE = "FIELD_ACCESS";
+    private final Map<Integer, MethodDetails> methodDetailsMap = new ConcurrentHashMap<Integer, MethodDetails>();
     private final Map<String, ClassDetails> classDetailsMap = new HashMap<>();
     private final Map<String, Integer> libMethSignToMethIDMap = new ConcurrentHashMap<>();
     private final Map<String, Set<String>> classPublicFieldsMap = new HashMap<>();
@@ -84,5 +85,9 @@ public class InstrumentResult {
                         .map(SootField::getName)
                         .collect(Collectors.toSet())
                 );
+    }
+
+    public static String getFieldAccessSignature() {
+        return FIELD_ACCESS_SIGNATURE;
     }
 }
