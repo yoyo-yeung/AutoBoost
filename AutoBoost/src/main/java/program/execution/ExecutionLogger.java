@@ -33,11 +33,10 @@ public class ExecutionLogger {
      * Operation and values of sub-functions called under methods like "equals", "toString" and "hashCode" should not be processed and stored as these methods are also used during processing, hence processing of such methods would call itself and result in infinite loop.
      *
      * @param methodId ID of method invoked, corresponding MethodDetails can be found in InstrumentationResult
-     * @param process  value of LOG_ITEM type, representing the status of method execution and the item being stored
      * @param threadID
      * @return true if the current operation and value should not be logged, false if they should
      */
-    private static boolean returnNow(int methodId, LOG_ITEM process, long threadID) throws ClassNotFoundException {
+    private static boolean returnNow(int methodId, long threadID) throws ClassNotFoundException {
         if (getCurrentExecuting(threadID).size() == 0 ) {
             setThreadSkippingState(threadID, false);
             return false;
@@ -61,7 +60,7 @@ public class ExecutionLogger {
 
     // both instance and returnVal must be Object or else they would not be logged in the first place
     public static void logFieldAccess(int methodId, Object instance, Object returnVal, long threadID) throws ClassNotFoundException {
-        if(!isLogging() || returnNow(methodId, LOG_ITEM.START, threadID)) return;
+        if(!isLogging() || returnNow(methodId, threadID)) return;
         MethodDetails details = instrumentResult.getMethodDetailByID(methodId);
         MethodExecution newExecution = new MethodExecution(executionTrace.getNewExeID(), details);
         Stack<MethodExecution> currentlyExecuting = getCurrentExecuting(threadID);
@@ -79,7 +78,7 @@ public class ExecutionLogger {
     }
 
     public static int logStart(int methodId, Object callee, Object params, long threadID) throws ClassNotFoundException {
-         if(!isLogging() || returnNow(methodId, LOG_ITEM.START, threadID)) return -1;
+         if(!isLogging() || returnNow(methodId, threadID)) return -1;
         MethodDetails details = instrumentResult.getMethodDetailByID(methodId);
         MethodExecution newExecution = new MethodExecution(executionTrace.getNewExeID(), details);
         Stack<MethodExecution> currentExecuting = getCurrentExecuting(threadID);
