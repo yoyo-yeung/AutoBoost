@@ -167,6 +167,27 @@ public class Instrumenter extends BodyTransformer {
         return toInsert;
     }
 
+    private MethodDetails getFieldAccessingMethodDetails(InstanceFieldRef fieldRef) {
+        SootClass declaringClass =  fieldRef.getField().getDeclaringClass();
+        String fieldName = fieldRef.getField().getName();
+        MethodDetails result = instrumentResult.findExistingFieldAccessMethod(declaringClass.getName(), fieldName);
+        if(result == null) {
+            result = MethodDetails.getFieldAccessingMethodDetails(declaringClass, fieldName, fieldRef.getType());
+            instrumentResult.addFieldAccessMethod(result);
+        }
+        return result;
+    }
+
+    private List<Unit> getLogFieldAccessStmts(InstanceFieldRef fieldRef, Value originalReturnVal, LocalGenerator localGenerator, MethodDetails methodDetails, Value threadIDLocal) {
+        Value base = fieldRef.getBase();
+        Value returnVal = fieldRef.getType() instanceof PrimType ? localGenerator.generateLocal(((PrimType) fieldRef.getType()).boxedType()) : originalReturnVal;
+        List<Unit> toInsert = new ArrayList<>(getReturnLocalSetupStmt(localGenerator, fieldRef.getType(), returnVal, originalReturnVal));
+        Expr logExpr = Jimple.v().newStaticInvokeExpr(logFieldAccessMethod.makeRef(), IntConstant.v(methodDetails.getId()), base, returnVal, threadIDLocal);
+        toInsert.add(Jimple.v().newInvokeStmt(logExpr));
+        toInsert.forEach(t -> t.addTag(CUSTOM_TAGS.NEWLY_ADDED_TAG.getTag()));
+        return toInsert;
+    }
+
     private List<Unit> getLogStartStmts(SootMethod method, LocalGenerator localGenerator, MethodDetails methodDetails, Value threadIDLocal, Value exeIDLocal, Value thisLocal, List<?> originalParamLocals) {
         Value paramLocal = method.getParameterCount() == 0 ? NullConstant.v() : localGenerator.generateLocal(ArrayType.v(RefType.v(Object.class.getName()), method.getParameterCount()));
         List<Unit> toInsert = new ArrayList<>(getParamLocalSetupStmts(method, localGenerator, paramLocal, method.getParameterTypes(), originalParamLocals));
