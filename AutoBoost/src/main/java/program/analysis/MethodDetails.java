@@ -3,15 +3,19 @@ package program.analysis;
 import entity.ACCESS;
 import entity.METHOD_TYPE;
 import org.apache.commons.lang3.ClassUtils;
+import program.instrumentation.InstrumentResult;
 import soot.SootClass;
 import soot.SootMethod;
 import soot.Type;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MethodDetails {
     private static final AtomicInteger methodIdGenerator = new AtomicInteger(0);
+    private static final String FIELD_ACCESS_SIGNATURE = "FIELD_ACCESS:%s-%s";
+
     private int id;
     private final List<Type> parameterTypes;
     private final int parameterCount;
@@ -20,10 +24,23 @@ public class MethodDetails {
     private final ACCESS access;
     private final METHOD_TYPE type;
     private final SootClass declaringClass;
-    private Class<?> dClass;
+    private Class<?> dClass = null;
     private final String signature;
     private final String subSignature;
     private boolean canMockInputs = false;
+
+    public MethodDetails(List<Type> parameterTypes, int parameterCount, String name, Type returnSootType, ACCESS access, METHOD_TYPE type, SootClass declaringClass, String signature, String subSignature) {
+        this.id = methodIdGenerator.incrementAndGet();
+        this.parameterTypes = parameterTypes;
+        this.parameterCount = parameterCount;
+        this.name = name;
+        this.returnSootType = returnSootType;
+        this.access = access;
+        this.type = type;
+        this.declaringClass = declaringClass;
+        this.signature = signature;
+        this.subSignature = subSignature;
+    }
 
     public MethodDetails(SootMethod method) {
         this.id = methodIdGenerator.incrementAndGet();
@@ -123,7 +140,11 @@ public class MethodDetails {
                 ", type=" + type +
                 ", declaringClass=" + declaringClass +
                 ", signature='" + signature + '\'' +
+                ", canMockInputs=" + canMockInputs +
                 '}';
     }
 
+    public static MethodDetails getFieldAccessingMethodDetails(SootClass declaringClass, String fieldName, Type fieldType){
+        return new MethodDetails(new ArrayList<>(), 0, fieldName, fieldType, ACCESS.PRIVATE, METHOD_TYPE.MEMBER, declaringClass, String.format(FIELD_ACCESS_SIGNATURE, declaringClass.getName(), fieldName), String.format(FIELD_ACCESS_SIGNATURE, declaringClass.getName(), fieldName));
+    }
 }
