@@ -12,6 +12,7 @@ import soot.VoidType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public class MethodExecution {
@@ -24,6 +25,7 @@ public class MethodExecution {
     private Class<?> exceptionClass;
     private boolean reproducible = true;
     private String test = null;
+    private final AtomicInteger childExeCount = new AtomicInteger(0);
 
     public MethodExecution(int ID, MethodDetails methodInvoked) {
         this.ID = ID;
@@ -188,6 +190,14 @@ public class MethodExecution {
 
     public void setTest(String test) {
         this.test = test;
+    }
+
+    public int getNextChildOrder() {
+        return childExeCount.incrementAndGet();
+    }
+
+    public int getChildExeCount() {
+        return childExeCount.get();
     }
 
     @Override
