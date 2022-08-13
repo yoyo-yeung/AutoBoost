@@ -230,7 +230,7 @@ public class ExecutionLogger {
         Stack<MethodExecution> executionStack = getCurrentExecuting(threadID);
         executionTrace.addMethodExecution(execution);
         if (executionStack.size() != 0)
-            executionTrace.addMethodRelationship(executionStack.peek().getID(), execution.getID());
+            executionTrace.addMethodRelationship(executionStack.peek().getID(), execution.getID(), executionStack.peek().getNextChildOrder());
     }
 
     private static void addExecutionToThreadStack(long threadID, MethodExecution execution) {

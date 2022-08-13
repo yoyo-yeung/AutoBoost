@@ -7,8 +7,8 @@ import helper.Properties;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.jgrapht.graph.DefaultDirectedGraph;
 import org.jgrapht.graph.DefaultEdge;
+import org.jgrapht.graph.DirectedMultigraph;
 import program.analysis.ClassDetails;
 import program.analysis.MethodDetails;
 import program.execution.variable.*;
@@ -33,7 +33,7 @@ public class ExecutionTrace {
     private final Map<Integer, MethodExecution> allMethodExecs;
     private final Map<Integer, VarDetail> allVars; // store all vardetail used, needed for lookups
     private final Map<Integer, Integer> varToDefMap;
-    private final DefaultDirectedGraph<Integer, DefaultEdge> callGraph;
+    private final DirectedMultigraph<Integer, CallOrderEdge> callGraph;
     private final VarDetail nullVar;
 
 
@@ -44,7 +44,7 @@ public class ExecutionTrace {
         this.allMethodExecs = new ConcurrentHashMap<>();
         this.allVars = new ConcurrentHashMap<>();
         this.varToDefMap = new HashMap<Integer, Integer>();
-        callGraph = new DefaultDirectedGraph<>(DefaultEdge.class);
+        callGraph = new DirectedMultigraph<>(CallOrderEdge.class);
         nullVar = new ObjVarDetails(0, Object.class, "null");
         this.allVars.put(nullVar.getID(), nullVar);
     }
@@ -433,18 +433,19 @@ public class ExecutionTrace {
         this.allMethodExecs.put(executionID, execution);
     }
 
-    public void addMethodRelationship(int father, int son) {
+    public void addMethodRelationship(int father, int son, int exeOrder) {
         this.callGraph.addVertex(father);
         this.callGraph.addVertex(son);
-        this.callGraph.addEdge(father, son);
+        this.callGraph.addEdge(father, son, new CallOrderEdge(exeOrder));
     }
+
 
     public void changeVertex(int original, int now) {
         if (!this.callGraph.containsVertex(original)) return;
         this.callGraph.addVertex(now);
-        this.callGraph.outgoingEdgesOf(original).forEach(e -> addMethodRelationship(now, this.callGraph.getEdgeTarget(e)));
-        this.callGraph.incomingEdgesOf(original).forEach(e -> addMethodRelationship(this.callGraph.getEdgeSource(e), now));
-        this.callGraph.removeAllEdges(now, now);
+        this.callGraph.removeAllEdges(original, now);
+        this.callGraph.outgoingEdgesOf(original).forEach(e -> addMethodRelationship(now, this.callGraph.getEdgeTarget(e), e.getLabel()));
+        this.callGraph.incomingEdgesOf(original).forEach(e -> addMethodRelationship(this.callGraph.getEdgeSource(e), now, e.getLabel()));
         this.callGraph.removeVertex(original);
     }
 
@@ -587,4 +588,30 @@ public class ExecutionTrace {
 
     }
 
+    private static class CallOrderEdge extends DefaultEdge {
+        private final int label;
+
+        /**
+         * Constructs a CallOrderEdge
+         *
+         * @param label the label of the new edge
+         */
+        public CallOrderEdge(int label) {
+            this.label = label;
+        }
+
+        /**
+         * Gets the label associated with this edge
+         *
+         * @return edge label
+         */
+        public int getLabel() {
+            return label;
+        }
+
+        @Override
+        public String toString() {
+            return "(" + getSource() + " : " + getTarget() + " : " + label + ")";
+        }
+    }
 }
