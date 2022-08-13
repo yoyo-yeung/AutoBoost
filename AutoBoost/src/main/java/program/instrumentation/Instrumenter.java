@@ -229,29 +229,36 @@ public class Instrumenter extends BodyTransformer {
         return reversedUnits;
     }
 
-    private boolean toLogInvokedMethod(InvokeExpr invokeExpr, SootMethod currentMethod, SootMethodRef invokedMethod) {
+    // archive
+   /* private boolean toLogInvokedMethod(InvokeExpr invokeExpr, SootMethod currentMethod, SootMethodRef invokedMethod) {
+//        if(!invokedMethod.getDeclaringClass().getPackageName().startsWith(properties.getPUT())) logger.debug(invokedMethod);
         //  if not calling library class
-        if(!invokedMethod.getDeclaringClass().isJavaLibraryClass()) return false;
+        if (!invokedMethod.getDeclaringClass().isJavaLibraryClass()) return false;
         // if invoking constructor of interface
-        if(invokedMethod.isConstructor() && invokedMethod.getDeclaringClass().isInterface()) return false;
+        if (invokedMethod.isConstructor() && invokedMethod.getDeclaringClass().isInterface()) return false;
         // if just calling parent constructor
-        if(currentMethod.isConstructor() && invokedMethod.isConstructor() && currentMethod.getDeclaringClass().getSuperclass().equals(invokedMethod.getDeclaringClass())) return false;
+        if (currentMethod.isConstructor() && invokedMethod.isConstructor() && currentMethod.getDeclaringClass().getSuperclass().equals(invokedMethod.getDeclaringClass()))
+            return false;
         try {
             Class<?> declaringClass = ClassUtils.getClass(invokedMethod.getDeclaringClass().getName());
-            if(ClassUtils.isPrimitiveOrWrapper(declaringClass) || declaringClass.equals(Arrays.class) || declaringClass.equals(Array.class) || declaringClass.equals(Thread.class)|| declaringClass.getPackage().getName().startsWith("java.util.concurrent")) return false;
-            if(declaringClass.equals(String.class) || StringBVarDetails.availableTypeCheck(declaringClass)) return false;
-            if(MapVarDetails.availableTypeCheck(declaringClass)) return false;
-            if(Collection.class.isAssignableFrom(declaringClass) && declaringClass.getName().startsWith("java") && ((invokedMethod.getReturnType() instanceof PrimType || invokedMethod.getReturnType().equals(VoidType.v())) || invokedMethod.getReturnType().toString().equals(Object.class.getName()))) return false;
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-        try {
-            if(invokedMethod.isStatic() && (invokedMethod.getReturnType() instanceof  PrimType || invokedMethod.getReturnType().equals(RefType.v("java.lang.String")) ||  ClassUtils.isPrimitiveOrWrapper(ClassUtils.getClass(invokedMethod.getReturnType().toString()))))
+            if (ClassUtils.isPrimitiveOrWrapper(declaringClass) || declaringClass.equals(Arrays.class) || declaringClass.equals(Array.class) || declaringClass.equals(Thread.class) || declaringClass.getPackage().getName().startsWith("java.util.concurrent"))
+                return false;
+            if (declaringClass.equals(String.class) || StringBVarDetails.availableTypeCheck(declaringClass))
+                return false;
+            if (MapVarDetails.availableTypeCheck(declaringClass)) return false;
+            if (Collection.class.isAssignableFrom(declaringClass) && declaringClass.getName().startsWith("java") && ((invokedMethod.getReturnType() instanceof PrimType || invokedMethod.getReturnType().equals(VoidType.v())) || invokedMethod.getReturnType().toString().equals(Object.class.getName())))
                 return false;
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
-        return (invokedMethod.isConstructor() || (invokeExpr instanceof InstanceInvokeExpr) || invokedMethod.isStatic() );
+        try {
+            if (invokedMethod.isStatic() && (invokedMethod.getReturnType() instanceof PrimType || invokedMethod.getReturnType().equals(RefType.v("java.lang.String")) || ClassUtils.isPrimitiveOrWrapper(ClassUtils.getClass(invokedMethod.getReturnType().toString()))))
+                return false;
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return (invokedMethod.isConstructor() || (invokeExpr instanceof InstanceInvokeExpr) || invokedMethod.isStatic());
+    }*/
 
     private enum CUSTOM_TAGS {
         NEWLY_ADDED_TAG("NEWLY_ADDED_TAG"),
