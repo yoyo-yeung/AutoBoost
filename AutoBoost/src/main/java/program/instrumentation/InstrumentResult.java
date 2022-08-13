@@ -11,11 +11,11 @@ import java.util.stream.Collectors;
 
 public class InstrumentResult {
     private static final InstrumentResult singleton = new InstrumentResult();
-    private static final String FIELD_ACCESS_SIGNATURE = "FIELD_ACCESS";
     private final Map<Integer, MethodDetails> methodDetailsMap = new ConcurrentHashMap<Integer, MethodDetails>();
     private final Map<String, ClassDetails> classDetailsMap = new HashMap<>();
     private final Map<String, Integer> libMethSignToMethIDMap = new ConcurrentHashMap<>();
     private final Map<String, Set<String>> classPublicFieldsMap = new HashMap<>();
+    private final Map<String, Integer> fieldAccessToMethIDMap = new ConcurrentHashMap<>();
 
     public static InstrumentResult getSingleton() {
         return singleton;
@@ -30,6 +30,10 @@ public class InstrumentResult {
         this.libMethSignToMethIDMap.put(details.getSignature(), details.getId());
     }
 
+    public void addFieldAccessMethod(MethodDetails details) {
+        this.addMethod(details);
+        this.fieldAccessToMethIDMap.put(getFieldAccessMapKey(details.getDeclaringClass().getName(), details.getName()), details.getId());
+    }
     public Map<Integer, MethodDetails> getMethodDetailsMap() {
         return methodDetailsMap;
     }
@@ -70,6 +74,13 @@ public class InstrumentResult {
         else return null;
     }
 
+    public MethodDetails findExistingFieldAccessMethod(String declaringClass, String fieldName ) {
+        String key = getFieldAccessMapKey(declaringClass, fieldName);
+        if(this.fieldAccessToMethIDMap.containsKey(key))
+            return this.getMethodDetailByID(this.fieldAccessToMethIDMap.get(key));
+        else return null;
+    }
+
     public boolean isLibMethod(Integer methodID) {
         return this.libMethSignToMethIDMap.containsValue(methodID);
     }
@@ -87,7 +98,11 @@ public class InstrumentResult {
                 );
     }
 
-    public static String getFieldAccessSignature() {
-        return FIELD_ACCESS_SIGNATURE;
+    private String getFieldAccessMapKey(String declaringClass, String fieldName) {
+        return declaringClass+"_"+fieldName;
+    }
+
+    public Map<String, Integer> getFieldAccessToMethIDMap() {
+        return fieldAccessToMethIDMap;
     }
 }
