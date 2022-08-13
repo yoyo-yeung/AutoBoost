@@ -102,6 +102,7 @@ public class Instrumenter extends BodyTransformer {
         PatchingChain<Unit> units = body.getUnits();
         Iterator<?> stmtIt = units.snapshotIterator();
 
+        if (!body.getMethod().getDeclaringClass().getPackageName().startsWith(properties.getPUT())) return;
         // method info
         SootMethod currentSootMethod = body.getMethod();
         if (currentSootMethod.getName().contains("$") || currentSootMethod.isStaticInitializer())
