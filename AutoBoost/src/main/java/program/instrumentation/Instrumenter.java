@@ -6,8 +6,6 @@ import org.apache.commons.lang3.ClassUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import program.analysis.MethodDetails;
-import program.execution.variable.MapVarDetails;
-import program.execution.variable.StringBVarDetails;
 import soot.*;
 import soot.javaToJimple.LocalGenerator;
 import soot.jimple.*;
@@ -19,7 +17,6 @@ import soot.toolkits.scalar.SimpleLocalDefs;
 import soot.toolkits.scalar.SimpleLocalUses;
 import soot.toolkits.scalar.UnitValueBoxPair;
 
-import java.lang.reflect.Array;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -173,7 +170,7 @@ public class Instrumenter extends BodyTransformer {
             }
 
             // log field access if they were marked
-            if(methodDetails.isCanMockInputs() && stmt.containsFieldRef() && stmt.getFieldRef() instanceof InstanceFieldRef && stmt instanceof DefinitionStmt && stmt.hasTag(CUSTOM_TAGS.DAN_FIELD_ACCESS_TO_LOG_TAG.getTag().getName())){
+            if (methodDetails.isCanMockInputs() && stmt.containsFieldRef() && stmt.getFieldRef() instanceof InstanceFieldRef && stmt instanceof DefinitionStmt && stmt.hasTag(CUSTOM_TAGS.DAN_FIELD_ACCESS_TO_LOG_TAG.getTag().getName())) {
                 MethodDetails fieldAccessDetails = getFieldAccessingMethodDetails((InstanceFieldRef) stmt.getFieldRef());
                 reverse(getLogFieldAccessStmts((InstanceFieldRef) stmt.getFieldRef(), ((DefinitionStmt) stmt).getLeftOp(), localGenerator, fieldAccessDetails, threadIDLocal)).forEach(s -> units.insertAfter(s, stmt));
             }
@@ -301,10 +298,10 @@ public class Instrumenter extends BodyTransformer {
     }
 
     private MethodDetails getFieldAccessingMethodDetails(InstanceFieldRef fieldRef) {
-        SootClass declaringClass =  fieldRef.getField().getDeclaringClass();
+        SootClass declaringClass = fieldRef.getField().getDeclaringClass();
         String fieldName = fieldRef.getField().getName();
         MethodDetails result = instrumentResult.findExistingFieldAccessMethod(declaringClass.getName(), fieldName);
-        if(result == null) {
+        if (result == null) {
             result = MethodDetails.getFieldAccessingMethodDetails(declaringClass, fieldName, fieldRef.getType());
             instrumentResult.addFieldAccessMethod(result);
         }
