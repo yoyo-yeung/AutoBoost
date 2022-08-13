@@ -35,6 +35,7 @@ public class Instrumenter extends BodyTransformer {
     private static final SootMethod logStartMethod;
     private static final SootMethod logEndMethod;
     private static final SootMethod logExceptionMethod;
+    private static final SootMethod logFieldAccessMethod;
     private static final SootMethodRef getCurrentThreadmRef;
     private static final SootMethodRef getTIDmRef;
     private static final SootClass threadClass;
@@ -47,6 +48,7 @@ public class Instrumenter extends BodyTransformer {
         logStartMethod = loggerClass.getMethod("int logStart(int,java.lang.Object,java.lang.Object,long)");
         logEndMethod = loggerClass.getMethod("void logEnd(int,java.lang.Object,java.lang.Object,long)");
         logExceptionMethod = loggerClass.getMethod("void logException(java.lang.Object,long)");
+        logFieldAccessMethod = loggerClass.getMethod("void logFieldAccess(int,java.lang.Object,java.lang.Object,long)");
         threadClass = Scene.v().loadClassAndSupport(Thread.class.getName());
         getCurrentThreadmRef = Scene.v().makeMethodRef(threadClass, "currentThread", new ArrayList<>(), RefType.v(Thread.class.getName()), true);
         getTIDmRef = Scene.v().makeMethodRef(threadClass, "getId", new ArrayList<>(), LongType.v(), false);
@@ -114,6 +116,8 @@ public class Instrumenter extends BodyTransformer {
         if (properties.getFaultyFunc().contains(currentSootMethod.getSignature()))
             properties.addFaultyFuncId(methodDetails.getId());
 
+        SimpleLocalDefs localDefs = new SimpleLocalDefs(new CompleteUnitGraph(body));
+        SimpleLocalUses localUses = new SimpleLocalUses(body, localDefs);
         // Prepare for statements adding
         LocalGenerator localGenerator = new LocalGenerator(currentSootMethod.getActiveBody());
         boolean paramLogged = false, threadRetrieved = false;
@@ -123,14 +127,25 @@ public class Instrumenter extends BodyTransformer {
         Queue<DefinitionStmt> inputUnits = new PriorityQueue<>(unitComparator); // for tracking input arguments and this instance separately
         while (stmtIt.hasNext()) {
             Stmt stmt = (Stmt) stmtIt.next();
-            if(stmt instanceof JIdentityStmt) continue;
-            if(!threadRetrieved) {
+            if (stmt instanceof JIdentityStmt) {
+                if (((JIdentityStmt) stmt).getRightOp() instanceof ParameterRef && needTrackVar(((JIdentityStmt) stmt).getLeftOp().getType()))
+                    inputUnits.add((DefinitionStmt) stmt);
+
+                if (((JIdentityStmt) stmt).getRightOp() instanceof ThisRef) {
+                    checkIfInputCanBeMocked(currentSootMethod, localUses, getFieldRefsOfUnit(localUses, stmt, new PriorityQueue<>(unitComparator)), true);
+                }
+                continue;
+            }
+            // set thread id
+            if (!threadRetrieved) {
                 getThreadIDRetrievalStmts(threadClassLocal, threadIDLocal)
                         .forEach(s -> units.insertBeforeNoRedirect(s, stmt));
                 threadRetrieved = true;
             }
-            if(!paramLogged) {
-                getLogStartStmts(currentSootMethod, localGenerator, methodDetails, threadIDLocal, exeIDLocal, methodDetails.getType().equals(METHOD_TYPE.MEMBER)? currentSootMethod.getActiveBody().getThisLocal(): NullConstant.v(), currentSootMethod.getActiveBody().getParameterLocals())
+            // log start of method call
+            if (!paramLogged) {
+                methodDetails.setCanMockInputs(checkIfInputCanBeMocked(currentSootMethod, localUses, inputUnits, false));
+                getLogStartStmts(currentSootMethod, localGenerator, methodDetails, threadIDLocal, exeIDLocal, methodDetails.getType().equals(METHOD_TYPE.MEMBER) ? currentSootMethod.getActiveBody().getThisLocal() : NullConstant.v(), currentSootMethod.getActiveBody().getParameterLocals())
                         .forEach(s -> units.insertBeforeNoRedirect(s, stmt));
                 paramLogged = true;
             }
@@ -142,8 +157,8 @@ public class Instrumenter extends BodyTransformer {
             if (stmt instanceof ReturnStmt || stmt instanceof ReturnVoidStmt)
                 getLogEndStmts(currentSootMethod, localGenerator, methodDetails, threadIDLocal, exeIDLocal, methodDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR) || methodDetails.getType().equals(METHOD_TYPE.MEMBER) ? currentSootMethod.getActiveBody().getThisLocal() : NullConstant.v(), stmt)
                         .forEach(s -> units.insertBefore(s, stmt));
-
-            if(stmt.containsInvokeExpr() && toLogInvokedMethod(stmt.getInvokeExpr(), currentSootMethod, stmt.getInvokeExpr().getMethodRef())) {
+            // log method invoke if they were marked
+            if (stmt.containsInvokeExpr() && (stmt.hasTag(CUSTOM_TAGS.INV_TO_LOG_TAG.getTag().getName()) || stmt.hasTag(CUSTOM_TAGS.DAN_LIB_CALL_TO_LOG_TAG.getTag().getName())) && methodDetails.isCanMockInputs()) {
                 InvokeExpr invokeExpr = stmt.getInvokeExpr();
                 MethodDetails invokedMethodDetails = instrumentResult.findExistingLibMethod(invokeExpr.getMethod().getSignature());
                 if (invokedMethodDetails == null) {
@@ -156,12 +171,106 @@ public class Instrumenter extends BodyTransformer {
                 reverse(getLogInvEndStmts(invokeExpr.getMethod(), localGenerator, invokedMethodDetails, threadIDLocal, invokedIDLocal, (invokedMethodDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR) || invokedMethodDetails.getType().equals(METHOD_TYPE.MEMBER)) && invokeExpr instanceof InstanceInvokeExpr ? ((InstanceInvokeExpr) invokeExpr).getBase() : NullConstant.v(), stmt)).forEach(s -> units.insertAfter(s, stmt));
             }
 
-
-//            if(stmt.containsFieldRef())
-//                logger.debug(methodDetails.toString() + "\t" + stmt.getFieldRef());
+            // log field access if they were marked
+            if(methodDetails.isCanMockInputs() && stmt.containsFieldRef() && stmt.getFieldRef() instanceof InstanceFieldRef && stmt instanceof DefinitionStmt && stmt.hasTag(CUSTOM_TAGS.DAN_FIELD_ACCESS_TO_LOG_TAG.getTag().getName())){
+                MethodDetails fieldAccessDetails = getFieldAccessingMethodDetails((InstanceFieldRef) stmt.getFieldRef());
+                reverse(getLogFieldAccessStmts((InstanceFieldRef) stmt.getFieldRef(), ((DefinitionStmt) stmt).getLeftOp(), localGenerator, fieldAccessDetails, threadIDLocal)).forEach(s -> units.insertAfter(s, stmt));
+            }
         }
-
         instrumentResult.addMethod(methodDetails);
+
+    }
+
+    private boolean checkIfInputCanBeMocked(SootMethod currentMethod, SimpleLocalUses localUses, Queue<DefinitionStmt> inputs, boolean logOnly) {
+        Set<Unit> checked = new HashSet<>();
+        while (!inputs.isEmpty()) {
+
+            Unit u = inputs.poll();
+            if (checked.contains(u)) continue;
+            checked.add(u);
+            List<UnitValueBoxPair> uses = localUses.getUsesOf(u);
+            // add descendants to check list
+            uses.stream()
+                    .map(UnitValueBoxPair::getUnit)
+                    .filter(c -> c instanceof DefinitionStmt)
+                    .map(c -> (DefinitionStmt) c)
+                    .filter(c -> needTrackVar(c.getLeftOp().getType())) // no need to keep track of primitive/string/wrapper value as we don't need to mock their behavior
+                    .forEach(inputs::add);
+
+            // cannot mock if fields of inputs are accessed directly
+            // cannot mock if this.field is a mocked input + field of it is accessed directly
+            Set<Unit> fieldAccessStream = uses.stream()
+                    .filter(c -> ((Stmt) c.getUnit()).containsFieldRef())
+                    .filter(c -> ((Stmt) c.getUnit()).getFieldRef() instanceof InstanceFieldRef)
+                    .filter(c -> ((InstanceFieldRef) ((Stmt) c.getUnit()).getFieldRef()).getBase().equals(c.getValueBox().getValue()))  // if contains current unit .field
+                    .map(UnitValueBoxPair::getUnit)
+                    .filter(c -> !(c instanceof DefinitionStmt) || !((DefinitionStmt) c).getLeftOp().equals(((DefinitionStmt) c).getFieldRef())) // if it is being accessed, not defined
+                    .collect(Collectors.toSet());
+
+            if (fieldAccessStream.size() > 0)
+                if (logOnly) fieldAccessStream.forEach(c -> c.addTag(CUSTOM_TAGS.DAN_FIELD_ACCESS_TO_LOG_TAG.getTag()));
+                else return false;
+
+
+            // cannot mock if the item is used as an input to un-logged methods (the method may call .field to get values)
+            Set<Unit> methodInputStream = uses.stream()
+                    .filter(c -> ((Stmt) c.getUnit()).containsInvokeExpr())
+                    .filter(c -> ((Stmt) c.getUnit()).getInvokeExpr().getArgs().contains(c.getValueBox().getValue()))
+                    .filter(s -> {
+                        SootMethodRef c = ((Stmt) s.getUnit()).getInvokeExpr().getMethodRef();
+                        try {
+                            if (!c.getDeclaringClass().getPackageName().startsWith("java"))
+                                return true; // move on to the next checking if not java package
+                            Class<?> declaringClass = ClassUtils.getClass(c.getDeclaringClass().getName());
+                            if (safeJavaLibMethodMap.entrySet().stream().anyMatch(e -> e.getKey().isAssignableFrom(declaringClass) && e.getValue().contains(c.getName())))
+                                return false; // declared as can mock (statement specific) if the method called is excluded manually
+                        } catch (ClassNotFoundException e) {
+                            logger.error(e.getMessage());
+                        }
+                        return true;
+                    })
+                    .filter(s -> {
+                        SootMethodRef c = ((Stmt) s.getUnit()).getInvokeExpr().getMethodRef();
+                        return !(c.getDeclaringClass().getPackageName().startsWith(properties.getPUT()));
+                    })
+                    .map(UnitValueBoxPair::getUnit)
+                    .collect(Collectors.toSet());
+            if (methodInputStream.size() > 0)
+                if (logOnly) methodInputStream.forEach(c -> c.addTag(CUSTOM_TAGS.DAN_LIB_CALL_TO_LOG_TAG.getTag()));
+                else return false;
+
+
+            // Log calling of lib methods if they are called by inputs / descendant for mocking
+            // if void, use for tracking content of var (for tracing)
+            // else, for mocking  + tracking
+            uses.stream()
+                    .filter(c -> ((Stmt) c.getUnit()).containsInvokeExpr() && ((Stmt) c.getUnit()).getInvokeExpr() instanceof InstanceInvokeExpr)
+                    .filter(c -> ((InstanceInvokeExpr) ((Stmt) c.getUnit()).getInvokeExpr()).getBase().equals(c.getValueBox().getValue()))
+                    .filter(c -> !((Stmt) c.getUnit()).getInvokeExpr().getMethodRef().getDeclaringClass().getPackageName().startsWith(properties.getPUT()))
+                    .forEach(c -> c.getUnit().addTag(CUSTOM_TAGS.INV_TO_LOG_TAG.getTag()));
+
+
+        }
+        return true;
+    }
+
+    /**
+     * Use for getting this.field to track
+     *
+     * @param localUses localUses provided by soot
+     * @param unit      this unit
+     * @return a queue with fields to track
+     */
+    private Queue<DefinitionStmt> getFieldRefsOfUnit(SimpleLocalUses localUses, Unit unit, Queue<DefinitionStmt> output) {
+        localUses.getUsesOf(unit).stream()
+                .filter(u -> ((Stmt) u.getUnit()).containsFieldRef() && ((Stmt) u.getUnit()).getFieldRef() instanceof InstanceFieldRef)
+                .filter(u -> ((InstanceFieldRef) ((Stmt) u.getUnit()).getFieldRef()).getBase().equals(u.getValueBox().getValue()))
+                .filter(u -> u.getUnit() instanceof DefinitionStmt)
+                .map(u -> (DefinitionStmt) u.getUnit())
+                .filter(u -> u.getRightOpBox().equals(u.getFieldRefBox()))
+                .filter(u -> needTrackVar(u.getFieldRef().getField().getType()))
+                .forEach(output::add);
+        return output;
     }
 
     private boolean needTrackVar(Type t) {
