@@ -59,12 +59,31 @@ public class ExecutionLogger {
         else return getThreadSkippingState(threadID);
     }
 
+    // both instance and returnVal must be Object or else they would not be logged in the first place
+    public static void logFieldAccess(int methodId, Object instance, Object returnVal, long threadID) throws ClassNotFoundException {
+        if(!isLogging() || returnNow(methodId, LOG_ITEM.START, threadID)) return;
+        MethodDetails details = instrumentResult.getMethodDetailByID(methodId);
+        MethodExecution newExecution = new MethodExecution(executionTrace.getNewExeID(), details);
+        Stack<MethodExecution> currentlyExecuting = getCurrentExecuting(threadID);
+        // set test as null if static initializer is running
+        if(currentlyExecuting.size() > 0 && currentlyExecuting.peek().getTest() == null) newExecution.setTest(null);
+        updateExecutionRelationships(threadID, newExecution);
+        // not putting in thread stack as it is instant access
+        setVarForExecution(newExecution, LOG_ITEM.CALL_THIS, executionTrace.getVarDetail(newExecution, instance == null? Object.class: instance.getClass(), instance, LOG_ITEM.CALL_THIS, false));
+        if(details.getReturnSootType() instanceof soot.PrimType)
+            setVarIDForExecution(newExecution, LOG_ITEM.RETURN_ITEM, executionTrace.getVarDetail(newExecution, ClassUtils.wrapperToPrimitive(returnVal.getClass()), returnVal, LOG_ITEM.RETURN_ITEM, false).getID());
+        else {
+            setVarIDForExecution(newExecution, LOG_ITEM.RETURN_ITEM, executionTrace.getVarDetail(newExecution, (returnVal == null ? Object.class : returnVal.getClass()), returnVal, LOG_ITEM.RETURN_ITEM, false).getID());
+        }
+        endLogMethod(threadID, newExecution);
+    }
 
     public static int logStart(int methodId, Object callee, Object params, long threadID) throws ClassNotFoundException {
          if(!isLogging() || returnNow(methodId, LOG_ITEM.START, threadID)) return -1;
         MethodDetails details = instrumentResult.getMethodDetailByID(methodId);
         MethodExecution newExecution = new MethodExecution(executionTrace.getNewExeID(), details);
         Stack<MethodExecution> currentExecuting = getCurrentExecuting(threadID);
+//        logger.debug(details.getSignature());
         if (details.getType().equals(METHOD_TYPE.STATIC_INITIALIZER) || (currentExecuting.size() > 0 && currentExecuting.peek().getTest() == null))
             newExecution.setTest(null);
         updateExecutionRelationships(threadID, newExecution);
