@@ -50,6 +50,23 @@ public class Instrumenter extends BodyTransformer {
         threadClass = Scene.v().loadClassAndSupport(Thread.class.getName());
         getCurrentThreadmRef = Scene.v().makeMethodRef(threadClass, "currentThread", new ArrayList<>(), RefType.v(Thread.class.getName()), true);
         getTIDmRef = Scene.v().makeMethodRef(threadClass, "getId", new ArrayList<>(), LongType.v(), false);
+    }
+
+    static {
+        for (PrimType t : new PrimType[]{BooleanType.v(), ByteType.v(), CharType.v(), DoubleType.v(), FloatType.v(), IntType.v(), LongType.v(), ShortType.v()})
+            notMockingTypeSet.add(t.boxedType());
+        notMockingTypeSet.add(RefType.v(String.class.getName()));
+        notMockingTypeSet.add(RefType.v(StringBuilder.class.getName()));
+        notMockingTypeSet.add(RefType.v(StringBuffer.class.getName()));
+
+        safeJavaLibMethodMap.put(Collection.class, new HashSet<String>() {{
+            String[] methodNames = new String[]{"add", "addAll", "contains", "containsAll", "indexOf", "lastIndexOf", "remove", "removeAll", "retainAll", "set", "replaceAll"};
+            addAll(Arrays.asList(methodNames));
+        }}); // as they do not access fields of inputs (known)
+        safeJavaLibMethodMap.put(Map.class, new HashSet<String>() {{
+            String[] methodNames = new String[]{"containsKey", "containsValue", "get", "getOrDefault", "put", "putAll", "putIfAbsent", "replace", "remove"};
+            addAll(Arrays.asList(methodNames));
+        }});
 
     }
 
@@ -147,6 +164,12 @@ public class Instrumenter extends BodyTransformer {
         instrumentResult.addMethod(methodDetails);
     }
 
+    private boolean needTrackVar(Type t) {
+        if (t instanceof PrimType) return false;
+        if (notMockingTypeSet.contains(t)) return false;
+        if (t instanceof ArrayType) return needTrackVar(((ArrayType) t).getElementType());
+        return true;
+    }
 
     private List<Stmt> getThreadIDRetrievalStmts(Local threadClassLocal, Value threadIDLocal) {
         List<Stmt> toInsert = new ArrayList<>();
