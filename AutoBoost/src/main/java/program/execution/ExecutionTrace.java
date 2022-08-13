@@ -130,7 +130,7 @@ public class ExecutionTrace {
                 try {
                     return (!InstrumentResult.getSingleton().getClassPublicFieldsMap().containsKey(finalType.getName())&& Modifier.isPublic(finalType.getField(f.getName()).getModifiers())) || InstrumentResult.getSingleton().getClassPublicFieldsMap().get(finalType.getName()).contains(f.getName());
                 } catch (NoSuchFieldException e) {
-                    logger.error(e.getMessage());
+                    logger.error(e);
                     return false;
                 }
             }).filter(f -> {
