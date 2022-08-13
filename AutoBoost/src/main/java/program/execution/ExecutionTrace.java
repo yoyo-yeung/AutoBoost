@@ -75,6 +75,7 @@ public class ExecutionTrace {
 
     /**
      * List all VarDetail ID and MethodExecution ID where the VarDetail is defined
+     *
      * @return Map between a VarDetail ID and MethodExecution ID
      */
     public Map<Integer, Integer> getVarToDefMap() {
@@ -83,6 +84,7 @@ public class ExecutionTrace {
 
     /**
      * Find method execution where the provided VarDetail is defined
+     *
      * @param varID
      * @return ID of MethodExecution
      */
@@ -109,26 +111,25 @@ public class ExecutionTrace {
      * If object already stored, return existing VarDetail ID stored
      * If not, create a new VarDetail and return the corresponding ID
      *
-     *
      * @param execution
-     * @param type     type of the object to be stored
-     * @param objValue object to be stored
-     * @param process the current process, e.g. logging callee? param? or return value?
+     * @param type       type of the object to be stored
+     * @param objValue   object to be stored
+     * @param process    the current process, e.g. logging callee? param? or return value?
      * @param subElement
      * @return VarDetail storing the provided object
      */
     public VarDetail getVarDetail(MethodExecution execution, Class<?> type, Object objValue, LOG_ITEM process, boolean subElement) {
         boolean artificialEnum = false;
-        if(objValue == null ) return nullVar;
+        if (objValue == null) return nullVar;
         if (type.isEnum()) {
             objValue = ((Enum) objValue).name();
-        } else if (!type.isArray() && !type.equals(String.class) && !ClassUtils.isPrimitiveOrWrapper(type) && !((ArrVarDetails.availableTypeCheck(type) && ArrVarDetails.availableTypeCheck(objValue.getClass())) || (MapVarDetails.availableTypeCheck(type) && MapVarDetails.availableTypeCheck(objValue.getClass()))) ) {
+        } else if (!type.isArray() && !type.equals(String.class) && !ClassUtils.isPrimitiveOrWrapper(type) && !((ArrVarDetails.availableTypeCheck(type) && ArrVarDetails.availableTypeCheck(objValue.getClass())) || (MapVarDetails.availableTypeCheck(type) && MapVarDetails.availableTypeCheck(objValue.getClass())))) {
             Object finalObjValue1 = objValue;
 
             Class<?> finalType = type;
             Optional<String> match = Arrays.stream(type.getDeclaredFields()).filter(f -> f.getType().equals(finalType)).filter(f -> {
                 try {
-                    return (!InstrumentResult.getSingleton().getClassPublicFieldsMap().containsKey(finalType.getName())&& Modifier.isPublic(finalType.getField(f.getName()).getModifiers())) || InstrumentResult.getSingleton().getClassPublicFieldsMap().get(finalType.getName()).contains(f.getName());
+                    return (!InstrumentResult.getSingleton().getClassPublicFieldsMap().containsKey(finalType.getName()) && Modifier.isPublic(finalType.getField(f.getName()).getModifiers())) || InstrumentResult.getSingleton().getClassPublicFieldsMap().get(finalType.getName()).contains(f.getName());
                 } catch (NoSuchFieldException e) {
                     logger.error(e);
                     return false;
@@ -148,11 +149,10 @@ public class ExecutionTrace {
                 objValue = match.get();
             } else if (type.equals(Class.class)) {
                 artificialEnum = true;
-                if(((Class)objValue).isArray()) objValue = Array.class;
+                if (((Class) objValue).isArray()) objValue = Array.class;
                 objValue = ((Class) objValue).getName();
             } else objValue = toStringWithAttr(objValue);
-        }
-        else if (ClassUtils.isPrimitiveOrWrapper(type)) {
+        } else if (ClassUtils.isPrimitiveOrWrapper(type)) {
             if ((type.equals(double.class) || type.equals(Double.class))) {
                 if (Double.isNaN(((Double) objValue))) {
                     artificialEnum = true;
@@ -201,8 +201,7 @@ public class ExecutionTrace {
                 varDetail = new MapVarDetails(getNewVarID(), type, ((Map<?, ?>) objValue).entrySet().stream()
                         .map(e -> new AbstractMap.SimpleEntry<Integer, Integer>(getVarDetail(execution, getClassOfObj(e.getKey()), e.getKey(), process, true).getID(), getVarDetail(execution, getClassOfObj(e.getValue()), e.getValue(), process, true).getID()))
                         .collect(Collectors.<Map.Entry<Integer, Integer>>toSet()), objValue);
-            }
-             else if (ClassUtils.isPrimitiveWrapper(type)) {
+            } else if (ClassUtils.isPrimitiveWrapper(type)) {
                 varDetail = new WrapperVarDetails(getNewVarID(), type, objValue);
             } else {
                 // other cases
@@ -210,14 +209,14 @@ public class ExecutionTrace {
             }
             assert varDetail != null; // if null, then fail to generate test
             addNewVarDetail(varDetail);
-            if(!subElement) {
+            if (!subElement) {
                 if (setFirstOccurrenceAsUse(varDetail, process, execution))
                     addVarDetailUsage(varDetail, execution.getID());
                 else
                     addNewVarDetailDef(varDetail, execution.getID());
             }
         } else {
-            if(!subElement) {
+            if (!subElement) {
                 if (setOccurrenceAsDef(varDetail, process, execution))
                     addNewVarDetailDef(varDetail, execution.getID());
                 else
@@ -231,8 +230,9 @@ public class ExecutionTrace {
      * Called if the variable is stored for the first time.
      * Find if the current execution should be stored as USE, instead of DEF.
      * e.g. If the variable is a callee, then it is a USE.
+     *
      * @param varDetail the current Variable Details under review
-     * @param process the current logging step
+     * @param process   the current logging step
      * @param execution the execution where the variable is used
      * @return if this occurance should be stored as USE
      */
@@ -260,8 +260,9 @@ public class ExecutionTrace {
      * Find if the current execution should be stored as DEF, instead of USE.
      * e.g. If the variable was stored before exiting constructor, then it is a DEF.
      * If the variable has been DEFed before, the method also check if this execution is "better" (higher probabilty to reproduce) than the originally stored ones.
+     *
      * @param varDetail the current Variable Details under review
-     * @param process the current logging step
+     * @param process   the current logging step
      * @param execution the execution where the variable is used
      * @return if this occurance should be stored as DEF
      */
@@ -274,7 +275,7 @@ public class ExecutionTrace {
         MethodExecution existingDefEx = getDefExeList(varDetail.getID()) == null ? null : getMethodExecutionByID(getDefExeList(varDetail.getID()));
         MethodDetails existingDef = existingDefEx == null ? null : existingDefEx.getMethodInvoked();
         // return false if its essentially the same execution
-        if(existingDefEx != null && existingDefEx.getMethodInvoked().equals(execution.getMethodInvoked()) && existingDefEx.getParams().equals(execution.getParams()) && existingDefEx.getCalleeId() == execution.getCalleeId() && (!process.equals(LOG_ITEM.RETURN_THIS) || existingDefEx.getResultThisId() == varDetail.getID()) && (!process.equals(LOG_ITEM.RETURN_ITEM) || existingDefEx.getReturnValId() == varDetail.getID()) )
+        if (existingDefEx != null && existingDefEx.getMethodInvoked().equals(execution.getMethodInvoked()) && existingDefEx.getParams().equals(execution.getParams()) && existingDefEx.getCalleeId() == execution.getCalleeId() && (!process.equals(LOG_ITEM.RETURN_THIS) || existingDefEx.getResultThisId() == varDetail.getID()) && (!process.equals(LOG_ITEM.RETURN_ITEM) || existingDefEx.getReturnValId() == varDetail.getID()))
             return false;
         if (details.getAccess().equals(ACCESS.PRIVATE))
             return false;
@@ -283,13 +284,13 @@ public class ExecutionTrace {
         if (existingDef == null) return true;
         else if (existingDef.getId() == details.getId()) return false;
 
-        if(details.getAccess().equals(ACCESS.PUBLIC) && !existingDef.getAccess().equals(ACCESS.PUBLIC)) return true;
+        if (details.getAccess().equals(ACCESS.PUBLIC) && !existingDef.getAccess().equals(ACCESS.PUBLIC)) return true;
 
         int existingNullDefCount = getNullDefCount(existingDefEx);
         int currentNullDefCount = getNullDefCount(execution);
         if (existingNullDefCount > currentNullDefCount) return true;
         else if (existingNullDefCount == currentNullDefCount) {
-            if(!existingDef.getType().equals(METHOD_TYPE.CONSTRUCTOR) && !existingDef.getType().equals(METHOD_TYPE.STATIC) &&  (details.getType().equals(METHOD_TYPE.STATIC) || details.getType().equals(METHOD_TYPE.CONSTRUCTOR)))
+            if (!existingDef.getType().equals(METHOD_TYPE.CONSTRUCTOR) && !existingDef.getType().equals(METHOD_TYPE.STATIC) && (details.getType().equals(METHOD_TYPE.STATIC) || details.getType().equals(METHOD_TYPE.CONSTRUCTOR)))
                 return true;
             return ((existingDef.getParameterTypes().stream().filter(t -> !(t instanceof soot.PrimType)).count() + (existingDef.getType().equals(METHOD_TYPE.CONSTRUCTOR) || existingDef.getType().equals(METHOD_TYPE.STATIC) ? 0 : 1)) > (details.getParameterTypes().stream().filter(t -> !(t instanceof soot.PrimType)).count() + (details.getType().equals(METHOD_TYPE.STATIC) || details.getType().equals(METHOD_TYPE.CONSTRUCTOR) ? 0 : 1)));
         }
@@ -298,6 +299,7 @@ public class ExecutionTrace {
 
     /**
      * Used in setOccurrenceAsDef to compare two executions and see which one has a higher prob for reproducing by checking the number of variables used in ones execution that the program have not find a DEF for.
+     *
      * @param execution the MethodExecution under review
      * @return the number of variables used in Method invoking that the program have NOT find a DEF method call for.
      */
@@ -310,9 +312,9 @@ public class ExecutionTrace {
      * Retrieve Stream of VarDetail IDs of components in the array/Collection
      *
      * @param execution
-     * @param type the type of variable (Array/subclasses of Collection/etc)
-     * @param obj the variable
-     * @param process the current logging step
+     * @param type      the type of variable (Array/subclasses of Collection/etc)
+     * @param obj       the variable
+     * @param process   the current logging step
      * @return Stream of VarDetail IDs
      */
     private Stream<Integer> getComponentStream(MethodExecution execution, Class<?> type, Object obj, LOG_ITEM process) {
@@ -327,9 +329,9 @@ public class ExecutionTrace {
             componentStream = componentStream.sorted();
         return componentStream;
     }
+
     /**
      * If the obj was defined and stored before, return ID of the corresponding ObjVarDetails for reuse. Else return -1
-     *
      *
      * @param execution
      * @param objValue
@@ -341,16 +343,14 @@ public class ExecutionTrace {
         Class<?> varDetailType = null;
 //        logger.debug("findExisting ");
         if (type.isEnum() || artificialEnum) {
-            if(type.equals(Class.class))
-                objValue = objValue.toString().replace("$", ".") +".class";
+            if (type.equals(Class.class))
+                objValue = objValue.toString().replace("$", ".") + ".class";
             else objValue = type.getSimpleName() + "." + objValue;
             varDetailType = EnumVarDetails.class;
-        }
-        else if (ArrVarDetails.availableTypeCheck(type) && ArrVarDetails.availableTypeCheck(objValue.getClass())) {
+        } else if (ArrVarDetails.availableTypeCheck(type) && ArrVarDetails.availableTypeCheck(objValue.getClass())) {
             objValue = getComponentStream(execution, type, objValue, process).map(String::valueOf).collect(Collectors.joining(Properties.getDELIMITER()));
             varDetailType = ArrVarDetails.class;
-        }
-        else if (MapVarDetails.availableTypeCheck(type) && MapVarDetails.availableTypeCheck(objValue.getClass())) {
+        } else if (MapVarDetails.availableTypeCheck(type) && MapVarDetails.availableTypeCheck(objValue.getClass())) {
             objValue = ((Map<?, ?>) objValue).entrySet().stream().map(comp -> getVarDetail(execution, getClassOfObj(comp.getKey()), comp.getKey(), process, true).getID() + "=" + getVarDetail(execution, getClassOfObj(comp.getValue()), comp.getValue(), process, true).getID()).sorted().collect(Collectors.joining(Properties.getDELIMITER()));
             varDetailType = MapVarDetails.class;
         }
@@ -383,6 +383,7 @@ public class ExecutionTrace {
         if (obj != null) return obj.getClass();
         else return Object.class;
     }
+
     /**
      * Set up all maps using VarDetail key as ID
      *
@@ -431,6 +432,7 @@ public class ExecutionTrace {
         int executionID = execution.getID();
         this.allMethodExecs.put(executionID, execution);
     }
+
     public void addMethodRelationship(int father, int son) {
         this.callGraph.addVertex(father);
         this.callGraph.addVertex(son);
@@ -453,7 +455,7 @@ public class ExecutionTrace {
 
     public Set<Integer> getChildren(int father) {
         Set<Integer> results = new HashSet<>();
-        this.callGraph.outgoingEdgesOf(father).stream().filter(e -> this.callGraph.getEdgeTarget(e)!=father).forEach(e -> {
+        this.callGraph.outgoingEdgesOf(father).stream().filter(e -> this.callGraph.getEdgeTarget(e) != father).forEach(e -> {
             results.add(this.callGraph.getEdgeTarget(e));
         });
         return results;
@@ -488,9 +490,8 @@ public class ExecutionTrace {
         if (obj == null) {
             result.append(nullVar.getID());
             return;
-        }
-        else if (ClassUtils.isPrimitiveOrWrapper(obj.getClass()) || obj.getClass().equals(String.class)) {
-            if(obj.getClass().equals(String.class) && ((String)obj).length()>100)
+        } else if (ClassUtils.isPrimitiveOrWrapper(obj.getClass()) || obj.getClass().equals(String.class)) {
+            if (obj.getClass().equals(String.class) && ((String) obj).length() > 100)
                 result.append("ID:").append(getVarDetail(null, obj.getClass(), obj, null, true).getID());
             else
                 result.append(obj);
@@ -499,20 +500,18 @@ public class ExecutionTrace {
         if (hashCodeToFieldMap.containsKey(System.identityHashCode(obj))) {
             result.append(hashCodeToFieldMap.get(System.identityHashCode(obj)));
             return;
-        }
-        else hashCodeToFieldMap.put(System.identityHashCode(obj), fieldName);
+        } else hashCodeToFieldMap.put(System.identityHashCode(obj), fieldName);
         if (depth == 0) {
             result.append("[]");
             return;
-        }
-        else if (obj.getClass().isArray()) {
-                result.append("[");
-                IntStream.range(0, Array.getLength(obj)).forEach(i -> {
-                    if (Array.get(obj, i) == null) result.append("null");
-                    else toCustomString(fieldName + "." + i, Array.get(obj, i), depth - 1, result, hashCodeToFieldMap);
-                    if (i < Array.getLength(obj) - 1) result.append(",");
-                });
-                result.append("]");
+        } else if (obj.getClass().isArray()) {
+            result.append("[");
+            IntStream.range(0, Array.getLength(obj)).forEach(i -> {
+                if (Array.get(obj, i) == null) result.append("null");
+                else toCustomString(fieldName + "." + i, Array.get(obj, i), depth - 1, result, hashCodeToFieldMap);
+                if (i < Array.getLength(obj) - 1) result.append(",");
+            });
+            result.append("]");
             return;
         } else if (MapVarDetails.availableTypeCheck(obj.getClass())) {
 
@@ -520,9 +519,9 @@ public class ExecutionTrace {
             AtomicInteger i = new AtomicInteger();
             ((Map<?, ?>) obj).forEach((key, value) -> {
                 result.append("[");
-                toCustomString(fieldName+"." + i.get() + ".key", key, depth - 1, result, hashCodeToFieldMap);
+                toCustomString(fieldName + "." + i.get() + ".key", key, depth - 1, result, hashCodeToFieldMap);
                 result.append("=");
-                toCustomString(fieldName+"." + i.getAndIncrement() +".value", value, depth - 1, result, hashCodeToFieldMap);
+                toCustomString(fieldName + "." + i.getAndIncrement() + ".value", value, depth - 1, result, hashCodeToFieldMap);
                 result.append("]");
             });
             result.append("}");
@@ -531,7 +530,7 @@ public class ExecutionTrace {
             result.append("{");
             AtomicInteger y = new AtomicInteger();
             ((Collection) obj).forEach(i -> {
-                toCustomString(fieldName+"." + y.getAndIncrement(), i, depth - 1, result, hashCodeToFieldMap);
+                toCustomString(fieldName + "." + y.getAndIncrement(), i, depth - 1, result, hashCodeToFieldMap);
                 result.append(",");
             });
             result.deleteCharAt(result.length() - 1);
@@ -555,7 +554,7 @@ public class ExecutionTrace {
                     f.setAccessible(true);
                     try {
                         result.append(f.getName()).append("=");
-                        toCustomString(fieldName+"." + f.getName(), f.get(obj), depth - 1, result, hashCodeToFieldMap);
+                        toCustomString(fieldName + "." + f.getName(), f.get(obj), depth - 1, result, hashCodeToFieldMap);
                         result.append(",");
                     } catch (IllegalAccessException e) {
                         e.printStackTrace();
@@ -564,17 +563,18 @@ public class ExecutionTrace {
         result.deleteCharAt(result.length() - 1);
         result.append("}");
     }
+
     public void clear() {
         allMethodExecs.clear();
         varToDefMap.clear();
     }
 
-    public void replacePossibleDefExe(MethodExecution original, MethodExecution repl){
+    public void replacePossibleDefExe(MethodExecution original, MethodExecution repl) {
         Set<Integer> varInvolved = new HashSet<>(original.getParams());
         varInvolved.add(original.getCalleeId());
         varInvolved.add(original.getReturnValId());
         varInvolved.add(original.getResultThisId());
-        if(original.getReturnValId() != -1) {
+        if (original.getReturnValId() != -1) {
             VarDetail returnVarDetail = getVarDetailByID(original.getReturnValId());
             if (returnVarDetail instanceof ArrVarDetails)
                 varInvolved.addAll(((ArrVarDetails) returnVarDetail).getComponents());
