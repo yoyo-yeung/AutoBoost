@@ -27,9 +27,10 @@ public class MethodDetails {
     private Class<?> dClass = null;
     private final String signature;
     private final String subSignature;
-    private boolean canMockInputs = false;
+    private boolean canMockInputs = true;
+    private boolean isFieldAccess = false;
 
-    public MethodDetails(List<Type> parameterTypes, int parameterCount, String name, Type returnSootType, ACCESS access, METHOD_TYPE type, SootClass declaringClass, String signature, String subSignature) {
+    public MethodDetails(List<Type> parameterTypes, int parameterCount, String name, Type returnSootType, ACCESS access, METHOD_TYPE type, SootClass declaringClass, String signature, String subSignature, boolean isFieldAccess, boolean canMockInputs) {
         this.id = methodIdGenerator.incrementAndGet();
         this.parameterTypes = parameterTypes;
         this.parameterCount = parameterCount;
@@ -40,6 +41,8 @@ public class MethodDetails {
         this.declaringClass = declaringClass;
         this.signature = signature;
         this.subSignature = subSignature;
+        this.isFieldAccess = isFieldAccess;
+        this.canMockInputs = canMockInputs;
     }
 
     public MethodDetails(SootMethod method) {
@@ -59,6 +62,7 @@ public class MethodDetails {
         this.access = method.isPrivate()? ACCESS.PRIVATE: (method.isPublic()? ACCESS.PUBLIC: ACCESS.PROTECTED);
         this.declaringClass = method.getDeclaringClass();
         this.subSignature = method.getSubSignature();
+        this.isFieldAccess = false;
     }
 
     public int getId() {
@@ -129,6 +133,10 @@ public class MethodDetails {
         this.canMockInputs = canMockInputs;
     }
 
+    public boolean isFieldAccess() {
+        return isFieldAccess;
+    }
+
     @Override
     public String toString() {
         return "MethodDetails{" +
@@ -145,6 +153,6 @@ public class MethodDetails {
     }
 
     public static MethodDetails getFieldAccessingMethodDetails(SootClass declaringClass, String fieldName, Type fieldType){
-        return new MethodDetails(new ArrayList<>(), 0, fieldName, fieldType, ACCESS.PRIVATE, METHOD_TYPE.MEMBER, declaringClass, String.format(FIELD_ACCESS_SIGNATURE, declaringClass.getName(), fieldName), String.format(FIELD_ACCESS_SIGNATURE, declaringClass.getName(), fieldName));
+        return new MethodDetails(new ArrayList<>(), 0, fieldName, fieldType, ACCESS.PRIVATE, METHOD_TYPE.MEMBER, declaringClass, String.format(FIELD_ACCESS_SIGNATURE, declaringClass.getName(), fieldName), String.format(FIELD_ACCESS_SIGNATURE, declaringClass.getName(), fieldName), true, false);
     }
 }
