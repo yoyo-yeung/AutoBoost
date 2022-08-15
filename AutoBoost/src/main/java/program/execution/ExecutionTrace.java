@@ -210,14 +210,14 @@ public class ExecutionTrace {
             assert varDetail != null; // if null, then fail to generate test
             addNewVarDetail(varDetail);
             if (!subElement) {
-                if (setFirstOccurrenceAsUse(varDetail, process, execution))
-                    addVarDetailUsage(varDetail, execution.getID());
-                else
-                    addNewVarDetailDef(varDetail, execution.getID());
+                if (setCurrentExeAsDef(varDetail, process, execution)) addNewVarDetailDef(varDetail, execution.getID());
+                else addVarDetailUsage(varDetail, execution.getID());
+
+
             }
         } else {
             if (!subElement) {
-                if (setOccurrenceAsDef(varDetail, process, execution))
+                if (setCurrentExeAsDef(varDetail, process, execution))
                     addNewVarDetailDef(varDetail, execution.getID());
                 else
                     addVarDetailUsage(varDetail, execution.getID());
@@ -227,85 +227,39 @@ public class ExecutionTrace {
     }
 
     /**
-     * Called if the variable is stored for the first time.
-     * Find if the current execution should be stored as USE, instead of DEF.
+     * Find if the current execution should be recognized as def of a var
      * e.g. If the variable is a callee, then it is a USE.
      *
      * @param varDetail the current Variable Details under review
      * @param process   the current logging step
      * @param execution the execution where the variable is used
-     * @return if this occurance should be stored as USE
+     * @return if this occurance should be stored as def
      */
-    private boolean setFirstOccurrenceAsUse(VarDetail varDetail, LOG_ITEM process, MethodExecution execution) {
-        if (!(varDetail instanceof ObjVarDetails) || execution.getTest() == null)
-            return true;
-
-        MethodDetails details = execution.getMethodInvoked();
-        if (details.getAccess().equals(ACCESS.PRIVATE))
-            return true;
-        switch (process) {
-            case CALL_THIS:
-            case CALL_PARAM:
-                return true;
-            case RETURN_THIS:
+    private boolean setCurrentExeAsDef(VarDetail varDetail, LOG_ITEM process, MethodExecution execution) {
+        if(!(varDetail instanceof ObjVarDetails)) return false; // no need to get a def if it is not an object
+        // must be a resulting var
+        switch(process) {
             case RETURN_ITEM:
-                return (execution.getCalleeId() == varDetail.getID() || execution.getParams().contains(varDetail.getID()));
+            case RETURN_THIS:
+                break;
             default:
                 return false;
         }
+        MethodDetails methodDetails = execution.getMethodInvoked();
+        if((methodDetails.getType().equals(METHOD_TYPE.MEMBER) && execution.getCallee().equals(varDetail)) || execution.getParams().stream().anyMatch(p -> p == varDetail.getID())) return false; // if they were inputs to begin with
+        if(methodDetails.getAccess().equals(ACCESS.PRIVATE) || methodDetails.isFieldAccess() || !methodDetails.isCanMockInputs()) return false;
+        MethodExecution existingDef = getDefExeList(varDetail.getID()) == null ? null : getMethodExecutionByID(getDefExeList(varDetail.getID()));
+        if(existingDef == null) return true;
+        if(existingDef.equals(execution)) return false; // would compare method, callee, params
+        MethodDetails existingDefDetails = existingDef.getMethodInvoked();
+        if(existingDefDetails.getType().getRank() < methodDetails.getType().getRank()) return false;
+        if(methodDetails.getType().equals(METHOD_TYPE.MEMBER) && getParentExeStack(execution.getCallee())== null) return false;
+        if(existingDefDetails.getParameterCount() < methodDetails.getParameterCount())
+            return false;
+        return true;
     }
 
-    /**
-     * Called if the variable is stored NOT for the first time.
-     * Find if the current execution should be stored as DEF, instead of USE.
-     * e.g. If the variable was stored before exiting constructor, then it is a DEF.
-     * If the variable has been DEFed before, the method also check if this execution is "better" (higher probabilty to reproduce) than the originally stored ones.
-     *
-     * @param varDetail the current Variable Details under review
-     * @param process   the current logging step
-     * @param execution the execution where the variable is used
-     * @return if this occurance should be stored as DEF
-     */
-    private boolean setOccurrenceAsDef(VarDetail varDetail, LOG_ITEM process, MethodExecution execution) {
-//        logger.debug(varDetail.toDetailedString() + "\t" + getDefExeList(varDetail.getID()));
-        if (!(varDetail instanceof ObjVarDetails) || execution.getTest() == null)
-            return false;
-        if (!process.equals(LOG_ITEM.RETURN_THIS) && !process.equals(LOG_ITEM.RETURN_ITEM)) return false;
-        MethodDetails details = execution.getMethodInvoked();
-        MethodExecution existingDefEx = getDefExeList(varDetail.getID()) == null ? null : getMethodExecutionByID(getDefExeList(varDetail.getID()));
-        MethodDetails existingDef = existingDefEx == null ? null : existingDefEx.getMethodInvoked();
-        // return false if its essentially the same execution
-        if (existingDefEx != null && existingDefEx.getMethodInvoked().equals(execution.getMethodInvoked()) && existingDefEx.getParams().equals(execution.getParams()) && existingDefEx.getCalleeId() == execution.getCalleeId() && (!process.equals(LOG_ITEM.RETURN_THIS) || existingDefEx.getResultThisId() == varDetail.getID()) && (!process.equals(LOG_ITEM.RETURN_ITEM) || existingDefEx.getReturnValId() == varDetail.getID()))
-            return false;
-        if (details.getAccess().equals(ACCESS.PRIVATE))
-            return false;
-        if (execution.getCalleeId() == varDetail.getID() || execution.getParams().contains(varDetail.getID()))
-            return false;
-        if (existingDef == null) return true;
-        else if (existingDef.getId() == details.getId()) return false;
-
-        if (details.getAccess().equals(ACCESS.PUBLIC) && !existingDef.getAccess().equals(ACCESS.PUBLIC)) return true;
-
-        int existingNullDefCount = getNullDefCount(existingDefEx);
-        int currentNullDefCount = getNullDefCount(execution);
-        if (existingNullDefCount > currentNullDefCount) return true;
-        else if (existingNullDefCount == currentNullDefCount) {
-            if (!existingDef.getType().equals(METHOD_TYPE.CONSTRUCTOR) && !existingDef.getType().equals(METHOD_TYPE.STATIC) && (details.getType().equals(METHOD_TYPE.STATIC) || details.getType().equals(METHOD_TYPE.CONSTRUCTOR)))
-                return true;
-            return ((existingDef.getParameterTypes().stream().filter(t -> !(t instanceof soot.PrimType)).count() + (existingDef.getType().equals(METHOD_TYPE.CONSTRUCTOR) || existingDef.getType().equals(METHOD_TYPE.STATIC) ? 0 : 1)) > (details.getParameterTypes().stream().filter(t -> !(t instanceof soot.PrimType)).count() + (details.getType().equals(METHOD_TYPE.STATIC) || details.getType().equals(METHOD_TYPE.CONSTRUCTOR) ? 0 : 1)));
-        }
-        return false;
-    }
-
-    /**
-     * Used in setOccurrenceAsDef to compare two executions and see which one has a higher prob for reproducing by checking the number of variables used in ones execution that the program have not find a DEF for.
-     *
-     * @param execution the MethodExecution under review
-     * @return the number of variables used in Method invoking that the program have NOT find a DEF method call for.
-     */
-    private int getNullDefCount(MethodExecution execution) {
-        return (int) execution.getParams().stream().map(this::getVarDetailByID).filter(p -> ((p instanceof ObjVarDetails) && getDefExeList(p.getID()) == null)).count() + ((execution.getCalleeId() == -1 || getDefExeList(execution.getCalleeId()) != null) ? 0 : 1);
-    }
+    
 
     /**
      * Used when the variable storing is of array/Collection type.
