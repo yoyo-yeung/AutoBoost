@@ -588,7 +588,27 @@ public class ExecutionTrace {
 
     }
 
-    private static class CallOrderEdge extends DefaultEdge {
+    public DirectedMultigraph<Integer, CallOrderEdge> getCallGraph() {
+        return callGraph;
+    }
+
+    public Stack<MethodExecution> getParentExeStack(VarDetail var) {
+        Stack<MethodExecution> executionStack = new Stack<>();
+        if(!(var instanceof ObjVarDetails)) return null;
+        while(var!=null) {
+            Integer def = getDefExeList(var.getID());
+            if(def == null) return null; // i.e. can not be produced
+            MethodExecution defExe = getMethodExecutionByID(def);
+            executionStack.push(defExe);
+            if(defExe.getMethodInvoked().getType().equals(METHOD_TYPE.MEMBER))
+                var = defExe.getCallee();
+            else
+                var = null;
+        }
+        return executionStack;
+    }
+
+    public static class CallOrderEdge extends DefaultEdge {
         private final int label;
 
         /**
