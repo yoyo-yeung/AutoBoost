@@ -25,6 +25,9 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import static helper.Helper.accessibilityCheck;
+import static helper.Helper.getRequiredPackage;
+
 public class ExecutionTrace {
     private static final Logger logger = LogManager.getLogger(ExecutionTrace.class);
     private static final ExecutionTrace singleton = new ExecutionTrace();
@@ -546,20 +549,254 @@ public class ExecutionTrace {
         return callGraph;
     }
 
+    /**
+     * Update canTest field in each execution storing if the execution can be tested
+     */
+    public void checkTestabilityOfExecutions() {
+        Queue<MethodExecution> executionQueue = new PriorityQueue<>(Comparator.comparingInt(MethodExecution::getID));
+        executionQueue.addAll(this.allMethodExecs.values().stream().sorted(Comparator.comparingInt(MethodExecution::getID)).collect(Collectors.toList()));
+        Set<Integer> checked = new HashSet<>();
+        Map<Integer, Set<Integer>> exeToInputVarsMap = new HashMap<>();
+        while (!executionQueue.isEmpty()) {
+            MethodExecution execution = executionQueue.poll();
+            if (execution.getCalleeId() != -1 && getDefExeList(execution.getCalleeId()) != null && !checked.contains(getDefExeList(execution.getCalleeId()))) {
+                executionQueue.add(execution); // if the callee is not checked yet, wait
+                continue;
+            }
+            checked.add(execution.getID());
+            execution.setCanTest(canTestExecution(execution) && canTestCallee(execution) && compatibilityCheck(execution));
+            if (!execution.isCanTest()) continue;
+
+            Set<Integer> inputsAndDes = getInputAndDes(execution);
+            exeToInputVarsMap.put(execution.getID(), inputsAndDes);
+            if (execution.getCalleeId() != -1 && execution.getCallee() instanceof ObjVarDetails)
+                inputsAndDes.addAll(getParentExeStack(execution.getCallee()).stream().map(e -> exeToInputVarsMap.getOrDefault(e.getID(), new HashSet<>())).flatMap(Collection::stream).collect(Collectors.toSet())); // may change to accumulative putting to Map if it takes LONG
+            execution.setCanTest(!hasUnmockableUsage(execution, inputsAndDes));
+        }
+    }
+
+    /**
+     * Check if there exist unmockable usage of vars specified in the provided execution
+     *
+     * @param execution Method Execution under investigation
+     * @param vars      VarDetail IDs to check
+     * @return if there is unmockable usages of vars in execution
+     */
+    private boolean hasUnmockableUsage(MethodExecution execution, Set<Integer> vars) {
+        return getChildren(execution.getID()).stream()
+                .map(this::getMethodExecutionByID)
+                .anyMatch(e -> {
+                    MethodDetails methodDetails = e.getMethodInvoked();
+                    if (methodDetails.isFieldAccess() && vars.contains(e.getCalleeId()))
+                        return true;
+                    if (InstrumentResult.getSingleton().isLibMethod(methodDetails.getId()) && e.getParams().stream().anyMatch(vars::contains))
+                        return true;
+                    return hasUnmockableUsage(e, vars);
+                });
+    }
+
+    /**
+     * Get stack of method executions needed to create the var specified
+     *
+     * @param var Variable to create
+     * @return stack of method executions for creation
+     */
     public Stack<MethodExecution> getParentExeStack(VarDetail var) {
         Stack<MethodExecution> executionStack = new Stack<>();
-        if(!(var instanceof ObjVarDetails)) return null;
-        while(var!=null) {
+        if (!(var instanceof ObjVarDetails)) return null;
+        while (var != null) {
+            if (var instanceof EnumVarDetails) break;
             Integer def = getDefExeList(var.getID());
-            if(def == null) return null; // i.e. can not be produced
+            if (def == null) return null; // i.e. can not be produced
             MethodExecution defExe = getMethodExecutionByID(def);
+            if (executionStack.contains(defExe))
+                return null; // if its a loop def
+
             executionStack.push(defExe);
-            if(defExe.getMethodInvoked().getType().equals(METHOD_TYPE.MEMBER))
+            if (defExe.getMethodInvoked().getType().equals(METHOD_TYPE.MEMBER))
                 var = defExe.getCallee();
             else
                 var = null;
         }
         return executionStack;
+    }
+
+    /**
+     * @param execution MethodExecution under check
+     * @return if the execution provided is / runs faulty methods
+     */
+    private boolean containsFaultyDef(MethodExecution execution) {
+        InstrumentResult instrumentResult = InstrumentResult.getSingleton();
+        MethodDetails details = execution.getMethodInvoked();
+        return Properties.getSingleton().getFaultyFuncIds().stream()
+                .map(instrumentResult::getMethodDetailByID)
+                .anyMatch(s -> s.equals(details) || (execution.getCalleeId() != -1 && s.getName().equals(details.getName()) && getVarDetailByID(execution.getCalleeId()).getType().equals(s.getdClass()))) || getChildren(execution.getID()).stream().anyMatch(this::containsFaultyDef);
+    }
+
+    /**
+     * @param exeID id of MethodExecution under check
+     * @return if the execution provided is / runs faulty methods
+     */
+    private boolean containsFaultyDef(int exeID) {
+        return containsFaultyDef(getMethodExecutionByID(exeID));
+    }
+
+
+    /**
+     * @param execution MethodExecution under check
+     * @return if the execution can be tested based on requirements on the execution itself
+     */
+    private boolean canTestExecution(MethodExecution execution) {
+        MethodDetails methodDetails = execution.getMethodInvoked();
+        if (!methodDetails.isCanMockInputs() || containsFaultyDef(execution) || getAllMethodExecs().values().stream().anyMatch(e -> e.sameCalleeParamNMethod(execution) && !e.sameContent(execution)))
+            return false;
+        if (methodDetails.getAccess().equals(ACCESS.PRIVATE) || methodDetails.getName().startsWith("access$"))
+            return false;
+        switch (methodDetails.getType()) {
+            case STATIC_INITIALIZER:
+                return false;
+            case CONSTRUCTOR:
+                if (methodDetails.getDeclaringClass().isAbstract()) return false;
+            case STATIC:
+                String neededPackage = getRequiredPackage(methodDetails.getdClass());
+                if (neededPackage == null) return false;
+                if (methodDetails.getAccess().equals(ACCESS.PROTECTED) && neededPackage.equals(""))
+                    neededPackage = methodDetails.getDeclaringClass().getPackageName();
+                execution.setRequiredPackage(neededPackage);
+        }
+        return true;
+    }
+
+    /**
+     * @param execution MethodExecution under check
+     * @return if the execution can be tested based on its callee requirement
+     */
+    private boolean canTestCallee(MethodExecution execution) {
+        if (execution.getCalleeId() == -1) return true;
+        if (execution.getCallee() instanceof ObjVarDetails) {
+            Stack<MethodExecution> parentStack = getParentExeStack(execution.getCallee());
+            if (parentStack == null || parentStack.contains(execution) || !parentStack.stream().allMatch(MethodExecution::isCanTest))
+                return false;
+        }
+        if (execution.getCallee() instanceof EnumVarDetails) {
+            EnumVarDetails callee = (EnumVarDetails) execution.getCallee();
+            // is field
+            if (!callee.getType().isEnum()) {
+                try {
+                    if (!callee.getType().getPackage().getName().startsWith(Properties.getSingleton().getPUT()) && !Modifier.isPublic(callee.getType().getField(callee.getValue()).getModifiers()))
+                        return false;
+                } catch (NoSuchFieldException e) {
+                    return false;
+                }
+                if (callee.getType().getPackage().getName().startsWith(Properties.getSingleton().getPUT()) && !InstrumentResult.getSingleton().getClassPublicFieldsMap().getOrDefault(callee.getType().getName(), new HashSet<>()).contains(callee.getValue()))
+                    return false;
+            }
+            execution.setRequiredPackage(getRequiredPackage(callee.getType()));
+            return execution.getRequiredPackage() != null && compatibilityCheck(execution, execution.getRequiredPackage());
+        }
+        return true;
+    }
+
+    /**
+     * @param execution MethodExecution under check
+     * @return if the package required (if any) by its callee (if any) is compatible with that of the execution
+     */
+    private boolean compatibilityCheck(MethodExecution execution) {
+        if (execution.getCalleeId() == -1 || !(execution.getCallee() instanceof ObjVarDetails)) return true;
+        if (getDefExeList(execution.getCalleeId()) == null) return false;
+        MethodExecution calleeDef = getMethodExecutionByID(getDefExeList(execution.getCalleeId()));
+        ObjVarDetails callee = (ObjVarDetails) execution.getCallee();
+        if (calleeDef.getRequiredPackage().isEmpty() || calleeDef.getRequiredPackage().equals(callee.getType().getPackage().getName()))
+            return true;
+        if (!compatibilityCheck(execution, calleeDef.getRequiredPackage()))
+            return false;
+        execution.setRequiredPackage(calleeDef.getRequiredPackage());
+        return true;
+    }
+
+    /**
+     * @param execution       MethodExecution under check
+     * @param requiredPackage package required
+     * @return if the package required is compatible with that of the execution
+     */
+    private boolean compatibilityCheck(MethodExecution execution, String requiredPackage) {
+        if (execution.getCallee().getType().getPackage().getName().equals(requiredPackage) || requiredPackage.isEmpty())
+            return true;
+        MethodDetails details = execution.getMethodInvoked();
+        List<Class<?>> superClasses = ClassUtils.getAllSuperclasses(execution.getCallee().getType());
+        superClasses = superClasses.subList(0, superClasses.indexOf(details.getdClass()) + 1);
+        return superClasses.stream().anyMatch(c -> accessibilityCheck(c, requiredPackage));
+    }
+
+    /**
+     * Get inputs and their descendants in a method execution
+     *
+     * @param execution method execution under review
+     * @return set of ids of vardetails being used as inputs or descendants of inputs in the execution
+     */
+    private Set<Integer> getInputAndDes(MethodExecution execution) {
+        Set<Integer> inputsAndDes = execution.getParams().stream()
+                .map(this::getVarDetailByID)
+                .map(this::getRelatedObjVarIDs)
+                .flatMap(Collection::stream)
+                .collect(Collectors.toSet());
+
+        return getDes(execution, new HashSet<>(inputsAndDes));
+    }
+
+    /**
+     * Get descendants of provided inputs in the provided execution
+     * dfs approach
+     *
+     * @param execution    Method execution under review
+     * @param inputsAndDes ids of Set of inputs to investigate
+     * @return Set of ids of vardetails found in execution matching criteria
+     */
+    private Set<Integer> getDes(MethodExecution execution, Set<Integer> inputsAndDes) {
+        if (inputsAndDes.size() == 0) return inputsAndDes;
+        getChildren(execution.getID())
+                .forEach(cID -> {
+                    MethodExecution c = getMethodExecutionByID(cID);
+                    if (c.getCalleeId() != -1 && inputsAndDes.contains(c.getCalleeId())) { // only consider callee, if it is param, it either would call sth inside that makes impact / its lib method that would be considered invalid later
+                        inputsAndDes.addAll(getRelatedObjVarIDs(c.getResultThisId()));
+                        inputsAndDes.addAll(getRelatedObjVarIDs(c.getReturnValId()));
+                    }
+                    inputsAndDes.addAll(getDes(c, inputsAndDes));
+                });
+        return inputsAndDes;
+    }
+
+    /**
+     * Get Object Vardetail IDs relating to input
+     *
+     * @param varDetailID varDetail to investigate
+     * @return Set of ids matching criteria
+     */
+    private Set<Integer> getRelatedObjVarIDs(int varDetailID) {
+        if (varDetailID == -1) return new HashSet<>();
+        return getRelatedObjVarIDs(getVarDetailByID(varDetailID));
+    }
+
+    /**
+     * Get Object Vardetail IDs relating to input
+     *
+     * @param varDetail varDetail to investigate
+     * @return Set of ids matching criteria
+     */
+    private Set<Integer> getRelatedObjVarIDs(VarDetail varDetail) {
+        Set<Integer> relatedVarIDs = new HashSet<>();
+        if (varDetail instanceof StringVarDetails || varDetail instanceof StringBVarDetails || varDetail instanceof PrimitiveVarDetails)
+            return relatedVarIDs;
+        relatedVarIDs.add(varDetail.getID());
+        if (varDetail instanceof ArrVarDetails)
+            relatedVarIDs.addAll(((ArrVarDetails) varDetail).getComponents().stream().map(this::getRelatedObjVarIDs).flatMap(Collection::stream).collect(Collectors.toSet()));
+        if (varDetail instanceof MapVarDetails)
+            relatedVarIDs.addAll(((MapVarDetails) varDetail).getKeyValuePairs().stream()
+                    .flatMap(pair -> Stream.of(pair.getKey(), pair.getValue()))
+                    .map(this::getRelatedObjVarIDs)
+                    .flatMap(Collection::stream)
+                    .collect(Collectors.toSet()));
+        return relatedVarIDs;
     }
 
     public static class CallOrderEdge extends DefaultEdge {
