@@ -23,8 +23,9 @@ public class MethodExecution {
     private int returnValId; // if non void
     private int resultThisId; // if member function, object after executing its member function
     private Class<?> exceptionClass;
-    private boolean reproducible = true;
+    private boolean canTest = true;
     private String test = null;
+    private String requiredPackage = "";
     private final AtomicInteger childExeCount = new AtomicInteger(0);
 
     public MethodExecution(int ID, MethodDetails methodInvoked) {
@@ -134,7 +135,8 @@ public class MethodExecution {
                 ", returnValId=" + returnValId +
                 ", resultThisId=" + resultThisId +
                 ", exceptionClass=" + exceptionClass +
-                ", reproducible=" + reproducible +
+                ", canTest=" + canTest +
+                ", requiredPackage=" + requiredPackage +
                 ", test='" + test + '\'' +
                 '}';
     }
@@ -148,7 +150,8 @@ public class MethodExecution {
                 ", returnValId=" + returnValId +
                 ", resultThisId=" + resultThisId +
                 ", exceptionClass=" + (exceptionClass == null ? "null" : exceptionClass.getName()) +
-                ", reproducible=" + reproducible +
+                ", canTest=" + canTest +
+                ", requiredPackage=" + requiredPackage +
                 ", test='" + (test == null ? "null" : test) +
                 '}';
     }
@@ -163,7 +166,8 @@ public class MethodExecution {
                 ", returnValId=" + (returnValId == -1 ? "null" : trace.getVarDetailByID(returnValId).toString()) +
                 ", resultThisId=" + (resultThisId == -1 ? "null" : trace.getVarDetailByID(resultThisId).toString()) +
                 ", e=" + (exceptionClass == null ? "null" : exceptionClass.getName()) +
-                ", reproducible=" + reproducible +
+                ", canTest=" + canTest +
+                ", requiredPackage=" + requiredPackage +
                 ", test=" + (test == null ? "null" : test) +
                 '}';
     }
@@ -176,12 +180,12 @@ public class MethodExecution {
         return sameCalleeParamNMethod(ex) && this.returnValId == ex.returnValId && this.resultThisId == ex.resultThisId;
     }
 
-    public boolean isReproducible() {
-        return reproducible;
+    public boolean isCanTest() {
+        return canTest;
     }
 
-    public void setReproducible(boolean reproducible) {
-        this.reproducible = reproducible;
+    public void setCanTest(boolean canTest) {
+        this.canTest = canTest;
     }
 
     public String getTest() {
@@ -200,12 +204,20 @@ public class MethodExecution {
         return childExeCount.get();
     }
 
+    public String getRequiredPackage() {
+        return requiredPackage;
+    }
+
+    public void setRequiredPackage(String requiredPackage) {
+        this.requiredPackage = requiredPackage;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         MethodExecution execution = (MethodExecution) o;
-        return this.getCalleeId() == execution.getCalleeId() && this.params.equals(execution.params) && this.methodInvoked.equals(execution.getMethodInvoked());
+        return ID == execution.ID && returnValId == execution.returnValId && resultThisId == execution.resultThisId && canTest == execution.canTest && Objects.equals(methodInvoked, execution.methodInvoked) && Objects.equals(params, execution.params) && Objects.equals(callee, execution.callee) && Objects.equals(exceptionClass, execution.exceptionClass) && Objects.equals(test, execution.test) && Objects.equals(childExeCount, execution.childExeCount);
     }
 
     @Override
