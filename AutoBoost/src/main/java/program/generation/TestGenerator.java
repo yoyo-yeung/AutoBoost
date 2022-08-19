@@ -1,6 +1,5 @@
 package program.generation;
 
-import entity.METHOD_TYPE;
 import entity.UnrecognizableException;
 import helper.Properties;
 import org.apache.commons.lang3.ClassUtils;
@@ -14,7 +13,6 @@ import program.execution.stmt.*;
 import program.execution.variable.*;
 import program.generation.test.*;
 import program.instrumentation.InstrumentResult;
-import soot.Modifier;
 import soot.VoidType;
 
 import java.io.File;
@@ -48,6 +46,7 @@ public class TestGenerator {
     public static TestGenerator getSingleton() {
         return singleton;
     }
+
     public void generateResultCheckingTests(List<MethodExecution> snapshot) {
         snapshot.stream()
                 .distinct()
@@ -66,9 +65,9 @@ public class TestGenerator {
                     } catch (ClassNotFoundException classNotFoundException) {
                         classNotFoundException.printStackTrace();
                     }
-                    testCase.addStmt(new AssignStmt(returnValStmt,(detailsType!=null && detailsType.equals(returnValType)) ? invStmt : new CastStmt(e.getReturnValId(), returnValType,  invStmt)));
+                    testCase.addStmt(new AssignStmt(returnValStmt, (detailsType != null && detailsType.equals(returnValType)) ? invStmt : new CastStmt(e.getReturnValId(), returnValType, invStmt)));
                     Stmt expectedStmt = generateDefStmt(e.getReturnValId(), testCase, false, true);
-                    if(ClassUtils.isPrimitiveWrapper(returnValType) && !(executionTrace.getVarDetailByID(e.getReturnValId()) instanceof EnumVarDetails)) {
+                    if (ClassUtils.isPrimitiveWrapper(returnValType) && !(executionTrace.getVarDetailByID(e.getReturnValId()) instanceof EnumVarDetails)) {
                         expectedStmt = new CastStmt(expectedStmt.getResultVarDetailID(), ClassUtils.wrapperToPrimitive(returnValType), expectedStmt);
                         returnValStmt = new CastStmt(returnValStmt.getResultVarDetailID(), ClassUtils.wrapperToPrimitive(returnValType), returnValStmt);
                     }
@@ -298,24 +297,23 @@ public class TestGenerator {
         if (varDetailClass.equals(PrimitiveVarDetails.class) || varDetailClass.equals(WrapperVarDetails.class) || varDetailClass.equals(StringVarDetails.class) || varDetailClass.equals(EnumVarDetails.class))
             return new ConstantStmt(varDetail.getID());
         List<Stmt> params;
-        if(varDetailClass.equals(StringBVarDetails.class)) {
+        if (varDetailClass.equals(StringBVarDetails.class)) {
             params = new ArrayList<>();
             params.add(new ConstantStmt(((StringBVarDetails) varDetail).getStringValID()));
-        }
-        else if (varDetailClass.equals(MapVarDetails.class)) {
+        } else if (varDetailClass.equals(MapVarDetails.class)) {
             params = ((MapVarDetails) varDetail).getKeyValuePairs().stream().map(e -> new PairStmt(generateDefStmt(e.getKey(), testCase, true, true), generateDefStmt(e.getValue(), testCase, true, true))).collect(Collectors.toList());
         } else {
             params = ((ArrVarDetails) varDetail).getComponents().stream().map(e -> generateDefStmt(e, testCase, true, true)).collect(Collectors.toList());
             if (((ArrVarDetails) varDetail).getComponents().stream().map(executionTrace::getVarDetailByID).noneMatch(e -> e.getType().isArray()) && ((ArrVarDetails) varDetail).getComponents().size() <= 25)
                 return new ConstructStmt(varDetail.getID(), null, params);
             else {
-                VarStmt varStmt =  new VarStmt(varDetail.getType(), testCase.getNewVarID(), varDetail.getID());
+                VarStmt varStmt = new VarStmt(varDetail.getType(), testCase.getNewVarID(), varDetail.getID());
                 testCase.addStmt(new AssignStmt(varStmt, new ConstructStmt(varDetail.getID(), null, params)));
                 testCase.addOrUpdateVar(varDetail.getID(), varStmt);
                 return varStmt;
             }
         }
-        VarStmt varStmt = new VarStmt( varDetail.getType(), testCase.getNewVarID(), varDetail.getID());
+        VarStmt varStmt = new VarStmt(varDetail.getType(), testCase.getNewVarID(), varDetail.getID());
         testCase.addStmt(new AssignStmt(varStmt, new ConstructStmt(varDetail.getID(), null, params)));
         testCase.addOrUpdateVar(varDetail.getID(), varStmt);
         return varStmt;
@@ -330,7 +328,7 @@ public class TestGenerator {
             VarDetail varDetail = ExecutionTrace.getSingleton().getVarDetailByID(returnStmt.getResultVarDetailID());
             try {
                 Class<?> requiredType = ClassUtils.getClass(details.getParameterTypes().get(i).toString());
-                if(!requiredType.equals(varDetail.getType()) || ExecutionTrace.getSingleton().getNullVar().equals(varDetail)) {
+                if (!requiredType.equals(varDetail.getType()) || ExecutionTrace.getSingleton().getNullVar().equals(varDetail)) {
                     returnStmt = new CastStmt(returnStmt.getResultVarDetailID(), requiredType, returnStmt);
                 }
             } catch (ClassNotFoundException e) {
@@ -340,7 +338,7 @@ public class TestGenerator {
         }).collect(Collectors.toList());
         switch (details.getType()) {
             case STATIC:
-                invokeStmt = new MethodInvStmt(details.getDeclaringClass().getShortName().replace("$","."), details.getId(), paramStmt);
+                invokeStmt = new MethodInvStmt(details.getDeclaringClass().getShortName().replace("$", "."), details.getId(), paramStmt);
                 break;
             case CONSTRUCTOR:
                 invokeStmt = new MethodInvStmt("", details.getId(), paramStmt);
@@ -370,7 +368,7 @@ public class TestGenerator {
                     List<VarStmt> availableStmts = testCase.getExistingVar(execution.getReturnValId());
                     varStmt = availableStmts == null || availableStmts.size() == 0 ? null : availableStmts.get(0);
                     Class<?> actualType = executionTrace.getVarDetailByID(execution.getReturnValId()).getType();
-                    if(!accessibilityCheck(actualType, testCase.getPackageName()))
+                    if (!accessibilityCheck(actualType, testCase.getPackageName()))
                         actualType = getAccessibleSuperType(actualType, testCase.getPackageName());
                     if (varStmt == null)
                         varStmt = new VarStmt(actualType, testCase.getNewVarID(), execution.getReturnValId());
@@ -391,16 +389,16 @@ public class TestGenerator {
                 if (!details.getReturnSootType().equals(VoidType.v())) {
 //                        logger.debug(details.getReturnType());
                     Class<?> actualType = executionTrace.getVarDetailByID(execution.getReturnValId()).getType();
-                    if(!accessibilityCheck(actualType, testCase.getPackageName()))
+                    if (!accessibilityCheck(actualType, testCase.getPackageName()))
                         actualType = getAccessibleSuperType(actualType, testCase.getPackageName());
                     VarStmt varStmt1 = new VarStmt(actualType, testCase.getNewVarID(), execution.getReturnValId());
 //                        logger.debug(varStmt1.getImports());
-                    testCase.addStmt(new AssignStmt(varStmt1, details.getReturnSootType().toString().equals(actualType.getName())? invokeStmt : new CastStmt(execution.getReturnValId(), actualType, invokeStmt)));
+                    testCase.addStmt(new AssignStmt(varStmt1, details.getReturnSootType().toString().equals(actualType.getName()) ? invokeStmt : new CastStmt(execution.getReturnValId(), actualType, invokeStmt)));
 
                     testCase.addOrUpdateVar(execution.getReturnValId(), varStmt1);
                 } else
                     testCase.addStmt(invokeStmt);
-                if(defStmt instanceof VarStmt) {
+                if (defStmt instanceof VarStmt) {
                     testCase.removeVar(execution.getCalleeId(), (VarStmt) defStmt);
                     testCase.addOrUpdateVar(execution.getResultThisId(), (VarStmt) defStmt);
                 }
@@ -414,7 +412,7 @@ public class TestGenerator {
 
     public void output() throws IOException {
         Properties properties = Properties.getSingleton();
-        int totalCases = 0 ;
+        int totalCases = 0;
 
         File file = new File(properties.getTestSourceDir());
         file.mkdirs();
@@ -427,7 +425,7 @@ public class TestGenerator {
 //            writeStream.close();
 //        }
         for (TestClass tc : testSuite.getTestClasses()) {
-            File packageDir = new File(properties.getTestSourceDir(),tc.getPackageName().replace(".", File.separator));
+            File packageDir = new File(properties.getTestSourceDir(), tc.getPackageName().replace(".", File.separator));
             if (!packageDir.exists() || !packageDir.isDirectory())
                 packageDir.mkdirs();
             file = new File(packageDir, tc.getClassName() + ".java");
@@ -444,20 +442,21 @@ public class TestGenerator {
         writeStream.close();
         logger.info("Total no. of test cases generated: " + totalCases);
     }
+
     private boolean canUseAsTargetExecution(MethodExecution execution) {
-        if(execution.getTest() == null || ! execution.isCanTest() || execution.getReturnValId() == -1 ) return false;
+        if (execution.getTest() == null || !execution.isCanTest() || execution.getReturnValId() == -1) return false;
         return shouldTestMethod(execution) && methodIsDirectlyCallable(execution) && hasCheckableReturnValue(execution);
     }
 
     private boolean shouldTestMethod(MethodExecution execution) {
         MethodDetails details = execution.getMethodInvoked();
-        if(instrumentResult.isLibMethod(details.getId())) return false;
-        switch(details.getType()) {
+        if (instrumentResult.isLibMethod(details.getId())) return false;
+        switch (details.getType()) {
             case MEMBER:
-                if(Arrays.stream(SKIP_MEMBER_METHODS).anyMatch(s -> details.getName().equals(s))) return false;
+                if (Arrays.stream(SKIP_MEMBER_METHODS).anyMatch(s -> details.getName().equals(s))) return false;
                 break;
             case STATIC:
-                if(Arrays.stream(SKIP_STATIC_METHODS).anyMatch(s -> details.getName().equals(s))) return false;
+                if (Arrays.stream(SKIP_STATIC_METHODS).anyMatch(s -> details.getName().equals(s))) return false;
                 break;
         }
         return true;
@@ -466,11 +465,11 @@ public class TestGenerator {
 
     private boolean methodIsDirectlyCallable(MethodExecution e) {
         try {
-            if(e.getCalleeId() == -1) return true; // if no callee, no overriding problems
+            if (e.getCalleeId() == -1) return true; // if no callee, no overriding problems
             // check if the method is actually called by subclass callee
             // if yes, they cannot be specified in test case and hence cannot be used as target
             MethodDetails details = e.getMethodInvoked();
-            if(e.getCallee().getType().equals(details.getdClass())) return true;
+            if (e.getCallee().getType().equals(details.getdClass())) return true;
             Method method = details.getdClass().getMethod(details.getName(), details.getParameterTypes().stream().map(t -> {
                 try {
                     return ClassUtils.getClass(t.toQuotedString());
@@ -479,14 +478,13 @@ public class TestGenerator {
                     return null;
                 }
             }).toArray(Class<?>[]::new));
-            if(method.isBridge()) return false;
+            if (method.isBridge()) return false;
             VarDetail callee = e.getCallee();
             // prevent incorrect method call
-            if(method.getDeclaringClass().isAssignableFrom(callee.getType())) //if callee is subclass
-                try{
+            if (method.getDeclaringClass().isAssignableFrom(callee.getType())) //if callee is subclass
+                try {
                     return callee.getType().getMethod(method.getName(), method.getParameterTypes()).equals(method);
-                }
-                catch (NoSuchMethodException noSuchMethodException) {
+                } catch (NoSuchMethodException noSuchMethodException) {
                     return true;
                 }
         } catch (NoSuchMethodException noSuchMethodException) {
@@ -498,9 +496,9 @@ public class TestGenerator {
     private boolean hasCheckableReturnValue(MethodExecution e) {
         VarDetail returnVarDetail = executionTrace.getVarDetailByID(e.getReturnValId());
         Class<?> varDetailClass = returnVarDetail.getClass();
-        if(varDetailClass.equals(ObjVarDetails.class)) return returnVarDetail.equals(executionTrace.getNullVar());
-        if(varDetailClass.equals(ArrVarDetails.class)) {
-            if(((ArrVarDetails) returnVarDetail).getComponents().size() == 0) return true;
+        if (varDetailClass.equals(ObjVarDetails.class)) return returnVarDetail.equals(executionTrace.getNullVar());
+        if (varDetailClass.equals(ArrVarDetails.class)) {
+            if (((ArrVarDetails) returnVarDetail).getComponents().size() == 0) return true;
             return StringUtils.countMatches(e.getMethodInvoked().getReturnSootType().toString(), "[]") == StringUtils.countMatches(returnVarDetail.getType().getSimpleName(), "[]") && ((ArrVarDetails) returnVarDetail).getLeaveType().stream().allMatch(ClassUtils::isPrimitiveOrWrapper);
         }
         return true;
