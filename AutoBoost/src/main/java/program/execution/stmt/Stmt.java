@@ -1,5 +1,6 @@
 package program.execution.stmt;
 
+import helper.Helper;
 import program.generation.TestGenerator;
 
 import java.util.Set;
@@ -46,6 +47,6 @@ public abstract class Stmt {
         }
         if(type.isPrimitive() || type.equals(Object.class))
             return null;
-        else return TestGenerator.accessibilityCheck(type, packageName) ? type : TestGenerator.getAccessibleSuperType(type, packageName);
+        else return Helper.accessibilityCheck(type, packageName) ? type : Helper.getAccessibleSuperType(type, packageName);
     }
 }
