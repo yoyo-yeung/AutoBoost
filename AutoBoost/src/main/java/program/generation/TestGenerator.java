@@ -1,6 +1,5 @@
 package program.generation;
 
-import entity.ACCESS;
 import entity.METHOD_TYPE;
 import entity.UnrecognizableException;
 import helper.Properties;
@@ -26,7 +25,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
+
+import static helper.Helper.accessibilityCheck;
+import static helper.Helper.getAccessibleSuperType;
 
 public class TestGenerator {
     private static final Logger logger = LogManager.getLogger(TestGenerator.class);
@@ -47,55 +48,10 @@ public class TestGenerator {
     public static TestGenerator getSingleton() {
         return singleton;
     }
-
     public void generateResultCheckingTests(List<MethodExecution> snapshot) {
         snapshot.stream()
-                .filter(e -> {
-                    MethodDetails details = e.getMethodInvoked();
-                    return !instrumentResult.isLibMethod(details.getId()) && !(details.getType().equals(METHOD_TYPE.MEMBER) && Arrays.stream(SKIP_MEMBER_METHODS).anyMatch(s -> details.getName().equals(s))) && !(details.getType().equals(METHOD_TYPE.STATIC) && Arrays.stream(SKIP_STATIC_METHODS).anyMatch(s -> details.getName().equals(s))) ;
-                })
-                .filter(e -> e.getTest() != null)
                 .distinct()
-                .filter(e -> e.getReturnValId() != -1 && (executionTrace.getDefExeList(e.getReturnValId()) == null || !executionTrace.getDefExeList(e.getReturnValId()).equals(e.getID())) && exeCanBeTested(e.getID(), 0, -1, new HashSet<>(), e.getMethodInvoked().getdClass().getPackage().getName()))// prevent self checking
-                .filter(e -> {
-                    try {
-                        MethodDetails details = e.getMethodInvoked();
-                        Method method = details.getdClass().getMethod(details.getName(), details.getParameterTypes().stream().map(t -> {
-                            try {
-                                return ClassUtils.getClass(t.toQuotedString());
-                            } catch (ClassNotFoundException classNotFoundException) {
-                                classNotFoundException.printStackTrace();
-                                return null;
-                            }
-                        }).toArray(Class<?>[]::new));
-                        if(method.isBridge()) return false;
-                        if(e.getCalleeId()==-1) return true;
-                        VarDetail callee = executionTrace.getVarDetailByID(e.getCalleeId());
-                        // prevent incorrect method call
-                        if(!callee.getType().equals(method.getDeclaringClass()) && method.getDeclaringClass().isAssignableFrom(callee.getType()))
-                            try{
-//                                if(!callee.getType().getMethod(method.getName(), method.getParameterTypes()).equals(method))
-//                                    logger.debug(e.toDetailedString());
-                                return callee.getType().getMethod(method.getName(), method.getParameterTypes()).equals(method);
-                            }
-                            catch (NoSuchMethodException noSuchMethodException) {
-                                return true;
-                            }
-                    } catch (NoSuchMethodException noSuchMethodException) {
-                        logger.error(noSuchMethodException.getMessage());
-                    }
-                    return true;
-                })
-                .filter(e -> {
-                    VarDetail returnVarDetail = executionTrace.getVarDetailByID(e.getReturnValId());
-                    Class<?> varDetailClass = returnVarDetail.getClass();
-                    if(varDetailClass.equals(ObjVarDetails.class)) return returnVarDetail.equals(executionTrace.getNullVar());
-                    if(varDetailClass.equals(ArrVarDetails.class)) {
-                        if(((ArrVarDetails) returnVarDetail).getComponents().size() == 0) return true;
-                        return StringUtils.countMatches(e.getMethodInvoked().getReturnSootType().toString(), "[]") == StringUtils.countMatches(returnVarDetail.getType().getSimpleName(), "[]") && ((ArrVarDetails) returnVarDetail).getLeaveType().stream().allMatch(ClassUtils::isPrimitiveOrWrapper);
-                    }
-                    return  true;
-                })
+                .filter(this::canUseAsTargetExecution)
                 .map(e ->
                 {
                     MethodDetails methodDetails = e.getMethodInvoked();
@@ -125,7 +81,7 @@ public class TestGenerator {
 
     public void generateExceptionTests(List<MethodExecution> snapshot) {
         snapshot.stream()
-                .filter(e -> e.getReturnValId() == -1 && e.getExceptionClass() != null && !e.getExceptionClass().equals(UnrecognizableException.class) && exeCanBeTested(e.getID(), 0, -1, new HashSet<>(), e.getMethodInvoked().getdClass().getPackage().getName()))
+                .filter(e -> e.getReturnValId() == -1 && e.getExceptionClass() != null && !e.getExceptionClass().equals(UnrecognizableException.class) && e.isCanTest())
                 .map(e -> {
                     MethodDetails m = e.getMethodInvoked();
 
@@ -138,9 +94,10 @@ public class TestGenerator {
                 .forEach(testSuite::assignTestCase);
 
     }
-
+/*
     public boolean exeCanBeTested(Integer methodExecutionID, int lv, int defedVar, Set<Integer> exeUnderCheck, String packageName) {
         MethodExecution execution = executionTrace.getMethodExecutionByID(methodExecutionID);
+//        logger.debug(execution);
         MethodDetails details = execution.getMethodInvoked();
         if (passedExe.contains(methodExecutionID))
             return true;
@@ -148,10 +105,10 @@ public class TestGenerator {
             logger.info("same execution checked" + lv + "\n" + details.toString() + "\n" + execution.toDetailedString());
             return false;
         }
-        if (!execution.isReproducible()) {
-            logger.info("CANNOT test: results not reproducible \t" + lv + "\n" + details.toString() + "\n" + execution.toDetailedString());
-            return false;
-        }
+//        if (!execution.isCanTest()) {
+//            logger.info("CANNOT test: results not reproducible \t" + lv + "\n" + details.toString() + "\n" + execution.toDetailedString());
+//            return false;
+//        }
         if (failedExe.contains(methodExecutionID)) {
             logger.info("CANNOT test: past record \t" + lv + "\n" + details.toString() + "\n" + execution.toDetailedString());
             return false;
@@ -200,13 +157,13 @@ public class TestGenerator {
 //            logger.debug(executionTrace.getDefExeList(execution.getCalleeId())!=null? executionTrace.getMethodExecutionByID(executionTrace.getDefExeList(execution.getCalleeId())).toDetailedString() : "");
             return false;
         }
-        if (execution.getParams().stream().anyMatch(p -> !varCanBeTested(p, lv + 1, exeUnderCheck, packageName))) {
-            logger.info("CANNOT test: parameter issue\t" + lv + "\n" + details + "\n" + execution.toDetailedString());
-            failedExe.add(methodExecutionID);
-            exeUnderCheck.remove(methodExecutionID);
-//            logger.debug(executionTrace.getDefExeList(execution.getCalleeId())!=null? executionTrace.getMethodExecutionByID(executionTrace.getDefExeList(execution.getCalleeId())).toDetailedString() : "");
-            return false;
-        }
+//        if (execution.getParams().stream().anyMatch(p -> !varCanBeTested(p, lv + 1, exeUnderCheck, packageName))) {
+//            logger.info("CANNOT test: parameter issue\t" + lv + "\n" + details + "\n" + execution.toDetailedString());
+//            failedExe.add(methodExecutionID);
+//            exeUnderCheck.remove(methodExecutionID);
+////            logger.debug(executionTrace.getDefExeList(execution.getCalleeId())!=null? executionTrace.getMethodExecutionByID(executionTrace.getDefExeList(execution.getCalleeId())).toDetailedString() : "");
+//            return false;
+//        }
         if (execution.getReturnValId() != -1 && execution.getReturnValId() != defedVar && !varCanBeTested(execution.getReturnValId(), lv + 1, exeUnderCheck, packageName)) {
             logger.info("CANNOT test: return val issue\t" + lv + "\n" + details + "\n" + execution.toDetailedString());
             failedExe.add(methodExecutionID);
@@ -218,6 +175,7 @@ public class TestGenerator {
             Class<?> calleeType = executionTrace.getVarDetailByID(execution.getCalleeId()).getType() ;
             // if the callee is not an accessible class
             // check if there exist a class between real var type & method declaring class that can be accessed (else the method is NOT accessible)
+            // TODO
             if(!accessibilityCheck(calleeType, packageName) ) {
                 List<Class<?>> superClasses = ClassUtils.getAllSuperclasses(calleeType);
                 superClasses = superClasses.subList(0, superClasses.indexOf(details.getdClass())+1);
@@ -251,21 +209,9 @@ public class TestGenerator {
         exeUnderCheck.remove(methodExecutionID);
         return true;
     }
-    public static boolean accessibilityCheck(Class<?> c, String packageName) {
-        int modifier = c.getModifiers();
-        if(c.getName().contains("$"))
-            try {
-                Integer.parseInt(c.getName().substring(c.getName().indexOf("$") + 1)); // dont know why isAnonymousClass return false for these
-                return false;
-            }
-            catch (NumberFormatException e ){
+    */
 
-            }
-//        logger.debug(c.getName() + "\t"+(Modifier.isPublic(modifier) || (!Modifier.isPrivate(modifier) && c.getPackage().getName().equals(packageName))));
-        return (Modifier.isPublic(modifier) || (!Modifier.isPrivate(modifier) && c.getPackage().getName().equals(packageName))) // access check
-                && (!ClassUtils.isInnerClass(c) || (Modifier.isStatic(modifier) && accessibilityCheck(c.getEnclosingClass(), packageName))) // if is inner class, is static inner class and its enclosing class CAN be accessed
-                && !c.isAnonymousClass(); // is NOT anonymous class
-    }
+/*
 
     private boolean varCanBeTested(Integer varID, int lv, Set<Integer> exeUnderCheck, String packageName) {
         VarDetail varDetail = executionTrace.getVarDetailByID(varID);
@@ -317,7 +263,8 @@ public class TestGenerator {
         passedVar.add(varID);
         return true;
     }
-
+*/
+/*
     private boolean containsFaultyDef(Integer exeID) {
         MethodExecution execution = executionTrace.getMethodExecutionByID(exeID);
         MethodDetails details = execution.getMethodInvoked();
@@ -327,6 +274,7 @@ public class TestGenerator {
                 .anyMatch(s -> s.equals(details) || (execution.getCalleeId()!=-1 && s.getName().equals(details.getName()) && executionTrace.getVarDetailByID(execution.getCalleeId()).getType().equals(s.getdClass()))) || executionTrace.getChildren(exeID).stream().anyMatch(this::containsFaultyDef);
 
     }
+    */
 
     public Stmt generateDefStmt(Integer varDetailsID, TestCase testCase, boolean checkExisting, boolean store) throws IllegalArgumentException {
         VarDetail varDetail = executionTrace.getVarDetailByID(varDetailsID);
@@ -404,9 +352,6 @@ public class TestGenerator {
         }
 
         return invokeStmt;
-    }
-    public static Class<?> getAccessibleSuperType(Class<?> c, String packageName) {
-        return ClassUtils.getAllSuperclasses(c).stream().filter(c1 -> accessibilityCheck(c1, packageName)).findFirst().orElse(c);
     }
 
 
@@ -498,5 +443,66 @@ public class TestGenerator {
         writeStream.write(testSuite.getTestClasses().stream().map(c -> c.getPackageName() + "." + c.getClassName()).collect(Collectors.joining(",")).getBytes(StandardCharsets.UTF_8));
         writeStream.close();
         logger.info("Total no. of test cases generated: " + totalCases);
+    }
+    private boolean canUseAsTargetExecution(MethodExecution execution) {
+        if(execution.getTest() == null || ! execution.isCanTest() || execution.getReturnValId() == -1 ) return false;
+        return shouldTestMethod(execution) && methodIsDirectlyCallable(execution) && hasCheckableReturnValue(execution);
+    }
+
+    private boolean shouldTestMethod(MethodExecution execution) {
+        MethodDetails details = execution.getMethodInvoked();
+        if(instrumentResult.isLibMethod(details.getId())) return false;
+        switch(details.getType()) {
+            case MEMBER:
+                if(Arrays.stream(SKIP_MEMBER_METHODS).anyMatch(s -> details.getName().equals(s))) return false;
+                break;
+            case STATIC:
+                if(Arrays.stream(SKIP_STATIC_METHODS).anyMatch(s -> details.getName().equals(s))) return false;
+                break;
+        }
+        return true;
+    }
+
+
+    private boolean methodIsDirectlyCallable(MethodExecution e) {
+        try {
+            if(e.getCalleeId() == -1) return true; // if no callee, no overriding problems
+            // check if the method is actually called by subclass callee
+            // if yes, they cannot be specified in test case and hence cannot be used as target
+            MethodDetails details = e.getMethodInvoked();
+            if(e.getCallee().getType().equals(details.getdClass())) return true;
+            Method method = details.getdClass().getMethod(details.getName(), details.getParameterTypes().stream().map(t -> {
+                try {
+                    return ClassUtils.getClass(t.toQuotedString());
+                } catch (ClassNotFoundException classNotFoundException) {
+                    classNotFoundException.printStackTrace();
+                    return null;
+                }
+            }).toArray(Class<?>[]::new));
+            if(method.isBridge()) return false;
+            VarDetail callee = e.getCallee();
+            // prevent incorrect method call
+            if(method.getDeclaringClass().isAssignableFrom(callee.getType())) //if callee is subclass
+                try{
+                    return callee.getType().getMethod(method.getName(), method.getParameterTypes()).equals(method);
+                }
+                catch (NoSuchMethodException noSuchMethodException) {
+                    return true;
+                }
+        } catch (NoSuchMethodException noSuchMethodException) {
+            logger.error(noSuchMethodException.getMessage());
+        }
+        return true;
+    }
+
+    private boolean hasCheckableReturnValue(MethodExecution e) {
+        VarDetail returnVarDetail = executionTrace.getVarDetailByID(e.getReturnValId());
+        Class<?> varDetailClass = returnVarDetail.getClass();
+        if(varDetailClass.equals(ObjVarDetails.class)) return returnVarDetail.equals(executionTrace.getNullVar());
+        if(varDetailClass.equals(ArrVarDetails.class)) {
+            if(((ArrVarDetails) returnVarDetail).getComponents().size() == 0) return true;
+            return StringUtils.countMatches(e.getMethodInvoked().getReturnSootType().toString(), "[]") == StringUtils.countMatches(returnVarDetail.getType().getSimpleName(), "[]") && ((ArrVarDetails) returnVarDetail).getLeaveType().stream().allMatch(ClassUtils::isPrimitiveOrWrapper);
+        }
+        return true;
     }
 }
