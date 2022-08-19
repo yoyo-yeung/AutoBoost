@@ -236,9 +236,9 @@ public class ExecutionTrace {
      * @return if this occurance should be stored as def
      */
     private boolean setCurrentExeAsDef(VarDetail varDetail, LOG_ITEM process, MethodExecution execution) {
-        if(!(varDetail instanceof ObjVarDetails)) return false; // no need to get a def if it is not an object
+        if (!(varDetail instanceof ObjVarDetails)) return false; // no need to get a def if it is not an object
         // must be a resulting var
-        switch(process) {
+        switch (process) {
             case RETURN_ITEM:
             case RETURN_THIS:
                 break;
@@ -246,20 +246,20 @@ public class ExecutionTrace {
                 return false;
         }
         MethodDetails methodDetails = execution.getMethodInvoked();
-        if((methodDetails.getType().equals(METHOD_TYPE.MEMBER) && execution.getCallee().equals(varDetail)) || execution.getParams().stream().anyMatch(p -> p == varDetail.getID())) return false; // if they were inputs to begin with
-        if(methodDetails.getAccess().equals(ACCESS.PRIVATE) || methodDetails.isFieldAccess() || !methodDetails.isCanMockInputs()) return false;
-        MethodExecution existingDef = getDefExeList(varDetail.getID()) == null ? null : getMethodExecutionByID(getDefExeList(varDetail.getID()));
-        if(existingDef == null) return true;
-        if(existingDef.equals(execution)) return false; // would compare method, callee, params
-        MethodDetails existingDefDetails = existingDef.getMethodInvoked();
-        if(existingDefDetails.getType().getRank() < methodDetails.getType().getRank()) return false;
-        if(methodDetails.getType().equals(METHOD_TYPE.MEMBER) && getParentExeStack(execution.getCallee())== null) return false;
-        if(existingDefDetails.getParameterCount() < methodDetails.getParameterCount())
+        if ((methodDetails.getType().equals(METHOD_TYPE.MEMBER) && execution.getCallee().equals(varDetail)) || execution.getParams().stream().anyMatch(p -> p == varDetail.getID()))
+            return false; // if they were inputs to begin with
+        if (methodDetails.getAccess().equals(ACCESS.PRIVATE) || methodDetails.isFieldAccess() || !methodDetails.isCanMockInputs())
             return false;
-        return true;
+        MethodExecution existingDef = getDefExeList(varDetail.getID()) == null ? null : getMethodExecutionByID(getDefExeList(varDetail.getID()));
+        if (existingDef == null) return true;
+        if (existingDef.sameCalleeParamNMethod(execution)) return false; // would compare method, callee, params
+        MethodDetails existingDefDetails = existingDef.getMethodInvoked();
+        if (existingDefDetails.getType().getRank() < methodDetails.getType().getRank()) return false;
+        if (methodDetails.getType().equals(METHOD_TYPE.MEMBER) && getParentExeStack(execution.getCallee()) == null)
+            return false;
+        return existingDefDetails.getParameterCount() >= methodDetails.getParameterCount();
     }
 
-    
 
     /**
      * Used when the variable storing is of array/Collection type.
