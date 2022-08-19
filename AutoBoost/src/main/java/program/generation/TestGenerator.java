@@ -443,11 +443,22 @@ public class TestGenerator {
         logger.info("Total no. of test cases generated: " + totalCases);
     }
 
+    /**
+     *
+     * @param execution Method execution
+     * @return if the execution should be used as target for test generation
+     */
     private boolean canUseAsTargetExecution(MethodExecution execution) {
         if (execution.getTest() == null || !execution.isCanTest() || execution.getReturnValId() == -1) return false;
-        return shouldTestMethod(execution) && methodIsDirectlyCallable(execution) && hasCheckableReturnValue(execution);
+        return shouldTestMethod(execution) && methodIsDirectlyCallable(execution) && canCheckReturnValue(execution);
     }
 
+    /**
+     *
+     * @param execution Method Execution
+     * @return if the method executed should be tested
+     * If it is a library method, it should NOT be tested
+     */
     private boolean shouldTestMethod(MethodExecution execution) {
         MethodDetails details = execution.getMethodInvoked();
         if (instrumentResult.isLibMethod(details.getId())) return false;
@@ -462,7 +473,11 @@ public class TestGenerator {
         return true;
     }
 
-
+    /**
+     *
+     * @param e MethodExecution
+     * @return if the method execution can be directly called in test cases (e.g. if it is an override method, calling the method would actually be calling the override one
+     */
     private boolean methodIsDirectlyCallable(MethodExecution e) {
         try {
             if (e.getCalleeId() == -1) return true; // if no callee, no overriding problems
@@ -493,7 +508,12 @@ public class TestGenerator {
         return true;
     }
 
-    private boolean hasCheckableReturnValue(MethodExecution e) {
+    /**
+     *
+     * @param e Method Execution
+     * @return if the return value of the execution can be checked in test cases
+     */
+    private boolean canCheckReturnValue(MethodExecution e) {
         VarDetail returnVarDetail = executionTrace.getVarDetailByID(e.getReturnValId());
         Class<?> varDetailClass = returnVarDetail.getClass();
         if (varDetailClass.equals(ObjVarDetails.class)) return returnVarDetail.equals(executionTrace.getNullVar());
