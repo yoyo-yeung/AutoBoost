@@ -9,7 +9,6 @@ import org.junit.runner.notification.RunListener;
 import program.execution.ExecutionLogger;
 import program.execution.ExecutionTrace;
 import program.execution.MethodExecution;
-import program.execution.variable.VarDetail;
 import program.generation.TestGenerator;
 import program.instrumentation.InstrumentResult;
 import program.instrumentation.Instrumenter;
@@ -31,14 +30,18 @@ public class AutoBoost {
     private static final Logger logger = LogManager.getLogger(AutoBoost.class);
     private static final Properties properties = Properties.getSingleton();
     private static String executingTest = null;
-    public static void main(String... args) throws ParseException, IOException {
+    public static void main(String... args) throws ParseException, IOException{
         AutoBoost autoBoost = new AutoBoost();
         autoBoost.processCommand(args);
         autoBoost.setUpSoot();
         logger.info("Faulty methods: " + properties.getFaultyFuncIds().stream().map(id -> InstrumentResult.getSingleton().getMethodDetailByID(id).toString()).collect(Collectors.joining(",")));
         autoBoost.executeTests();
-        autoBoost.clearRuntimeOnlyInfo();
+//        autoBoost.clearRuntimeOnlyInfo();
+
+        ExecutionTrace.getSingleton().checkTestabilityOfExecutions();
+
         autoBoost.generateTestCases();
+
     }
     public void processCommand(String... args) throws ParseException {
         CommandLineParser parser = new DefaultParser();
@@ -119,8 +122,7 @@ public class AutoBoost {
         List<MethodExecution> snapshot = new ArrayList<>(ExecutionTrace.getSingleton().getAllMethodExecs().values());
         try {
             testGenerator.generateResultCheckingTests(snapshot);
-            if (Properties.getSingleton().getJunitVer() == 4)
-                testGenerator.generateExceptionTests(snapshot);
+            testGenerator.generateExceptionTests(snapshot);
         }catch(Exception | Error e) {
             logger.error(e.getMessage());
             logger.error(Arrays.stream(e.getStackTrace()).map(StackTraceElement::toString).collect(Collectors.joining("\n")));
@@ -134,10 +136,6 @@ public class AutoBoost {
 
     public static String getExecutingTest() {
         return executingTest;
-    }
-
-    public static void setExecutingTest(String executingTest) {
-        AutoBoost.executingTest = executingTest;
     }
 
     public void clearRuntimeOnlyInfo() {
