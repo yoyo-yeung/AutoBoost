@@ -28,6 +28,11 @@ public class EnumVarDetails extends VarDetail{
     }
 
     @Override
+    public boolean sameValue(Class<?> type, Object v) {
+        return this.type.equals(type) && this.value.equals(v);
+    }
+
+    @Override
     public String getTypeSimpleName() {
         return type.getSimpleName();
     }
