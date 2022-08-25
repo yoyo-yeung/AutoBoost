@@ -130,7 +130,7 @@ public class Instrumenter extends BodyTransformer {
                     inputUnits.add((DefinitionStmt) stmt);
 
                 if (((JIdentityStmt) stmt).getRightOp() instanceof ThisRef) {
-                    checkIfInputCanBeMocked(currentSootMethod, localUses, getFieldRefsOfUnit(localUses, stmt, new PriorityQueue<>(unitComparator)), true);
+                    addTagForDangerousCallsToLog(localUses, getFieldRefsOfUnit(localUses, stmt, new PriorityQueue<>(unitComparator)));
                 }
                 continue;
             }
@@ -142,7 +142,7 @@ public class Instrumenter extends BodyTransformer {
             }
             // log start of method call
             if (!paramLogged) {
-                methodDetails.setCanMockInputs(checkIfInputCanBeMocked(currentSootMethod, localUses, inputUnits, false));
+                addTagForDangerousCallsToLog(localUses, inputUnits);
                 getLogStartStmts(currentSootMethod, localGenerator, methodDetails, threadIDLocal, exeIDLocal, methodDetails.getType().equals(METHOD_TYPE.MEMBER) ? currentSootMethod.getActiveBody().getThisLocal() : NullConstant.v(), currentSootMethod.getActiveBody().getParameterLocals())
                         .forEach(s -> units.insertBeforeNoRedirect(s, stmt));
                 paramLogged = true;
@@ -156,7 +156,7 @@ public class Instrumenter extends BodyTransformer {
                 getLogEndStmts(currentSootMethod, localGenerator, methodDetails, threadIDLocal, exeIDLocal, methodDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR) || methodDetails.getType().equals(METHOD_TYPE.MEMBER) ? currentSootMethod.getActiveBody().getThisLocal() : NullConstant.v(), stmt)
                         .forEach(s -> units.insertBefore(s, stmt));
             // log method invoke if they were marked
-            if (stmt.containsInvokeExpr() && (stmt.hasTag(CUSTOM_TAGS.INV_TO_LOG_TAG.getTag().getName()) || stmt.hasTag(CUSTOM_TAGS.DAN_LIB_CALL_TO_LOG_TAG.getTag().getName())) && methodDetails.isCanMockInputs()) {
+            if (stmt.containsInvokeExpr() && (stmt.hasTag(CUSTOM_TAGS.INV_TO_LOG_TAG.getTag().getName()) || stmt.hasTag(CUSTOM_TAGS.DAN_LIB_CALL_TO_LOG_TAG.getTag().getName()))) {
                 InvokeExpr invokeExpr = stmt.getInvokeExpr();
                 MethodDetails invokedMethodDetails = instrumentResult.findExistingLibMethod(invokeExpr.getMethod().getSignature());
                 if (invokedMethodDetails == null) {
@@ -170,7 +170,7 @@ public class Instrumenter extends BodyTransformer {
             }
 
             // log field access if they were marked
-            if (methodDetails.isCanMockInputs() && stmt.containsFieldRef() && stmt.getFieldRef() instanceof InstanceFieldRef && stmt instanceof DefinitionStmt && stmt.hasTag(CUSTOM_TAGS.DAN_FIELD_ACCESS_TO_LOG_TAG.getTag().getName())) {
+            if (stmt.containsFieldRef() && stmt.getFieldRef() instanceof InstanceFieldRef && stmt instanceof DefinitionStmt && stmt.hasTag(CUSTOM_TAGS.DAN_FIELD_ACCESS_TO_LOG_TAG.getTag().getName())) {
                 MethodDetails fieldAccessDetails = getFieldAccessingMethodDetails((InstanceFieldRef) stmt.getFieldRef());
                 reverse(getLogFieldAccessStmts((InstanceFieldRef) stmt.getFieldRef(), ((DefinitionStmt) stmt).getLeftOp(), localGenerator, fieldAccessDetails, threadIDLocal)).forEach(s -> units.insertAfter(s, stmt));
             }
@@ -179,7 +179,7 @@ public class Instrumenter extends BodyTransformer {
 
     }
 
-    private boolean checkIfInputCanBeMocked(SootMethod currentMethod, SimpleLocalUses localUses, Queue<DefinitionStmt> inputs, boolean logOnly) {
+    private void addTagForDangerousCallsToLog(SimpleLocalUses localUses, Queue<DefinitionStmt> inputs) {
         Set<Unit> checked = new HashSet<>();
         while (!inputs.isEmpty()) {
 
@@ -239,7 +239,19 @@ public class Instrumenter extends BodyTransformer {
                     methodInputStream.forEach(c -> c.addTag(CUSTOM_TAGS.DAN_LIB_CALL_TO_LOG_TAG.getTag()));
 //                else return false;
 
+            // not sure if this is needed, may change to also check the other opr is constant and non-null?
+            // cannot mock if the item is directly compared to values using !=/ ==  and etc.
+        /*
 
+            if(uses.stream()
+                    .filter(c -> c.getUnit() instanceof IfStmt)
+                    .anyMatch(c -> {
+                        ConditionExpr conditionExpr = (ConditionExpr) ((IfStmt) c.getUnit()).getCondition();
+                        Value value = c.getValueBox().getValue();
+                        return conditionExpr.getOp1().equals(value) || conditionExpr.getOp2().equals(value) && !(conditionExpr.getOp1().equals(NullConstant.v()) || conditionExpr.getOp2().equals(NullConstant.v()));
+                    }))
+                return false;
+        */
 
             // Log calling of lib methods if they are called by inputs / descendant for mocking
             // if void, use for tracking content of var (for tracing)
@@ -252,7 +264,6 @@ public class Instrumenter extends BodyTransformer {
 
 
         }
-        return true;
     }
 
     /**
