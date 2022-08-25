@@ -677,7 +677,7 @@ public class ExecutionTrace {
      */
     private boolean canTestExecution(MethodExecution execution) {
         MethodDetails methodDetails = execution.getMethodInvoked();
-        if (!methodDetails.isCanMockInputs() || containsFaultyDef(execution) || getAllMethodExecs().values().stream().anyMatch(e -> e.sameCalleeParamNMethod(execution) && !e.sameContent(execution)))
+        if (containsFaultyDef(execution) || getAllMethodExecs().values().stream().anyMatch(e -> e.sameCalleeParamNMethod(execution) && !e.sameContent(execution)))
             return false;
         if (methodDetails.getAccess().equals(ACCESS.PRIVATE) || methodDetails.getName().startsWith("access$"))
             return false;
