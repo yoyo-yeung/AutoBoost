@@ -261,7 +261,11 @@ public class ExecutionTrace {
         if (existingDefDetails.getType().getRank() < methodDetails.getType().getRank()) return false;
         if (methodDetails.getType().equals(METHOD_TYPE.MEMBER) && getParentExeStack(execution.getCallee()) == null)
             return false;
-        return existingDefDetails.getParameterCount() >= methodDetails.getParameterCount();
+        return Stream.of(execution, existingDef)
+                .map(e -> new AbstractMap.SimpleEntry<MethodExecution, Integer>(e,
+                        (e.getMethodInvoked().getType().equals(METHOD_TYPE.MEMBER) && e.getResultThisId() == varDetail.getID() ? -1000 : 0) + e.getMethodInvoked().getParameterCount()))
+                .min(Comparator.comparingInt(AbstractMap.SimpleEntry::getValue))
+                .get().getKey().equals(execution);
     }
 
 
