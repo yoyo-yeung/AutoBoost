@@ -47,6 +47,6 @@ public abstract class Stmt {
         }
         if(type.isPrimitive() || type.equals(Object.class))
             return null;
-        else return Helper.accessibilityCheck(type, packageName) ? type : Helper.getAccessibleSuperType(type, packageName);
+        else return Helper.getAccessibleSuperType(type, packageName);
     }
 }

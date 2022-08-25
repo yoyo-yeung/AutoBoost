@@ -36,6 +36,7 @@ public class Helper {
     }
 
     public static Class<?> getAccessibleSuperType(Class<?> c, String packageName) {
+        if(accessibilityCheck(c, packageName)) return c;
         return ClassUtils.getAllSuperclasses(c).stream().filter(c1 -> accessibilityCheck(c1, packageName)).findFirst().orElse(c);
     }
 
