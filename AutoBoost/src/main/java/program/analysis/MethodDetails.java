@@ -21,6 +21,7 @@ public class MethodDetails {
     private final int parameterCount;
     private final String name;
     private final Type returnSootType;
+    private Class<?> returnType = null;
     private final ACCESS access;
     private final METHOD_TYPE type;
     private final SootClass declaringClass;
@@ -135,6 +136,17 @@ public class MethodDetails {
 
     public boolean isFieldAccess() {
         return isFieldAccess;
+    }
+
+    public Class<?> getReturnType() {
+        if(returnType == null) {
+            try {
+                this.returnType = ClassUtils.getClass(returnSootType.toString());
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+        return returnType;
     }
 
     @Override
