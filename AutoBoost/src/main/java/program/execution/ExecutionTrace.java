@@ -593,12 +593,37 @@ public class ExecutionTrace {
                     MethodDetails methodDetails = e.getMethodInvoked();
                     if (methodDetails.isFieldAccess() && vars.contains(e.getCalleeId()))
                         return true;
+                    if(vars.contains(e.getCalleeId()) && execution.getParams().stream().map(this::getVarDetailByID).anyMatch(v -> isUnmockableParam(execution,v)))
+                        return true;
+
+                    if(vars.contains(e.getCalleeId())) {
+                        try {
+                            Method toMock = methodDetails.getdClass().getMethod(methodDetails.getName(), methodDetails.getParameterTypes().stream().map(t -> {
+                                try {
+                                    return ClassUtils.getClass(t.toQuotedString());
+                                } catch (ClassNotFoundException classNotFoundException) {
+                                    classNotFoundException.printStackTrace();
+                                    return null;
+                                }
+                            }).toArray(Class<?>[]::new));
+                            if(Modifier.isFinal(toMock.getModifiers()) || Modifier.isPrivate(toMock.getModifiers()) || methodDetails.getName().equals("equals") || methodDetails.getName().equals("hashCode"))
+                                return true;
+                        } catch (NoSuchMethodException ex) {
+                            ex.printStackTrace();
+                        }
+                    }
                     if (InstrumentResult.getSingleton().isLibMethod(methodDetails.getId()) && e.getParams().stream().anyMatch(vars::contains))
                         return true;
                     return hasUnmockableUsage(e, vars);
                 });
     }
 
+    private boolean isUnmockableParam(MethodExecution execution, VarDetail p) {
+        if(p instanceof ObjVarDetails && p.getID()!=execution.getCalleeId() && !execution.getParams().contains(p.getID()) && !p.equals(nullVar)) return true;
+        if(p instanceof ArrVarDetails) return ((ArrVarDetails) p).getComponents().stream().map(this::getVarDetailByID).noneMatch(c -> isUnmockableParam(execution, c));
+        if(p instanceof MapVarDetails) return ((MapVarDetails) p).getKeyValuePairs().stream().flatMap(c-> Stream.of(c.getKey(), c.getValue())).map(this::getVarDetailByID).noneMatch(c-> isUnmockableParam(execution, c));
+        return false;
+    }
     /**
      * Get stack of method executions needed to create the var specified
      *
