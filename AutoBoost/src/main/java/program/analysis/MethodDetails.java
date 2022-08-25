@@ -3,7 +3,6 @@ package program.analysis;
 import entity.ACCESS;
 import entity.METHOD_TYPE;
 import org.apache.commons.lang3.ClassUtils;
-import program.instrumentation.InstrumentResult;
 import soot.SootClass;
 import soot.SootMethod;
 import soot.Type;
@@ -28,10 +27,9 @@ public class MethodDetails {
     private Class<?> dClass = null;
     private final String signature;
     private final String subSignature;
-    private boolean canMockInputs = true;
     private boolean isFieldAccess = false;
 
-    public MethodDetails(List<Type> parameterTypes, int parameterCount, String name, Type returnSootType, ACCESS access, METHOD_TYPE type, SootClass declaringClass, String signature, String subSignature, boolean isFieldAccess, boolean canMockInputs) {
+    public MethodDetails(List<Type> parameterTypes, int parameterCount, String name, Type returnSootType, ACCESS access, METHOD_TYPE type, SootClass declaringClass, String signature, String subSignature, boolean isFieldAccess) {
         this.id = methodIdGenerator.incrementAndGet();
         this.parameterTypes = parameterTypes;
         this.parameterCount = parameterCount;
@@ -43,7 +41,6 @@ public class MethodDetails {
         this.signature = signature;
         this.subSignature = subSignature;
         this.isFieldAccess = isFieldAccess;
-        this.canMockInputs = canMockInputs;
     }
 
     public MethodDetails(SootMethod method) {
@@ -126,13 +123,6 @@ public class MethodDetails {
         return subSignature;
     }
 
-    public boolean isCanMockInputs() {
-        return canMockInputs;
-    }
-
-    public void setCanMockInputs(boolean canMockInputs) {
-        this.canMockInputs = canMockInputs;
-    }
 
     public boolean isFieldAccess() {
         return isFieldAccess;
@@ -160,11 +150,10 @@ public class MethodDetails {
                 ", type=" + type +
                 ", declaringClass=" + declaringClass +
                 ", signature='" + signature + '\'' +
-                ", canMockInputs=" + canMockInputs +
                 '}';
     }
 
     public static MethodDetails getFieldAccessingMethodDetails(SootClass declaringClass, String fieldName, Type fieldType){
-        return new MethodDetails(new ArrayList<>(), 0, fieldName, fieldType, ACCESS.PRIVATE, METHOD_TYPE.MEMBER, declaringClass, String.format(FIELD_ACCESS_SIGNATURE, declaringClass.getName(), fieldName), String.format(FIELD_ACCESS_SIGNATURE, declaringClass.getName(), fieldName), true, false);
+        return new MethodDetails(new ArrayList<>(), 0, fieldName, fieldType, ACCESS.PRIVATE, METHOD_TYPE.MEMBER, declaringClass, String.format(FIELD_ACCESS_SIGNATURE, declaringClass.getName(), fieldName), String.format(FIELD_ACCESS_SIGNATURE, declaringClass.getName(), fieldName), true);
     }
 }

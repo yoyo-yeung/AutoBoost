@@ -18,6 +18,7 @@ import soot.Modifier;
 import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -251,7 +252,7 @@ public class ExecutionTrace {
         MethodDetails methodDetails = execution.getMethodInvoked();
         if ((methodDetails.getType().equals(METHOD_TYPE.MEMBER) && execution.getCallee().equals(varDetail)) || execution.getParams().stream().anyMatch(p -> p == varDetail.getID()))
             return false; // if they were inputs to begin with
-        if (methodDetails.getAccess().equals(ACCESS.PRIVATE) || methodDetails.isFieldAccess() || !methodDetails.isCanMockInputs())
+        if (methodDetails.getAccess().equals(ACCESS.PRIVATE) || methodDetails.isFieldAccess())
             return false;
         MethodExecution existingDef = getDefExeList(varDetail.getID()) == null ? null : getMethodExecutionByID(getDefExeList(varDetail.getID()));
         if (existingDef == null) return true;
