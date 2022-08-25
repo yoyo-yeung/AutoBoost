@@ -206,8 +206,9 @@ public class Instrumenter extends BodyTransformer {
                     .collect(Collectors.toSet());
 
             if (fieldAccessStream.size() > 0)
-                if (logOnly) fieldAccessStream.forEach(c -> c.addTag(CUSTOM_TAGS.DAN_FIELD_ACCESS_TO_LOG_TAG.getTag()));
-                else return false;
+//                if (logOnly)
+                fieldAccessStream.forEach(c -> c.addTag(CUSTOM_TAGS.DAN_FIELD_ACCESS_TO_LOG_TAG.getTag()));
+//                else return false;
 
 
             // cannot mock if the item is used as an input to un-logged methods (the method may call .field to get values)
@@ -233,9 +234,11 @@ public class Instrumenter extends BodyTransformer {
                     })
                     .map(UnitValueBoxPair::getUnit)
                     .collect(Collectors.toSet());
-            if (methodInputStream.size() > 0)
-                if (logOnly) methodInputStream.forEach(c -> c.addTag(CUSTOM_TAGS.DAN_LIB_CALL_TO_LOG_TAG.getTag()));
-                else return false;
+//            if (methodInputStream.size() > 0)
+//                if (logOnly)
+                    methodInputStream.forEach(c -> c.addTag(CUSTOM_TAGS.DAN_LIB_CALL_TO_LOG_TAG.getTag()));
+//                else return false;
+
 
 
             // Log calling of lib methods if they are called by inputs / descendant for mocking
