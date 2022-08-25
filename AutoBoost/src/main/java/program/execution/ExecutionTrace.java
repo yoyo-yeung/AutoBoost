@@ -307,7 +307,6 @@ public class ExecutionTrace {
         if (type.isEnum() || artificialEnum) {
             if (type.equals(Class.class))
                 objValue = objValue.toString().replace("$", ".") + ".class";
-            else objValue = type.getSimpleName() + "." + objValue;
             varDetailType = EnumVarDetails.class;
         } else if (ArrVarDetails.availableTypeCheck(type) && ArrVarDetails.availableTypeCheck(objValue.getClass())) {
             objValue = getComponentStream(execution, type, objValue, process).map(String::valueOf).collect(Collectors.joining(Properties.getDELIMITER()));
@@ -508,7 +507,7 @@ public class ExecutionTrace {
             classesToGetFields.removeIf(c -> c.equals(Object.class) || c.equals(Serializable.class) || c.equals(Field.class) || c.equals(Class.class));
             InstrumentResult.getSingleton().addClassDetails(new ClassDetails(CUC.getName(), classesToGetFields.stream()
                     .flatMap(c -> Arrays.stream(c.getDeclaredFields()))
-                    .filter(f -> !(soot.Modifier.isStatic(f.getModifiers()) && soot.Modifier.isFinal(f.getModifiers())))
+//                    .filter(f -> !(soot.Modifier.isStatic(f.getModifiers()) && soot.Modifier.isFinal(f.getModifiers())))
                     .collect(Collectors.toList())));
         }
         result.append("{");
@@ -790,7 +789,7 @@ public class ExecutionTrace {
      */
     private Set<Integer> getRelatedObjVarIDs(VarDetail varDetail) {
         Set<Integer> relatedVarIDs = new HashSet<>();
-        if (varDetail instanceof StringVarDetails || varDetail instanceof StringBVarDetails || varDetail instanceof PrimitiveVarDetails)
+        if (varDetail instanceof StringVarDetails || varDetail instanceof StringBVarDetails || varDetail instanceof PrimitiveVarDetails || varDetail instanceof EnumVarDetails)
             return relatedVarIDs;
         relatedVarIDs.add(varDetail.getID());
         if (varDetail instanceof ArrVarDetails)
