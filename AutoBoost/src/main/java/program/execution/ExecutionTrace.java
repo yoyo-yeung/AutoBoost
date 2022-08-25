@@ -557,6 +557,7 @@ public class ExecutionTrace {
      * Update canTest field in each execution storing if the execution can be tested
      */
     public void checkTestabilityOfExecutions() {
+        logger.info("Checking if executions can be tested ");
         Queue<MethodExecution> executionQueue = new PriorityQueue<>(Comparator.comparingInt(MethodExecution::getID));
         executionQueue.addAll(this.allMethodExecs.values().stream().sorted(Comparator.comparingInt(MethodExecution::getID)).collect(Collectors.toList()));
         Set<Integer> checked = new HashSet<>();
@@ -576,6 +577,7 @@ public class ExecutionTrace {
             if (execution.getCalleeId() != -1 && execution.getCallee() instanceof ObjVarDetails)
                 inputsAndDes.addAll(getParentExeStack(execution.getCallee()).stream().map(e -> exeToInputVarsMap.getOrDefault(e.getID(), new HashSet<>())).flatMap(Collection::stream).collect(Collectors.toSet())); // may change to accumulative putting to Map if it takes LONG
             execution.setCanTest(!hasUnmockableUsage(execution, inputsAndDes));
+            logger.debug(executionQueue.size() +" checks remaining");
         }
     }
 
