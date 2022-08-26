@@ -558,7 +558,7 @@ public class ExecutionTrace {
      */
     public void checkTestabilityOfExecutions() {
         logger.info("Checking if executions can be tested ");
-        Queue<MethodExecution> executionQueue = new PriorityQueue<>(Comparator.comparingInt(MethodExecution::getID));
+        Queue<MethodExecution> executionQueue = this.allMethodExecs.values().stream().sorted(Comparator.comparingInt(MethodExecution::getID)).collect(Collectors.toCollection(LinkedList::new));
         executionQueue.addAll(this.allMethodExecs.values().stream().sorted(Comparator.comparingInt(MethodExecution::getID)).collect(Collectors.toList()));
         Set<Integer> checked = new HashSet<>();
         Map<Integer, Set<Integer>> exeToInputVarsMap = new HashMap<>();
