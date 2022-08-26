@@ -23,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static helper.Helper.accessibilityCheck;
 import static helper.Helper.getAccessibleSuperType;
 
 public class TestGenerator {
@@ -187,6 +188,12 @@ public class TestGenerator {
         if (varDetailClass.equals(ArrVarDetails.class)) {
             if (((ArrVarDetails) returnVarDetail).getComponents().size() == 0) return true;
             return StringUtils.countMatches(e.getMethodInvoked().getReturnSootType().toString(), "[]") == StringUtils.countMatches(returnVarDetail.getType().getSimpleName(), "[]") && ((ArrVarDetails) returnVarDetail).getLeaveType().stream().allMatch(ClassUtils::isPrimitiveOrWrapper);
+        }
+        try {
+            if(varDetailClass.equals(EnumVarDetails.class) && returnVarDetail.getType().equals(Class.class) && !accessibilityCheck(ClassUtils.getClass(((EnumVarDetails) returnVarDetail).getValue()), e.getRequiredPackage()))
+            return false;
+        } catch (ClassNotFoundException ex) {
+            ex.printStackTrace();
         }
         return true;
     }
