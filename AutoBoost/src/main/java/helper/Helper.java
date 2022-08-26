@@ -3,6 +3,9 @@ package helper;
 import org.apache.commons.lang3.ClassUtils;
 import soot.Modifier;
 
+import java.util.Arrays;
+import java.util.stream.Stream;
+
 public class Helper {
     /**
      *
@@ -37,7 +40,10 @@ public class Helper {
 
     public static Class<?> getAccessibleSuperType(Class<?> c, String packageName) {
         if(accessibilityCheck(c, packageName)) return c;
-        return ClassUtils.getAllSuperclasses(c).stream().filter(c1 -> accessibilityCheck(c1, packageName)).findFirst().orElse(c);
+        return Stream.concat(Stream.of(c), ClassUtils.getAllSuperclasses(c).stream())
+                .flatMap(s -> Stream.concat(Stream.of(s), Arrays.stream(s.getInterfaces())))
+                .filter(c1-> accessibilityCheck(c1, packageName))
+                .findFirst().orElse(c);
     }
 
 }
