@@ -563,10 +563,12 @@ public class ExecutionTrace {
         Map<Integer, Set<Integer>> exeToInputVarsMap = new HashMap<>();
         while (!executionQueue.isEmpty()) {
             MethodExecution execution = executionQueue.poll();
+            logger.debug("checking " +  execution.toSimpleString());
             if (execution.getCalleeId() != -1 && getDefExeList(execution.getCalleeId()) != null && !checked.contains(getDefExeList(execution.getCalleeId()))) {
                 executionQueue.add(execution); // if the callee is not checked yet, wait
                 continue;
             }
+            logger.debug("checking " +  execution.toSimpleString());
             checked.add(execution.getID());
             execution.setCanTest(canTestExecution(execution) && canTestCallee(execution) && compatibilityCheck(execution));
             if (!execution.isCanTest()) continue;
@@ -588,6 +590,7 @@ public class ExecutionTrace {
      * @return if there is unmockable usages of vars in execution
      */
     private boolean hasUnmockableUsage(MethodExecution execution, Set<Integer> vars) {
+        logger.debug("Checking has unmockableusages " + execution.toSimpleString());
         return getChildren(execution.getID()).stream()
                 .map(this::getMethodExecutionByID)
                 .anyMatch(e -> {
@@ -681,6 +684,7 @@ public class ExecutionTrace {
      */
     private boolean canTestExecution(MethodExecution execution) {
         MethodDetails methodDetails = execution.getMethodInvoked();
+        logger.debug("Checking can test execution " + execution.toSimpleString());
         if (containsFaultyDef(execution) || getAllMethodExecs().values().stream().anyMatch(e -> e.sameCalleeParamNMethod(execution) && !e.sameContent(execution)))
             return false;
         if (methodDetails.getAccess().equals(ACCESS.PRIVATE) || methodDetails.getName().startsWith("access$"))
@@ -718,6 +722,7 @@ public class ExecutionTrace {
      */
     private boolean canTestCallee(MethodExecution execution) {
         if (execution.getCalleeId() == -1) return true;
+        logger.debug("Checking can test callee " + execution.getCallee().toString());
         if (execution.getCallee() instanceof ObjVarDetails) {
             if(execution.getCallee().getType().isAnonymousClass()) return false;
             Stack<MethodExecution> parentStack = getParentExeStack(execution.getCallee());
@@ -748,6 +753,7 @@ public class ExecutionTrace {
      * @return if the package required (if any) by its callee (if any) is compatible with that of the execution
      */
     private boolean compatibilityCheck(MethodExecution execution) {
+        logger.debug("checking compatibility for " + execution.toSimpleString());
         if (execution.getCalleeId() == -1 || !(execution.getCallee() instanceof ObjVarDetails)) return true;
         if (getDefExeList(execution.getCalleeId()) == null) return false;
         MethodExecution calleeDef = getMethodExecutionByID(getDefExeList(execution.getCalleeId()));
