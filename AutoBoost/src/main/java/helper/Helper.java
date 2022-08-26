@@ -31,7 +31,7 @@ public class Helper {
 
             }
         return (Modifier.isPublic(modifier) || (!Modifier.isPrivate(modifier) && c.getPackage().getName().equals(packageName))) // access check
-                && (!ClassUtils.isInnerClass(c) || (Modifier.isStatic(modifier) && accessibilityCheck(c.getEnclosingClass(), packageName))) // if is inner class, is static inner class and its enclosing class CAN be accessed
+                && (!ClassUtils.isInnerClass(c) || (Modifier.isStatic(modifier) && Modifier.isPublic(modifier) && accessibilityCheck(c.getEnclosingClass(), packageName))) // if is inner class, is static inner class and its enclosing class CAN be accessed
                 && !c.isAnonymousClass(); // is NOT anonymous class
     }
 
