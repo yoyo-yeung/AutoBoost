@@ -576,7 +576,7 @@ public class ExecutionTrace {
             exeToInputVarsMap.put(execution.getID(), inputsAndDes);
             if (execution.getCalleeId() != -1 && execution.getCallee() instanceof ObjVarDetails)
                 inputsAndDes.addAll(getParentExeStack(execution.getCallee()).stream().map(e -> exeToInputVarsMap.getOrDefault(e.getID(), new HashSet<>())).flatMap(Collection::stream).collect(Collectors.toSet())); // may change to accumulative putting to Map if it takes LONG
-            execution.setCanTest(!hasUnmockableUsage(execution, inputsAndDes));
+            execution.setCanTest(execution.getParams().stream().map(this::getVarDetailByID).noneMatch(p->isUnmockableParam(execution, p)) && !hasUnmockableUsage(execution, inputsAndDes));
             logger.debug(executionQueue.size() +" checks remaining");
         }
     }
@@ -621,6 +621,7 @@ public class ExecutionTrace {
     }
 
     private boolean isUnmockableParam(MethodExecution execution, VarDetail p) {
+        if(p instanceof ObjVarDetails && (p.getType().isAnonymousClass() || Modifier.isFinal(p.getType().getModifiers()))) return true;
         if(p instanceof ObjVarDetails && p.getID()!=execution.getCalleeId() && !execution.getParams().contains(p.getID()) && !p.equals(nullVar)) return true;
         if(p instanceof ArrVarDetails) return ((ArrVarDetails) p).getComponents().stream().map(this::getVarDetailByID).noneMatch(c -> isUnmockableParam(execution, c));
         if(p instanceof MapVarDetails) return ((MapVarDetails) p).getKeyValuePairs().stream().flatMap(c-> Stream.of(c.getKey(), c.getValue())).map(this::getVarDetailByID).noneMatch(c-> isUnmockableParam(execution, c));
@@ -707,6 +708,7 @@ public class ExecutionTrace {
     private boolean canTestCallee(MethodExecution execution) {
         if (execution.getCalleeId() == -1) return true;
         if (execution.getCallee() instanceof ObjVarDetails) {
+            if(execution.getCallee().getType().isAnonymousClass()) return false;
             Stack<MethodExecution> parentStack = getParentExeStack(execution.getCallee());
             if (parentStack == null || parentStack.contains(execution) || !parentStack.stream().allMatch(MethodExecution::isCanTest))
                 return false;
