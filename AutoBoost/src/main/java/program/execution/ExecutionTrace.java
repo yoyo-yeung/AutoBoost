@@ -263,7 +263,7 @@ public class ExecutionTrace {
             return false;
         return Stream.of(execution, existingDef)
                 .map(e -> new AbstractMap.SimpleEntry<MethodExecution, Integer>(e,
-                        (e.getMethodInvoked().getType().equals(METHOD_TYPE.MEMBER) && e.getResultThisId() == varDetail.getID() ? -1000 : 0) + e.getMethodInvoked().getParameterCount()))
+                        (e.getMethodInvoked().getType().equals(METHOD_TYPE.MEMBER) && e.getResultThisId() == varDetail.getID() ? -1000 : 0) + e.getMethodInvoked().getParameterCount() + e.getParams().stream().map(this::getVarDetailByID).filter(p -> p.getType().isAnonymousClass() || Modifier.isFinal(p.getType().getModifiers())).mapToInt(i->1000).sum()))
                 .min(Comparator.comparingInt(AbstractMap.SimpleEntry::getValue))
                 .get().getKey().equals(execution);
     }
