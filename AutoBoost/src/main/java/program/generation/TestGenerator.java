@@ -215,7 +215,7 @@ public class TestGenerator {
                             occurrence.addReturnVar(e.getReturnValId());
                             VarDetail returnVal = executionTrace.getVarDetailByID(e.getReturnValId());
 
-                            if (returnVal instanceof ObjVarDetails) {
+                            if (returnVal instanceof ObjVarDetails && !returnVal.equals(executionTrace.getNullVar())) {
                                 Class<?> valType = getAccessibleSuperType(returnVal.getType(), testCase.getPackageName());
                                 VarStmt mockReturn = new VarStmt(valType, testCase.getNewVarID(), returnVal.getID());
                                 testCase.addStmt(new AssignStmt(mockReturn, new MockInitStmt(valType)));
