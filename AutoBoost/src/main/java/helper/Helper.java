@@ -1,12 +1,15 @@
 package helper;
 
 import org.apache.commons.lang3.ClassUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import soot.Modifier;
 
 import java.util.Arrays;
 import java.util.stream.Stream;
 
 public class Helper {
+    private static Logger logger = LogManager.getLogger(Helper.class);
     /**
      *
      * @param c class to find accessing package
