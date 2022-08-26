@@ -697,7 +697,19 @@ public class ExecutionTrace {
                     neededPackage = methodDetails.getDeclaringClass().getPackageName();
                 execution.setRequiredPackage(neededPackage);
         }
-        return true;
+        return execution.getParams().stream().map(this::getVarDetailByID)
+                .filter(p -> p instanceof EnumVarDetails && p.getType().equals(Class.class)).map(p -> (EnumVarDetails) p).allMatch(p -> {
+                    try {
+                        String newRequiredPackage = getRequiredPackage(ClassUtils.getClass(p.getValue()));
+                        if (newRequiredPackage == null || (!execution.getRequiredPackage().isEmpty() && !execution.getRequiredPackage().equals(newRequiredPackage)))
+                            return false;
+                        execution.setRequiredPackage(newRequiredPackage);
+                    } catch (ClassNotFoundException e) {
+                        e.printStackTrace();
+                    }
+                    return true;
+                });
+
     }
 
     /**
