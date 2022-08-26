@@ -39,7 +39,7 @@ public class ExecutionTrace {
     private final Map<Integer, Integer> varToDefMap;
     private final DirectedMultigraph<Integer, CallOrderEdge> callGraph;
     private final VarDetail nullVar;
-
+    private final Map<VarDetail, Stack<MethodExecution>> varToParentStackCache = new HashMap<>(); // cache last retrieval results to save time
 
     /**
      * Constructor of ExecutionTrace, set up all vars.
@@ -635,6 +635,7 @@ public class ExecutionTrace {
     public Stack<MethodExecution> getParentExeStack(VarDetail var) {
         Stack<MethodExecution> executionStack = new Stack<>();
         if (!(var instanceof ObjVarDetails)) return null;
+        if(varToParentStackCache.containsKey(var)) return varToParentStackCache.get(var);
         while (var != null) {
             if (var instanceof EnumVarDetails) break;
             Integer def = getDefExeList(var.getID());
@@ -649,6 +650,7 @@ public class ExecutionTrace {
             else
                 var = null;
         }
+        varToParentStackCache.put(var, executionStack);
         return executionStack;
     }
 
