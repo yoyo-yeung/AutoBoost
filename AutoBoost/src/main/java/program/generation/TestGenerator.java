@@ -19,9 +19,11 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static helper.Helper.accessibilityCheck;
 import static helper.Helper.getAccessibleSuperType;
@@ -465,6 +467,16 @@ public class TestGenerator {
 
         public boolean sameCallInfo(VarStmt mockedVar, MethodExecution execution) {
             return this.mockedVar.equals(mockedVar) && this.inovkedMethod.equals(execution.getMethodInvoked()) && this.paramVarID.equals(execution.getParams());
+        }
+
+        @Override
+        public String toString() {
+            return "MockOccurrence{" +
+                    "mockedVar=" + mockedVar +
+                    ", inovkedMethod=" + inovkedMethod +
+                    ", paramVarID=" + paramVarID +
+                    ", returnVars=" + returnVars +
+                    '}';
         }
 
         @Override
