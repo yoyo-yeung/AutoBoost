@@ -600,7 +600,7 @@ public class ExecutionTrace {
                     MethodDetails methodDetails = e.getMethodInvoked();
                     if (methodDetails.isFieldAccess() && vars.contains(e.getCalleeId()))
                         return true;
-                    if(vars.contains(e.getCalleeId()) && execution.getParams().stream().map(this::getVarDetailByID).anyMatch(v -> isUnmockableParam(execution,v)))
+                    if(vars.contains(e.getCalleeId()) && e.getParams().stream().map(this::getVarDetailByID).anyMatch(v -> isUnmockableParam(execution,v)))
                         return true;
 
                     if(vars.contains(e.getCalleeId())) {
