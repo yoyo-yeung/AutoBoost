@@ -252,6 +252,8 @@ public class ExecutionTrace {
             return false; // if they were inputs to begin with
         if (methodDetails.getAccess().equals(ACCESS.PRIVATE) || methodDetails.isFieldAccess())
             return false;
+        if(methodDetails.getType().equals(METHOD_TYPE.MEMBER) && (getParentExeStack(execution.getCallee(), false) == null || getParentExeStack(execution.getCallee(), false).contains(execution)))
+            return false;
         MethodExecution existingDef = getDefExeList(varDetail.getID()) == null ? null : getMethodExecutionByID(getDefExeList(varDetail.getID()));
         if (existingDef == null) return true;
         if (existingDef.sameCalleeParamNMethod(execution)) return false; // would compare method, callee, params
@@ -560,7 +562,11 @@ public class ExecutionTrace {
         Map<Integer, Set<Integer>> exeToInputVarsMap = new HashMap<>();
         while (!executionQueue.isEmpty()) {
             MethodExecution execution = executionQueue.poll();
-            logger.debug("checking " +  execution.toSimpleString());
+            if(execution.getCalleeId()!=-1 && getParentExeStack(execution.getCallee(), true)==null) {
+                execution.setCanTest(false);
+                checked.add(execution.getID());
+                continue;
+            }
             if (execution.getCalleeId() != -1 && getDefExeList(execution.getCalleeId()) != null && !checked.contains(getDefExeList(execution.getCalleeId()))) {
                 executionQueue.add(execution); // if the callee is not checked yet, wait
                 continue;
