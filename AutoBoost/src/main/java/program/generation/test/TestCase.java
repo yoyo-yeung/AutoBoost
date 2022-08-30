@@ -1,6 +1,8 @@
 package program.generation.test;
 
 import helper.Properties;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import program.execution.stmt.Stmt;
 import program.execution.stmt.VarStmt;
 import program.execution.variable.VarDetail;
@@ -10,6 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public abstract class TestCase {
+    private Logger logger = LogManager.getLogger(TestCase.class);
     private static final AtomicInteger testIDGenerator = new AtomicInteger(0);
     private final AtomicInteger varIDGenerator = new AtomicInteger(0);
     private final int ID;
@@ -103,11 +106,38 @@ public abstract class TestCase {
         if(this.varToVarStmtMap.containsKey(detail.getID())) return this.varToVarStmtMap.get(detail.getID());
         else return this.varToMockedVarStmtMap.getOrDefault(detail, null);
     }
+
+    public Map<Integer, VarStmt> getVarToVarStmtMap() {
+        return varToVarStmtMap;
+    }
+
+    public Map<VarDetail, VarStmt> getVarToMockedVarStmtMap() {
+        return varToMockedVarStmtMap;
+    }
+
     public abstract String output(Set<Class<?>>fullCNameNeeded);
 
     protected String outputStmts(String indentation, Set<Class<?>>fullCNameNeeded) {
         if(this.getStmtList().size() > 0 )
             return indentation + this.getStmtList().stream().map(s ->  s.getStmt(fullCNameNeeded)).collect(Collectors.joining(";\n" + indentation)) + ";\n";
         return "";
+    }
+
+    public Set<Class<?>> getMockedTypes() {
+        return this.getVarToMockedVarStmtMap().values().stream().map(VarStmt::getVarType)
+                .collect(Collectors.toSet());
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        TestCase testCase = (TestCase) o;
+        return this.outputStmts("", new HashSet<>()).equals(testCase.outputStmts("", new HashSet<>()));
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(varIDGenerator, ID, varToVarStmtMap, varToMockedVarStmtMap, stmtList, allImports, packageName);
     }
 }

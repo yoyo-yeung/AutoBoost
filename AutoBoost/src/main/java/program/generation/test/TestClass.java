@@ -51,8 +51,10 @@ public class TestClass {
     }
 
     public void addEnclosedTestCases(TestCase testCase) {
+        if(this.enclosedTestCases.stream().anyMatch(ex -> ex.equals(testCase))) return;
         this.enclosedTestCases.add(testCase);
         this.imports.addAll(testCase.getAllImports());
+        this.mockedTypes.addAll(testCase.getMockedTypes());
     }
 
     public void addEnclosedTestCases(ArrayList<TestCase> testCases) {

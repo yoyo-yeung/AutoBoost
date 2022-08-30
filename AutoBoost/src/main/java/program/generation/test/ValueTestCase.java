@@ -1,11 +1,16 @@
 package program.generation.test;
 
 import helper.Properties;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import program.execution.stmt.AssertStmt;
 
+import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 public class ValueTestCase extends TestCase{
+    private static final Logger logger = LogManager.getLogger(ValueTestCase.class);
 
     private AssertStmt assertion;
 
@@ -36,5 +41,18 @@ public class ValueTestCase extends TestCase{
     @Override
     protected String outputStmts(String indentation, Set<Class<?>> fullCNameNeeded) {
         return super.outputStmts(indentation, fullCNameNeeded) + indentation + this.getAssertion().getStmt(fullCNameNeeded) + ";\n";
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ValueTestCase that = (ValueTestCase) o;
+        return this.outputStmts("", new HashSet<>()).equals(that.outputStmts("", new HashSet<>()));
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), assertion);
     }
 }

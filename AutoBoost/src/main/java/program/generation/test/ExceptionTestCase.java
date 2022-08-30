@@ -2,6 +2,7 @@ package program.generation.test;
 
 import helper.Properties;
 
+import java.util.HashSet;
 import java.util.Set;
 
 public class ExceptionTestCase extends TestCase{
@@ -29,6 +30,14 @@ public class ExceptionTestCase extends TestCase{
             result.append(indentation).append(indentation).append("fail(\"Expected exception\");\n").append(indentation).append("}catch(").append(exceptionClass.getName()).append(" ignored){\n").append(indentation).append(indentation).append("}\n");
         result.append(indentation).append("}\n");
         return result.toString();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ExceptionTestCase that = (ExceptionTestCase) o;
+        return this.outputStmts("", new HashSet<>()).equals(that.outputStmts("", new HashSet<>()));
     }
 
 }
