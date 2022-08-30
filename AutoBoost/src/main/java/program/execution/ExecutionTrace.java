@@ -263,7 +263,7 @@ public class ExecutionTrace {
             return false;
         return Stream.of(execution, existingDef)
                 .map(e -> new AbstractMap.SimpleEntry<MethodExecution, Integer>(e,
-                        (e.getMethodInvoked().getType().equals(METHOD_TYPE.MEMBER) && e.getResultThisId() == varDetail.getID() ? -1000 : 0) + e.getMethodInvoked().getParameterCount() + e.getParams().stream().map(this::getVarDetailByID).filter(p -> p.getType().isAnonymousClass() || Modifier.isFinal(p.getType().getModifiers())).mapToInt(i->1000).sum()))
+                        (e.getMethodInvoked().getType().equals(METHOD_TYPE.MEMBER) && e.getResultThisId() == varDetail.getID() ? -1000 : 0) + e.getMethodInvoked().getParameterCount() + e.getParams().stream().map(this::getVarDetailByID).filter(p -> p.getType().isAnonymousClass() ).mapToInt(i->1000).sum()))
                 .min(Comparator.comparingInt(AbstractMap.SimpleEntry::getValue))
                 .get().getKey().equals(execution);
     }
@@ -613,7 +613,8 @@ public class ExecutionTrace {
                                     return null;
                                 }
                             }).toArray(Class<?>[]::new));
-                            if(Modifier.isFinal(toMock.getModifiers()) || Modifier.isPrivate(toMock.getModifiers()) || methodDetails.getName().equals("equals") || methodDetails.getName().equals("hashCode"))
+
+                            if(Modifier.isPrivate(toMock.getModifiers()) || methodDetails.getName().equals("equals") || methodDetails.getName().equals("hashCode"))
                                 return true;
                         } catch (NoSuchMethodException ex) {
                             ex.printStackTrace();
@@ -621,12 +622,13 @@ public class ExecutionTrace {
                     }
                     if (InstrumentResult.getSingleton().isLibMethod(methodDetails.getId()) && e.getParams().stream().anyMatch(vars::contains))
                         return true;
+
                     return hasUnmockableUsage(e, vars);
                 });
     }
 
     private boolean isUnmockableParam(MethodExecution execution, VarDetail p) {
-        if(p instanceof ObjVarDetails && (p.getType().isAnonymousClass() || Modifier.isFinal(p.getType().getModifiers()))) return true;
+        if(p instanceof ObjVarDetails && (p.getType().isAnonymousClass() )) return true;
         if(p instanceof ObjVarDetails && p.getID()!=execution.getCalleeId() && !execution.getParams().contains(p.getID()) && !p.equals(nullVar)) return true;
         if(p instanceof ArrVarDetails) return ((ArrVarDetails) p).getComponents().stream().map(this::getVarDetailByID).noneMatch(c -> isUnmockableParam(execution, c));
         if(p instanceof MapVarDetails) return ((MapVarDetails) p).getKeyValuePairs().stream().flatMap(c-> Stream.of(c.getKey(), c.getValue())).map(this::getVarDetailByID).noneMatch(c-> isUnmockableParam(execution, c));
