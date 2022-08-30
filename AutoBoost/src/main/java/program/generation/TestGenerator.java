@@ -262,7 +262,7 @@ public class TestGenerator {
                 return varStmt;
             }
         }
-        throw new IllegalArgumentException("VarDetail " + p.toDetailedString() + " provided cannot be asserted. ");
+        throw new IllegalArgumentException("VarDetail " + p.toDetailedString() + " provided cannot be used. ");
     }
 
     private String prepareAndGetCallee(MethodExecution target, TestCase testCase) {
