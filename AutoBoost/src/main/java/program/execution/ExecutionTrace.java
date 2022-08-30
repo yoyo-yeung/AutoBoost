@@ -257,7 +257,7 @@ public class ExecutionTrace {
         if (existingDef.sameCalleeParamNMethod(execution)) return false; // would compare method, callee, params
         MethodDetails existingDefDetails = existingDef.getMethodInvoked();
         if (existingDefDetails.getType().getRank() < methodDetails.getType().getRank()) return false;
-        if (methodDetails.getType().equals(METHOD_TYPE.MEMBER) && getParentExeStack(execution.getCallee()) == null)
+        if (methodDetails.getType().equals(METHOD_TYPE.MEMBER) && getParentExeStack(execution.getCallee(), false) == null)
             return false;
         return Stream.of(execution, existingDef)
                 .map(e -> new AbstractMap.SimpleEntry<MethodExecution, Integer>(e,
@@ -573,7 +573,7 @@ public class ExecutionTrace {
             Set<Integer> inputsAndDes = getInputAndDes(execution);
             exeToInputVarsMap.put(execution.getID(), inputsAndDes);
             if (execution.getCalleeId() != -1 && execution.getCallee() instanceof ObjVarDetails)
-                inputsAndDes.addAll(getParentExeStack(execution.getCallee()).stream().map(e -> exeToInputVarsMap.getOrDefault(e.getID(), new HashSet<>())).flatMap(Collection::stream).collect(Collectors.toSet())); // may change to accumulative putting to Map if it takes LONG
+                inputsAndDes.addAll(getParentExeStack(execution.getCallee(), true).stream().map(e -> exeToInputVarsMap.getOrDefault(e.getID(), new HashSet<>())).flatMap(Collection::stream).collect(Collectors.toSet())); // may change to accumulative putting to Map if it takes LONG
             execution.setCanTest(execution.getParams().stream().map(this::getVarDetailByID).noneMatch(p->isUnmockableParam(execution, p)) && !hasUnmockableUsage(execution, inputsAndDes));
             logger.debug(executionQueue.size() +" checks remaining");
         }
@@ -630,9 +630,10 @@ public class ExecutionTrace {
      * Get stack of method executions needed to create the var specified
      *
      * @param var Variable to create
+     * @param cache
      * @return stack of method executions for creation
      */
-    public Stack<MethodExecution> getParentExeStack(VarDetail var) {
+    public Stack<MethodExecution> getParentExeStack(VarDetail var, boolean cache) {
         Stack<MethodExecution> executionStack = new Stack<>();
         if (!(var instanceof ObjVarDetails)) return null;
         if(varToParentStackCache.containsKey(var)) return varToParentStackCache.get(var);
@@ -650,7 +651,8 @@ public class ExecutionTrace {
             else
                 var = null;
         }
-        varToParentStackCache.put(var, executionStack);
+        if(cache)
+            varToParentStackCache.put(var, executionStack);
         return executionStack;
     }
 
@@ -722,7 +724,7 @@ public class ExecutionTrace {
         logger.debug("Checking can test callee " + execution.getCallee().toString());
         if (execution.getCallee() instanceof ObjVarDetails) {
             if(execution.getCallee().getType().isAnonymousClass()) return false;
-            Stack<MethodExecution> parentStack = getParentExeStack(execution.getCallee());
+            Stack<MethodExecution> parentStack = getParentExeStack(execution.getCallee(), true);
             if (parentStack == null || parentStack.contains(execution) || !parentStack.stream().allMatch(MethodExecution::isCanTest))
                 return false;
         }

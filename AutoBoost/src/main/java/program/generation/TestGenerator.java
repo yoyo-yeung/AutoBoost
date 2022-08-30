@@ -273,7 +273,7 @@ public class TestGenerator {
     private void prepareCallee(MethodExecution target, TestCase testCase) {
         if (target.getCalleeId() == -1 || !(target.getCallee() instanceof ObjVarDetails))
             return;
-        Stack<MethodExecution> parentStack = executionTrace.getParentExeStack(target.getCallee());
+        Stack<MethodExecution> parentStack = executionTrace.getParentExeStack(target.getCallee(), true);
         if (parentStack == null) throw new IllegalArgumentException("Provided target's callee cannot be created");
         Set<ObjVarDetails> varsToCreate = new HashSet<>();
         // get all vars that should be stored for re-using
