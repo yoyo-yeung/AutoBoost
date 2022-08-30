@@ -135,7 +135,6 @@ public class ExecutionTrace {
                 try {
                     return (!InstrumentResult.getSingleton().getClassPublicFieldsMap().containsKey(finalType.getName()) && Modifier.isPublic(finalType.getField(f.getName()).getModifiers())) || InstrumentResult.getSingleton().getClassPublicFieldsMap().get(finalType.getName()).contains(f.getName());
                 } catch (NoSuchFieldException e) {
-                    logger.error(e);
                     return false;
                 }
             }).filter(f -> {
@@ -143,7 +142,6 @@ public class ExecutionTrace {
                     Object val = f.get(finalObjValue1);
                     return val != null && System.identityHashCode(val) == System.identityHashCode(finalObjValue1);
                 } catch (IllegalAccessException e) {
-                    e.printStackTrace();
                     return false;
                 }
             }).map(Field::getName).findAny();
@@ -507,7 +505,6 @@ public class ExecutionTrace {
             classesToGetFields.removeIf(c -> c.equals(Object.class) || c.equals(Serializable.class) || c.equals(Field.class) || c.equals(Class.class));
             InstrumentResult.getSingleton().addClassDetails(new ClassDetails(CUC.getName(), classesToGetFields.stream()
                     .flatMap(c -> Arrays.stream(c.getDeclaredFields()))
-//                    .filter(f -> !(soot.Modifier.isStatic(f.getModifiers()) && soot.Modifier.isFinal(f.getModifiers())))
                     .collect(Collectors.toList())));
         }
         result.append("{");
@@ -590,7 +587,7 @@ public class ExecutionTrace {
      * @return if there is unmockable usages of vars in execution
      */
     private boolean hasUnmockableUsage(MethodExecution execution, Set<Integer> vars) {
-        logger.debug("Checking has unmockableusages " + execution.toSimpleString());
+        logger.debug("Checking has unmockable usages " + execution.toSimpleString());
         return getChildren(execution.getID()).stream()
                 .map(this::getMethodExecutionByID)
                 .anyMatch(e -> {
