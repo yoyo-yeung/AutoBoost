@@ -415,9 +415,9 @@ public class ExecutionTrace {
         this.callGraph.removeVertex(vertex);
     }
 
-    public Set<Integer> getChildren(int father) {
-        Set<Integer> results = new HashSet<>();
-        this.callGraph.outgoingEdgesOf(father).stream().filter(e -> this.callGraph.getEdgeTarget(e) != father).forEach(e -> {
+    public List<Integer> getChildren(int father) {
+        List<Integer> results = new ArrayList<>();
+        this.callGraph.outgoingEdgesOf(father).stream().filter(e -> this.callGraph.getEdgeTarget(e) != father).sorted(Comparator.comparingInt(CallOrderEdge::getLabel)).forEach(e -> {
             results.add(this.callGraph.getEdgeTarget(e));
         });
         return results;
