@@ -191,6 +191,10 @@ public class TestGenerator {
             if (((ArrVarDetails) returnVarDetail).getComponents().size() == 0) return true;
             return StringUtils.countMatches(e.getMethodInvoked().getReturnSootType().toString(), "[]") == StringUtils.countMatches(returnVarDetail.getType().getSimpleName(), "[]") && ((ArrVarDetails) returnVarDetail).getLeaveType().stream().allMatch(ClassUtils::isPrimitiveOrWrapper);
         }
+        if(varDetailClass.equals(MapVarDetails.class)) {
+            if(((MapVarDetails) returnVarDetail).getKeyValuePairs().size() == 0) return true;
+            return ((MapVarDetails) returnVarDetail).getKeyValuePairs().stream().flatMap(kvp -> Stream.of(kvp.getKey(), kvp.getValue())).map(executionTrace::getVarDetailByID).map(VarDetail::getType).allMatch(ClassUtils::isPrimitiveOrWrapper);
+        }
         try {
             if(varDetailClass.equals(EnumVarDetails.class) && returnVarDetail.getType().equals(Class.class) && !accessibilityCheck(ClassUtils.getClass(((EnumVarDetails) returnVarDetail).getValue()), e.getRequiredPackage()))
             return false;
