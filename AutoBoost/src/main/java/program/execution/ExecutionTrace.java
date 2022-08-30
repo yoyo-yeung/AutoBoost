@@ -619,8 +619,15 @@ public class ExecutionTrace {
 
                             if(Modifier.isPrivate(toMock.getModifiers()) || methodDetails.getName().equals("equals") || methodDetails.getName().equals("hashCode"))
                                 return true;
-                        } catch (NoSuchMethodException ex) {
-                            ex.printStackTrace();
+                            if(e.getReturnValId()!=-1) {
+                                VarDetail returnVal = this.getVarDetailByID(e.getReturnValId());
+                                if (returnVal instanceof EnumVarDetails && returnVal.getType().equals(Class.class)) {
+                                    String neededPackage = getRequiredPackage(ClassUtils.getClass(((EnumVarDetails) returnVal).getValue()));
+                                    if(neededPackage == null || (!neededPackage.isEmpty() && !execution.getRequiredPackage().equals(neededPackage))) return true;
+                                    execution.setRequiredPackage(neededPackage);
+                                }
+                            }
+                        } catch (NoSuchMethodException | ClassNotFoundException ignored) {
                         }
                     }
                     if (InstrumentResult.getSingleton().isLibMethod(methodDetails.getId()) && e.getParams().stream().anyMatch(vars::contains))
