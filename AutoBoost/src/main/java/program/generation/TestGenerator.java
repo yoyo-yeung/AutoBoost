@@ -198,8 +198,13 @@ public class TestGenerator {
         try {
             if(varDetailClass.equals(EnumVarDetails.class) && returnVarDetail.getType().equals(Class.class) && !accessibilityCheck(ClassUtils.getClass(((EnumVarDetails) returnVarDetail).getValue()), e.getRequiredPackage()))
             return false;
-        } catch (ClassNotFoundException ex) {
-            ex.printStackTrace();
+            if(varDetailClass.equals(EnumVarDetails.class) && !returnVarDetail.getType().equals(Class.class)) {
+                if(returnVarDetail.getType().getPackage().getName().startsWith(Properties.getSingleton().getPUT()))
+                    return instrumentResult.getClassPublicFieldsMap().getOrDefault(returnVarDetail.getType().getName(), new HashSet<>()).contains(((EnumVarDetails) returnVarDetail).getValue());
+                else
+                    return Modifier.isPublic(returnVarDetail.getType().getField(((EnumVarDetails) returnVarDetail).getValue()).getModifiers());
+            }
+        } catch (ClassNotFoundException | NoSuchFieldException ignored) {
         }
         return true;
     }
