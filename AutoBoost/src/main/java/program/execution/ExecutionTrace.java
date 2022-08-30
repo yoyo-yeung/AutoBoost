@@ -581,6 +581,9 @@ public class ExecutionTrace {
             if (execution.getCalleeId() != -1 && execution.getCallee() instanceof ObjVarDetails)
                 inputsAndDes.addAll(getParentExeStack(execution.getCallee(), true).stream().map(e -> exeToInputVarsMap.getOrDefault(e.getID(), new HashSet<>())).flatMap(Collection::stream).collect(Collectors.toSet())); // may change to accumulative putting to Map if it takes LONG
             execution.setCanTest(execution.getParams().stream().map(this::getVarDetailByID).noneMatch(p->isUnmockableParam(execution, p)) && !hasUnmockableUsage(execution, inputsAndDes));
+
+            if(!execution.getRequiredPackage().isEmpty() && !execution.getRequiredPackage().startsWith(Properties.getSingleton().getPUT()))
+                execution.setCanTest(false);
             logger.debug(executionQueue.size() +" checks remaining");
         }
     }
