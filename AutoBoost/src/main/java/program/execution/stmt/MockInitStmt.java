@@ -1,6 +1,6 @@
 package program.execution.stmt;
 
-import org.mockito.Mockito;
+import org.powermock.api.mockito.PowerMockito;
 
 import java.util.Collections;
 import java.util.Set;
@@ -14,11 +14,11 @@ public class MockInitStmt extends Stmt{
 
     @Override
     public String getStmt(Set<Class<?>> fullCNameNeeded) {
-        return "Mockito.mock("+ (fullCNameNeeded.contains(mockType)? mockType.getName().replace("$", ".") : mockType.getSimpleName()) + ".class)";
+        return "PowerMockito.mock("+ (fullCNameNeeded.contains(mockType)? mockType.getName().replace("$", ".") : mockType.getSimpleName()) + ".class)";
     }
 
     @Override
     public Set<Class<?>> getImports(String packageName) {
-        return Collections.singleton(Mockito.class);
+        return Collections.singleton(PowerMockito.class);
     }
 }

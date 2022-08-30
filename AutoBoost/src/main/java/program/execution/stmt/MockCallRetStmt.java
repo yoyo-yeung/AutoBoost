@@ -26,7 +26,7 @@ public class MockCallRetStmt extends Stmt{
 
     @Override
     public String getStmt(Set<Class<?>> fullCNameNeeded) {
-        return "Mockito.when("+methodInvStmt.getStmt(fullCNameNeeded)+ ")" + returnStmts.stream().map(s -> ".thenReturn("+s.getStmt(fullCNameNeeded)+")").collect(Collectors.joining("\n")) +";";
+        return "PowerMockito.when("+methodInvStmt.getStmt(fullCNameNeeded)+ ")" + returnStmts.stream().map(s -> ".thenReturn("+s.getStmt(fullCNameNeeded)+")").collect(Collectors.joining("\n")) +";";
     }
 
     @Override

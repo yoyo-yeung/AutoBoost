@@ -2,10 +2,11 @@ package program.generation.test;
 
 import helper.Properties;
 import org.apache.commons.lang3.ClassUtils;
+import org.junit.runner.RunWith;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -16,6 +17,7 @@ public class TestClass {
     private Set<Class<?>> imports = new HashSet<>();
     private String className = null;
     private String packageName = null;
+    private Set<Class<?>> mockedTypes = new HashSet<>();
 
     public TestClass(String packageName) {
         this.packageName = packageName;
@@ -42,13 +44,10 @@ public class TestClass {
         this.ID = ID;
     }
 
-    public ArrayList<TestCase> getEnclosedTestCases() {
-        return enclosedTestCases;
+    public List<TestCase> getEnclosedTestCases() {
+        return enclosedTestCases.stream().distinct().collect(Collectors.toList());
     }
 
-    public void setEnclosedTestCases(ArrayList<TestCase> enclosedTestCases) {
-        this.enclosedTestCases = enclosedTestCases;
-    }
 
     public void addEnclosedTestCases(TestCase testCase) {
         if(this.enclosedTestCases.stream().anyMatch(ex -> ex.equals(testCase))) return;
@@ -95,6 +94,11 @@ public class TestClass {
     }
 
     public String output() {
+        if(this.mockedTypes.size() > 0 ){
+            this.addImports(PowerMockRunner.class);
+            this.addImports(PrepareForTest.class);
+            this.addImports(RunWith.class);
+        }
         Set<Class<?>> fullCNameNeeded= this.imports.stream().collect(Collectors.groupingBy(Class::getSimpleName, Collectors.toSet())).entrySet().stream().filter(e -> e.getValue().size() > 1 )
                 .flatMap(e -> e.getValue().stream()).collect(Collectors.toSet());
         fullCNameNeeded.addAll(this.imports.stream().filter(ClassUtils::isInnerClass).collect(Collectors.toSet()));
@@ -103,9 +107,18 @@ public class TestClass {
         this.imports.stream().filter(i -> !fullCNameNeeded.contains(i)).filter(i -> !i.getPackage().getName().equals(packageName)).map(i -> {
             return "import " + i.getName().replace("$", ".") + ";" + Properties.getNewLine();
         }).forEach(result::append);
+        mockAnnotationsSetUp(fullCNameNeeded).forEach(result::append);
         result.append("public class ").append(this.className).append(Properties.getSingleton().getJunitVer()==3? " extends TestCase" : "").append("{").append(Properties.getNewLine());
         this.getEnclosedTestCases().stream().map(t-> t.output(fullCNameNeeded)+Properties.getNewLine()).forEach(result::append);
         result.append("}").append(Properties.getNewLine());
         return result.toString();
+    }
+
+    public List<String> mockAnnotationsSetUp(Set<Class<?>> fullCNameNeeded){
+        List<String> res = new ArrayList<>();
+        if(this.mockedTypes.size() == 0) return res;
+        res.add("@RunWith(PowerMockRunner.class)\n");
+        res.add("@PrepareForTest({" + this.mockedTypes.stream().map(t -> (fullCNameNeeded.contains(t)? t.getName().replace("$", ".") : t.getSimpleName()) + ".class").collect(Collectors.joining(",") )+ "})\n");
+        return res;
     }
 }
