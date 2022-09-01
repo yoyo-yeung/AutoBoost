@@ -101,10 +101,10 @@ public class TestClass {
         }
         Set<Class<?>> fullCNameNeeded= this.imports.stream().collect(Collectors.groupingBy(Class::getSimpleName, Collectors.toSet())).entrySet().stream().filter(e -> e.getValue().size() > 1 )
                 .flatMap(e -> e.getValue().stream()).collect(Collectors.toSet());
-        fullCNameNeeded.addAll(this.imports.stream().filter(ClassUtils::isInnerClass).collect(Collectors.toSet()));
+        fullCNameNeeded.addAll(this.imports.stream().filter(c-> ClassUtils.isInnerClass(c) || c.getPackage() == null).collect(Collectors.toSet()));
         StringBuilder result = new StringBuilder();
         result.append("package " + packageName).append(";").append(Properties.getNewLine());
-        this.imports.stream().filter(i -> !fullCNameNeeded.contains(i)).filter(i -> !i.getPackage().getName().equals(packageName)).map(i -> {
+        this.imports.stream().filter(i -> !fullCNameNeeded.contains(i)).filter(i -> i.getPackage() != null && !i.getPackage().getName().equals(packageName)).map(i -> {
             return "import " + i.getName().replace("$", ".") + ";" + Properties.getNewLine();
         }).forEach(result::append);
         mockAnnotationsSetUp(fullCNameNeeded).forEach(result::append);
