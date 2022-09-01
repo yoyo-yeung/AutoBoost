@@ -405,6 +405,7 @@ public class ExecutionTrace {
         if (!this.callGraph.containsVertex(original)) return;
         this.callGraph.addVertex(now);
         this.callGraph.removeAllEdges(original, now);
+        this.callGraph.removeAllEdges(now, original);
         this.callGraph.outgoingEdgesOf(original).forEach(e -> addMethodRelationship(now, this.callGraph.getEdgeTarget(e), e.getLabel()));
         this.callGraph.incomingEdgesOf(original).forEach(e -> addMethodRelationship(this.callGraph.getEdgeSource(e), now, e.getLabel()));
         this.callGraph.removeVertex(original);
