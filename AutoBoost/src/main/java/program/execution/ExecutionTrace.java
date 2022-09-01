@@ -714,10 +714,15 @@ public class ExecutionTrace {
             case STATIC:
                 String neededPackage = getRequiredPackage(methodDetails.getdClass());
                 if (neededPackage == null) return false;
-                if (methodDetails.getAccess().equals(ACCESS.PROTECTED) && neededPackage.equals(""))
-                    neededPackage = methodDetails.getDeclaringClass().getPackageName();
                 execution.setRequiredPackage(neededPackage);
         }
+        if(methodDetails.getAccess().equals(ACCESS.PROTECTED)) {
+            if(execution.getRequiredPackage().isEmpty())
+                execution.setRequiredPackage(methodDetails.getDeclaringClass().getPackageName());
+            else if(!execution.getRequiredPackage().equals(methodDetails.getDeclaringClass().getPackageName()))
+                return false;
+        }
+        if(execution.getParams().stream().map(this::getVarDetailByID).anyMatch(p-> p instanceof ObjVarDetails && p.getTypeSimpleName().startsWith("$"))) return false;
         return execution.getParams().stream().map(this::getVarDetailByID)
                 .filter(p -> p instanceof EnumVarDetails && p.getType().equals(Class.class)).map(p -> (EnumVarDetails) p).allMatch(p -> {
                     try {
