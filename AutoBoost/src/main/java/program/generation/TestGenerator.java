@@ -1,5 +1,6 @@
 package program.generation;
 
+import entity.ACCESS;
 import entity.METHOD_TYPE;
 import entity.UnrecognizableException;
 import helper.Properties;
@@ -438,7 +439,11 @@ public class TestGenerator {
     private String getPackageForTestCase(MethodExecution e) {
         if (!e.getRequiredPackage().isEmpty())
             return e.getRequiredPackage();
-        return e.getCalleeId() != -1 && e.getCallee() instanceof ObjVarDetails ? e.getCallee().getType().getPackage().getName() : e.getMethodInvoked().getDeclaringClass().getPackageName();
+        if(e.getCalleeId() == -1 || ! (e.getCallee() instanceof ObjVarDetails))
+            return e.getMethodInvoked().getDeclaringClass().getPackageName();
+        return executionTrace.getParentExeStack(e.getCallee(), true)
+                .stream().filter(ex -> ex.getMethodInvoked().getAccess().equals(ACCESS.PROTECTED))
+                .findAny().map(ex -> ex.getMethodInvoked().getDeclaringClass().getPackageName()).orElse(e.getMethodInvoked().getDeclaringClass().getPackageName());
     }
 
     private static class MockOccurrence {
