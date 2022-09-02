@@ -643,6 +643,15 @@ public class ExecutionTrace {
         if(p instanceof ObjVarDetails && p.getID()!=execution.getCalleeId() && !execution.getParams().contains(p.getID()) && !p.equals(nullVar)) return true;
         if(p instanceof ArrVarDetails) return ((ArrVarDetails) p).getComponents().stream().map(this::getVarDetailByID).anyMatch(c -> isUnmockableParam(execution, c));
         if(p instanceof MapVarDetails) return ((MapVarDetails) p).getKeyValuePairs().stream().flatMap(c-> Stream.of(c.getKey(), c.getValue())).map(this::getVarDetailByID).anyMatch(c-> isUnmockableParam(execution, c));
+        if(p instanceof EnumVarDetails && p.getType().equals(Class.class)) {
+            try {
+                String requiredPackage = getRequiredPackage(ClassUtils.getClass(((EnumVarDetails) p).getValue()));
+                if(requiredPackage == null) return true;
+                else execution.setRequiredPackage(requiredPackage);
+            } catch (ClassNotFoundException ignored) {
+
+            }
+        }
         return false;
     }
     /**
