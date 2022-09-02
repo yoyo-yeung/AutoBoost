@@ -639,10 +639,10 @@ public class ExecutionTrace {
     }
 
     private boolean isUnmockableParam(MethodExecution execution, VarDetail p) {
-        if(p instanceof ObjVarDetails && (p.getType().isAnonymousClass() )) return true;
+        if(p instanceof ObjVarDetails && (p.getType().isAnonymousClass() || p.getTypeSimpleName().startsWith("$"))) return true;
         if(p instanceof ObjVarDetails && p.getID()!=execution.getCalleeId() && !execution.getParams().contains(p.getID()) && !p.equals(nullVar)) return true;
-        if(p instanceof ArrVarDetails) return ((ArrVarDetails) p).getComponents().stream().map(this::getVarDetailByID).noneMatch(c -> isUnmockableParam(execution, c));
-        if(p instanceof MapVarDetails) return ((MapVarDetails) p).getKeyValuePairs().stream().flatMap(c-> Stream.of(c.getKey(), c.getValue())).map(this::getVarDetailByID).noneMatch(c-> isUnmockableParam(execution, c));
+        if(p instanceof ArrVarDetails) return ((ArrVarDetails) p).getComponents().stream().map(this::getVarDetailByID).anyMatch(c -> isUnmockableParam(execution, c));
+        if(p instanceof MapVarDetails) return ((MapVarDetails) p).getKeyValuePairs().stream().flatMap(c-> Stream.of(c.getKey(), c.getValue())).map(this::getVarDetailByID).anyMatch(c-> isUnmockableParam(execution, c));
         return false;
     }
     /**
