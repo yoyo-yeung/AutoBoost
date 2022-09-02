@@ -20,7 +20,7 @@ public class AssertStmt extends Stmt{
     public String getStmt(Set<Class<?>>fullCNameNeeded) {
         Class<?> assertType = ExecutionTrace.getSingleton().getVarDetailByID(expected.resultVarDetailID).getType();
 
-        return (Properties.getSingleton().getJunitVer()==4? "Assert." : "") +
+        return "Assert."  +
                 (assertType.isArray() ? "assertTrue(" + (assertType.getComponentType().isArray()? "Arrays.deepEquals(" : "Arrays.equals(") + expected.getStmt(fullCNameNeeded) + "," + actual.getStmt(fullCNameNeeded) + "))" :  "assertEquals(" + expected.getStmt(fullCNameNeeded) + ", " + actual.getStmt(fullCNameNeeded) +
                         (deltaChecking(assertType)
                                 ? ", " + MARGIN : "") + ")") ;
@@ -33,8 +33,8 @@ public class AssertStmt extends Stmt{
     @Override
     public Set<Class<?>> getImports(String packageName) {
         Set<Class<?>> imports = new HashSet<>();
-        if(Properties.getSingleton().getJunitVer() == 4)
-            imports.add(Assert.class);
+//        if(Properties.getSingleton().getJunitVer() == 4)
+        imports.add(Assert.class);
         if(ExecutionTrace.getSingleton().getVarDetailByID(expected.resultVarDetailID).getType().isArray())
             imports.add(Arrays.class);
         imports.addAll(expected.getImports(packageName));

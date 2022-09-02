@@ -23,8 +23,8 @@ public class TestClass {
         this.packageName = packageName;
         this.ID = classIDGenerator.incrementAndGet();
         this.className = Properties.getSingleton().getTestSuitePrefix() + "_"+ this.ID + "_Test";
-        if(Properties.getSingleton().getJunitVer() == 3)
-            this.addImports(junit.framework.TestCase.class);
+//        if(Properties.getSingleton().getJunitVer() == 3)
+//            this.addImports(junit.framework.TestCase.class);
 
     }
 
@@ -108,7 +108,7 @@ public class TestClass {
             return "import " + i.getName().replace("$", ".") + ";" + Properties.getNewLine();
         }).forEach(result::append);
         mockAnnotationsSetUp(fullCNameNeeded).forEach(result::append);
-        result.append("public class ").append(this.className).append(Properties.getSingleton().getJunitVer()==3? " extends TestCase" : "").append("{").append(Properties.getNewLine());
+        result.append("public class ").append(this.className).append("{").append(Properties.getNewLine());
         this.getEnclosedTestCases().stream().map(t-> t.output(fullCNameNeeded)+Properties.getNewLine()).forEach(result::append);
         result.append("}").append(Properties.getNewLine());
         return result.toString();
