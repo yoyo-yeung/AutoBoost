@@ -2,6 +2,8 @@ package program.generation.test;
 
 import helper.Properties;
 import org.apache.commons.lang3.ClassUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.runner.RunWith;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
@@ -11,6 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public class TestClass {
+    private static Logger logger = LogManager.getLogger(TestClass.class);
     private static AtomicInteger classIDGenerator = new AtomicInteger(0);
     private int ID;
     private ArrayList<TestCase> enclosedTestCases = new ArrayList<>();
@@ -23,8 +26,6 @@ public class TestClass {
         this.packageName = packageName;
         this.ID = classIDGenerator.incrementAndGet();
         this.className = Properties.getSingleton().getTestSuitePrefix() + "_"+ this.ID + "_Test";
-//        if(Properties.getSingleton().getJunitVer() == 3)
-//            this.addImports(junit.framework.TestCase.class);
 
     }
 
@@ -94,11 +95,9 @@ public class TestClass {
     }
 
     public String output() {
-        if(this.mockedTypes.size() > 0 ){
             this.addImports(PowerMockRunner.class);
             this.addImports(PrepareForTest.class);
             this.addImports(RunWith.class);
-        }
         Set<Class<?>> fullCNameNeeded= this.imports.stream().collect(Collectors.groupingBy(Class::getSimpleName, Collectors.toSet())).entrySet().stream().filter(e -> e.getValue().size() > 1 )
                 .flatMap(e -> e.getValue().stream()).collect(Collectors.toSet());
         fullCNameNeeded.addAll(this.imports.stream().filter(c-> ClassUtils.isInnerClass(c) || c.getPackage() == null).collect(Collectors.toSet()));
@@ -116,7 +115,7 @@ public class TestClass {
 
     public List<String> mockAnnotationsSetUp(Set<Class<?>> fullCNameNeeded){
         List<String> res = new ArrayList<>();
-        if(this.mockedTypes.size() == 0) return res;
+//        if(this.mockedTypes.size() == 0) return res;
         res.add("@RunWith(PowerMockRunner.class)\n");
         res.add("@PrepareForTest({" + this.mockedTypes.stream().map(t -> (fullCNameNeeded.contains(t)? t.getName().replace("$", ".") : t.getSimpleName()) + ".class").collect(Collectors.joining(",") )+ "})\n");
         return res;
