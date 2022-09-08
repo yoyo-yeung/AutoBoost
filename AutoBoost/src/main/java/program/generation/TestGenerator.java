@@ -226,14 +226,11 @@ public class TestGenerator {
                             mockOccurrences.add(occurrence);
                             occurrence.addReturnVar(e.getReturnValId());
                             VarDetail returnVal = executionTrace.getVarDetailByID(e.getReturnValId());
-                            e.getParams().stream().map(executionTrace::getVarDetailByID).filter(this::isVarToMock).forEach(p -> {
-                                createMockVars(p, testCase);
-
-                            });
-                            if (isVarToMock(returnVal)) {
-                                VarStmt mockReturn = new VarStmt(valType, testCase.getNewVarID(), returnVal.getID());
+                            e.getParams().stream().map(executionTrace::getVarDetailByID).filter(this::isVarToMock).forEach(p ->
+                                createMockVars(p, testCase));
+                            if (isVarToMock(returnVal))
                                 createMockVars(returnVal, testCase);
-                            }
+
                         }
                         testCase.addOrUpdateMockedVar(executionTrace.getVarDetailByID(e.getResultThisId()), mockedVar);
                     } else {
