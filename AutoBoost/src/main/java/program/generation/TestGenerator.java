@@ -226,12 +226,13 @@ public class TestGenerator {
                             mockOccurrences.add(occurrence);
                             occurrence.addReturnVar(e.getReturnValId());
                             VarDetail returnVal = executionTrace.getVarDetailByID(e.getReturnValId());
+                            e.getParams().stream().map(executionTrace::getVarDetailByID).filter(this::isVarToMock).forEach(p -> {
+                                createMockVars(p, testCase);
 
-                            if (returnVal instanceof ObjVarDetails && !returnVal.equals(executionTrace.getNullVar())) {
-                                Class<?> valType = getAccessibleSuperType(returnVal.getType(), testCase.getPackageName());
+                            });
+                            if (isVarToMock(returnVal)) {
                                 VarStmt mockReturn = new VarStmt(valType, testCase.getNewVarID(), returnVal.getID());
-                                testCase.addStmt(new AssignStmt(mockReturn, new MockInitStmt(valType)));
-                                testCase.addOrUpdateMockedVar(returnVal, mockReturn);
+                                createMockVars(returnVal, testCase);
                             }
                         }
                         testCase.addOrUpdateMockedVar(executionTrace.getVarDetailByID(e.getResultThisId()), mockedVar);
@@ -240,7 +241,26 @@ public class TestGenerator {
                     }
                 });
     }
+    private boolean isVarToMock(VarDetail v) {
+        return (v instanceof ArrVarDetails || v instanceof MapVarDetails || v instanceof ObjVarDetails) && !(v instanceof ObjVarDetails && v.equals(executionTrace.getNullVar())) && !(v instanceof ArrVarDetails && ((ArrVarDetails) v).getComponents().stream().map(executionTrace::getVarDetailByID).noneMatch(this::isVarToMock)) && !(v instanceof MapVarDetails && ((MapVarDetails) v).getKeyValuePairs().stream().flatMap(e -> Stream.of(e.getKey(), e.getValue())).map(executionTrace::getVarDetailByID).noneMatch(this::isVarToMock));
+    }
 
+    private void createMockVars(VarDetail v, TestCase testCase) {
+         Stmt res = prepareAndGetConstantVar(v);
+         if(res != null) return;
+         if(v instanceof ArrVarDetails)
+             ((ArrVarDetails) v).getComponents().stream().map(executionTrace::getVarDetailByID).forEach(p -> createMockVars(p, testCase));
+
+         else if(v instanceof MapVarDetails)
+             ((MapVarDetails) v).getKeyValuePairs().stream().flatMap(e -> Stream.of(e.getKey(), e.getValue())).map(executionTrace::getVarDetailByID).forEach(p -> createMockVars(p, testCase));
+
+         else {
+             Class<?> valType = getAccessibleSuperType(v.getType(), testCase.getPackageName());
+             res = new VarStmt(valType, testCase.getNewVarID(), v.getID());
+             testCase.addStmt(new AssignStmt(res, new MockInitStmt(valType)));
+             testCase.addOrUpdateMockedVar(v, (VarStmt) res);
+         }
+    }
     private void createMockedParamCalls(TestCase testCase, Set<MockOccurrence> mockOccurrences) {
         mockOccurrences.forEach(m -> {
             List<Stmt> paramStmts = m.getParamVarID().stream().map(executionTrace::getVarDetailByID)
@@ -388,13 +408,8 @@ public class TestGenerator {
                 return varStmt;
             }
         } else {
-
-            Class<?> valType = getAccessibleSuperType(p.getType(), testCase.getPackageName());
-            varStmt = new VarStmt(valType, testCase.getNewVarID(), p.getID());
-            MockInitStmt mockInitStmt = new MockInitStmt(valType);
-            testCase.addStmt(new AssignStmt(varStmt, mockInitStmt));
-            testCase.addOrUpdateMockedVar(p, (VarStmt) varStmt);
-            return varStmt;
+            createMockVars(p, testCase);
+            return getCreatedOrConstantVar(p, testCase);
         }
     }
 
