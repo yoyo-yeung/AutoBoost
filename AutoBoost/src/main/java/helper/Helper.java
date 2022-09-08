@@ -6,6 +6,8 @@ import org.apache.logging.log4j.Logger;
 import soot.Modifier;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class Helper {
@@ -43,10 +45,12 @@ public class Helper {
 
     public static Class<?> getAccessibleSuperType(Class<?> c, String packageName) {
         if(accessibilityCheck(c, packageName)) return c;
-        return Stream.concat(Stream.of(c), ClassUtils.getAllSuperclasses(c).stream())
-                .flatMap(s -> Stream.concat(Stream.of(s), Arrays.stream(s.getInterfaces())))
-                .filter(c1-> accessibilityCheck(c1, packageName))
-                .findFirst().orElse(c);
+        List<Class<?>> classList = Stream.concat(Stream.of(c), ClassUtils.getAllSuperclasses(c).stream()).collect(Collectors.toList());
+        classList.remove(Object.class);
+        List<Class<?>> interfaceList = classList.stream().flatMap(s -> Arrays.stream(s.getInterfaces())).filter(c1-> accessibilityCheck(c1, packageName)).collect(Collectors.toList());
+        classList = classList.stream().filter(c1-> accessibilityCheck(c1, packageName)).collect(Collectors.toList());
+        return classList.stream().findFirst().orElse(interfaceList.stream().findFirst().orElse(Object.class));
+
     }
 
 }
