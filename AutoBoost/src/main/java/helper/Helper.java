@@ -4,6 +4,7 @@ import org.apache.commons.lang3.ClassUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import soot.Modifier;
+import soot.Type;
 
 import java.util.Arrays;
 import java.util.List;
@@ -51,6 +52,14 @@ public class Helper {
         classList = classList.stream().filter(c1-> accessibilityCheck(c1, packageName)).collect(Collectors.toList());
         return classList.stream().findFirst().orElse(interfaceList.stream().findFirst().orElse(Object.class));
 
+    }
+
+    public static Class<?> sootTypeToClass(Type sootType) {
+        try {
+            return ClassUtils.getClass(sootType.toQuotedString().replace("'",""));
+        } catch (ClassNotFoundException e) {
+            return null;
+        }
     }
 
 }

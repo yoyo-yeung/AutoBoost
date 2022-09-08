@@ -3,6 +3,7 @@ package program.generation;
 import entity.ACCESS;
 import entity.METHOD_TYPE;
 import entity.UnrecognizableException;
+import helper.Helper;
 import helper.Properties;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -26,8 +27,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static helper.Helper.accessibilityCheck;
-import static helper.Helper.getAccessibleSuperType;
+import static helper.Helper.*;
 
 public class TestGenerator {
     private static final Logger logger = LogManager.getLogger(TestGenerator.class);
@@ -154,14 +154,7 @@ public class TestGenerator {
             // check if the method is actually called by subclass callee
             // if yes, they cannot be specified in test case and hence cannot be used as target
             MethodDetails details = e.getMethodInvoked();
-            Method method = details.getdClass().getMethod(details.getName(), details.getParameterTypes().stream().map(t -> {
-                try {
-                    return ClassUtils.getClass(t.toQuotedString());
-                } catch (ClassNotFoundException classNotFoundException) {
-                    classNotFoundException.printStackTrace();
-                    return null;
-                }
-            }).toArray(Class<?>[]::new));
+            Method method = details.getdClass().getMethod(details.getName(), details.getParameterTypes().stream().map(Helper::sootTypeToClass).toArray(Class<?>[]::new));
             if (method.isBridge()) return false;
             if (e.getCalleeId() == -1) return true; // if no callee, no overriding problems
             if (e.getCallee().getType().equals(details.getdClass())) return true;

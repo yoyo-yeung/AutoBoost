@@ -2,7 +2,6 @@ package program.execution.stmt;
 
 import entity.METHOD_TYPE;
 import helper.Properties;
-import org.apache.commons.lang3.ClassUtils;
 import program.analysis.MethodDetails;
 import program.execution.ExecutionTrace;
 import program.instrumentation.InstrumentResult;
@@ -12,6 +11,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import static helper.Helper.sootTypeToClass;
 
 public class MethodInvStmt extends Stmt {
     private final String callee;
@@ -25,11 +26,9 @@ public class MethodInvStmt extends Stmt {
         MethodDetails details = InstrumentResult.getSingleton().getMethodDetailByID(methodInvID);
         IntStream.range(0, details.getParameterCount()).filter(i -> !(paramStmts.get(i) instanceof CastStmt) && paramStmts.get(i).getResultVarDetailID() == ExecutionTrace.getSingleton().getNullVar().getID())
                 .forEach(i -> {
-                    try {
-                        paramStmts.set(i, new CastStmt(paramStmts.get(i).getResultVarDetailID(), ClassUtils.getClass(details.getParameterTypes().get(i).toQuotedString()), paramStmts.get(i)));
-                    } catch (ClassNotFoundException e) {
-                        e.printStackTrace();
-                    }
+                    Class<?> castType = sootTypeToClass(details.getParameterTypes().get(i));
+                    if (castType != null)
+                        paramStmts.set(i, new CastStmt(paramStmts.get(i).getResultVarDetailID(), castType, paramStmts.get(i)));
                 });
     }
 
