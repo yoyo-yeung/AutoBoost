@@ -645,13 +645,14 @@ public class ExecutionTrace {
             if(neededPackage == null || (!neededPackage.isEmpty() && !execution.getRequiredPackage().equals(neededPackage))) return false;
             execution.setRequiredPackage(neededPackage);
         }
-        if(returnVal instanceof ObjVarDetails && (returnVal.getTypeSimpleName().startsWith("$") || returnVal.getType().isAnonymousClass())) return false;
+        Class<?> declaredReturnType = execution.getReturnValId() == -1 ? null : execution.getMethodInvoked().getReturnType();
+        if(returnVal instanceof ObjVarDetails && !returnVal.equals(nullVar) && ((declaredReturnType == null && getRequiredPackage(returnVal.getType()) == null) || (declaredReturnType!=null && !declaredReturnType.isAssignableFrom(getAccessibleSuperType(returnVal.getType(), execution.getRequiredPackage()))))) return false;
         if(returnVal instanceof ArrVarDetails) return ((ArrVarDetails) returnVal).getComponents().stream().map(this::getVarDetailByID).allMatch(c -> canProvideReturnVal(execution, c));
         if(returnVal instanceof MapVarDetails) return ((MapVarDetails) returnVal).getKeyValuePairs().stream().flatMap(c-> Stream.of(c.getKey(), c.getValue())).map(this::getVarDetailByID).allMatch(c-> canProvideReturnVal(execution, c));
         return true;
     }
     private boolean isUnmockableParam(MethodExecution execution, Class<?> paramDeclaredType, VarDetail p) {
-        if(p instanceof ObjVarDetails && (p.getType().isAnonymousClass() || p.getTypeSimpleName().startsWith("$"))) return true;
+        if(p instanceof ObjVarDetails && !p.equals(this.getNullVar()) && ((paramDeclaredType == null && getRequiredPackage(p.getType()) == null) || (paramDeclaredType!=null && !paramDeclaredType.isAssignableFrom(getAccessibleSuperType(p.getType(), execution.getRequiredPackage()))))) return true;
         if(p instanceof ObjVarDetails && p.getID()!=execution.getCalleeId() && !execution.getParams().contains(p.getID()) && !p.equals(nullVar)) return true;
         if(p instanceof ArrVarDetails) return ((ArrVarDetails) p).getComponents().stream().map(this::getVarDetailByID).anyMatch(c -> isUnmockableParam(execution, paramDeclaredType == null ? null : paramDeclaredType.getComponentType(), c));
         if(p instanceof MapVarDetails) return ((MapVarDetails) p).getKeyValuePairs().stream().flatMap(c-> Stream.of(c.getKey(), c.getValue())).map(this::getVarDetailByID).anyMatch(c-> isUnmockableParam(execution, null, c));

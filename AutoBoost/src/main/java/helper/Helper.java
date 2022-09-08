@@ -39,9 +39,10 @@ public class Helper {
             catch (NumberFormatException ignored){
 
             }
-        return (Modifier.isPublic(modifier) || (!Modifier.isPrivate(modifier) && c.getPackage().getName().equals(packageName))) // access check
+        return (Modifier.isPublic(modifier) || (!Modifier.isPrivate(modifier) && (packageName.isEmpty() || c.getPackage().getName().equals(packageName)))) // access check
                 && (!ClassUtils.isInnerClass(c) || (Modifier.isStatic(modifier) && Modifier.isPublic(modifier) && accessibilityCheck(c.getEnclosingClass(), packageName))) // if is inner class, is static inner class and its enclosing class CAN be accessed
-                && !c.isAnonymousClass(); // is NOT anonymous class
+                && !c.isAnonymousClass() // is NOT anonymous class
+                && !c.getSimpleName().startsWith("$");
     }
 
     public static Class<?> getAccessibleSuperType(Class<?> c, String packageName) {
