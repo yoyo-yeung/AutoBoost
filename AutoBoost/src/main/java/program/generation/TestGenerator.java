@@ -296,18 +296,18 @@ public class TestGenerator {
     }
 
     private String prepareAndGetCallee(MethodExecution target, TestCase testCase) {
-        prepareCallee(target, testCase);
+        if (target.getCalleeId() != -1 && target.getCallee() instanceof ObjVarDetails)
+            prepareCallee((ObjVarDetails) target.getCallee(), testCase);
         return getCalleeVarString(target, testCase);
     }
 
-    private void prepareCallee(MethodExecution target, TestCase testCase) {
-        if (target.getCalleeId() == -1 || !(target.getCallee() instanceof ObjVarDetails))
-            return;
-        Stack<MethodExecution> parentStack = executionTrace.getParentExeStack(target.getCallee(), true);
+    private void prepareCallee(ObjVarDetails target, TestCase testCase) {
+
+        Stack<MethodExecution> parentStack = executionTrace.getParentExeStack(target, true);
         if (parentStack == null) throw new IllegalArgumentException("Provided target's callee cannot be created");
         Set<ObjVarDetails> varsToCreate = new HashSet<>();
         // get all vars that should be stored for re-using
-        varsToCreate.add((ObjVarDetails) target.getCallee());
+        varsToCreate.add(target);
         varsToCreate.addAll(parentStack.stream().filter(e -> e.getCalleeId() != -1).map(MethodExecution::getCallee).filter(c -> c instanceof ObjVarDetails).map(c -> (ObjVarDetails) c).collect(Collectors.toSet()));
 
         while (!parentStack.isEmpty()) {
