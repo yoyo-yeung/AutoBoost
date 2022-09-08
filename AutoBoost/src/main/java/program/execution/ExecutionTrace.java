@@ -658,7 +658,7 @@ public class ExecutionTrace {
         if(p instanceof EnumVarDetails && p.getType().equals(Class.class)) {
             try {
                 String requiredPackage = getRequiredPackage(ClassUtils.getClass(((EnumVarDetails) p).getValue()));
-                if(requiredPackage == null) return true;
+                if(requiredPackage == null || (!execution.getRequiredPackage().isEmpty() && !execution.getRequiredPackage().equals(requiredPackage)) ) return true;
                 else execution.setRequiredPackage(requiredPackage);
             } catch (ClassNotFoundException ignored) {
 
