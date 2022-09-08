@@ -247,7 +247,8 @@ public class TestGenerator {
                     .map(p -> getCreatedOrConstantVar(p, testCase))
                     .collect(Collectors.toList());
             MethodInvStmt methodInvStmt = new MethodInvStmt(m.getMockedVar().getStmt(new HashSet<>()), m.getInovkedMethod().getId(), paramStmts);
-            testCase.addStmt(new MockCallRetStmt(methodInvStmt, m.getReturnVars().stream().map(executionTrace::getVarDetailByID).map(p -> getCreatedOrConstantVar(p, testCase)).collect(Collectors.toList())));
+            boolean skipChecking = m.getReturnVars().stream().map(executionTrace::getVarDetailByID).allMatch(p -> p instanceof EnumVarDetails && p.getType().equals(Class.class));
+            testCase.addStmt(new MockCallRetStmt(methodInvStmt, m.getReturnVars().stream().map(executionTrace::getVarDetailByID).map(p -> getCreatedOrConstantVar(p, testCase)).collect(Collectors.toList()), skipChecking));
         });
     }
 
