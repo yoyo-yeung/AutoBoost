@@ -622,13 +622,9 @@ public class ExecutionTrace {
                                 return true;
                             if(e.getReturnValId()!=-1) {
                                 VarDetail returnVal = this.getVarDetailByID(e.getReturnValId());
-                                if (returnVal instanceof EnumVarDetails && returnVal.getType().equals(Class.class)) {
-                                    String neededPackage = getRequiredPackage(ClassUtils.getClass(((EnumVarDetails) returnVal).getValue()));
-                                    if(neededPackage == null || (!neededPackage.isEmpty() && !execution.getRequiredPackage().equals(neededPackage))) return true;
-                                    execution.setRequiredPackage(neededPackage);
-                                }
+                                if(!canProvideReturnVal(execution, returnVal)) return true;
                             }
-                        } catch (NoSuchMethodException | ClassNotFoundException ignored) {
+                        } catch (NoSuchMethodException ignored) {
                         }
                     }
                     if (InstrumentResult.getSingleton().isLibMethod(methodDetails.getId()) && e.getParams().stream().anyMatch(vars::contains))
@@ -636,6 +632,22 @@ public class ExecutionTrace {
 
                     return hasUnmockableUsage(e, vars);
                 });
+    }
+
+    private boolean canProvideReturnVal(MethodExecution execution, VarDetail returnVal) {
+        if (returnVal instanceof EnumVarDetails && returnVal.getType().equals(Class.class)) {
+            String neededPackage = null;
+            try {
+                neededPackage = getRequiredPackage(ClassUtils.getClass(((EnumVarDetails) returnVal).getValue()));
+            } catch (ClassNotFoundException ignored) {
+            }
+            if(neededPackage == null || (!neededPackage.isEmpty() && !execution.getRequiredPackage().equals(neededPackage))) return false;
+            execution.setRequiredPackage(neededPackage);
+        }
+        if(returnVal instanceof ObjVarDetails && (returnVal.getTypeSimpleName().startsWith("$") || returnVal.getType().isAnonymousClass())) return false;
+        if(returnVal instanceof ArrVarDetails) return ((ArrVarDetails) returnVal).getComponents().stream().map(this::getVarDetailByID).allMatch(c -> canProvideReturnVal(execution, c));
+        if(returnVal instanceof MapVarDetails) return ((MapVarDetails) returnVal).getKeyValuePairs().stream().flatMap(c-> Stream.of(c.getKey(), c.getValue())).map(this::getVarDetailByID).allMatch(c-> canProvideReturnVal(execution, c));
+        return true;
     }
 
     private boolean isUnmockableParam(MethodExecution execution, VarDetail p) {
