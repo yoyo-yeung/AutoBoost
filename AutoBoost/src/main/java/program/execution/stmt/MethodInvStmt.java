@@ -22,6 +22,15 @@ public class MethodInvStmt extends Stmt {
         this.callee = callee;
         this.methodInvID = methodInvID;
         this.paramStmts = paramStmts;
+        MethodDetails details = InstrumentResult.getSingleton().getMethodDetailByID(methodInvID);
+        IntStream.range(0, details.getParameterCount()).filter(i -> !(paramStmts.get(i) instanceof CastStmt) && paramStmts.get(i).getResultVarDetailID() == ExecutionTrace.getSingleton().getNullVar().getID())
+                .forEach(i -> {
+                    try {
+                        paramStmts.set(i, new CastStmt(paramStmts.get(i).getResultVarDetailID(), ClassUtils.getClass(details.getParameterTypes().get(i).toQuotedString()), paramStmts.get(i)));
+                    } catch (ClassNotFoundException e) {
+                        e.printStackTrace();
+                    }
+                });
     }
 
     public String getCallee() {
