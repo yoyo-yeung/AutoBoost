@@ -260,7 +260,7 @@ public class TestGenerator {
         List<Stmt> components;
         if (p instanceof MapVarDetails) {
             components = ((MapVarDetails) p).getKeyValuePairs().stream().map(e -> new PairStmt(getCreatedOrConstantVar(executionTrace.getVarDetailByID(e.getKey()), testCase), getCreatedOrConstantVar(executionTrace.getVarDetailByID(e.getValue()), testCase))).collect(Collectors.toList());
-            varStmt = new VarStmt(p.getType(), testCase.getNewVarID(), p.getID());
+            varStmt = new VarStmt(p.getType(), testCase.getNewVarID(  ), p.getID());
             testCase.addStmt(new AssignStmt(varStmt, new ConstructStmt(p.getID(), null, components)));
             testCase.addOrUpdateVar(p.getID(), (VarStmt) varStmt);
             return varStmt;
