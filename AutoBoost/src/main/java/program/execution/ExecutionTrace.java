@@ -3,6 +3,7 @@ package program.execution;
 import entity.ACCESS;
 import entity.LOG_ITEM;
 import entity.METHOD_TYPE;
+import helper.Helper;
 import helper.Properties;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.logging.log4j.LogManager;
@@ -26,8 +27,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import static helper.Helper.accessibilityCheck;
-import static helper.Helper.getRequiredPackage;
+import static helper.Helper.*;
 
 public class ExecutionTrace {
     private static final Logger logger = LogManager.getLogger(ExecutionTrace.class);
@@ -581,7 +581,11 @@ public class ExecutionTrace {
             exeToInputVarsMap.put(execution.getID(), inputsAndDes);
             if (execution.getCalleeId() != -1 && execution.getCallee() instanceof ObjVarDetails)
                 inputsAndDes.addAll(getParentExeStack(execution.getCallee(), true).stream().map(e -> exeToInputVarsMap.getOrDefault(e.getID(), new HashSet<>())).flatMap(Collection::stream).collect(Collectors.toSet())); // may change to accumulative putting to Map if it takes LONG
-            execution.setCanTest(execution.getParams().stream().map(this::getVarDetailByID).noneMatch(p->isUnmockableParam(execution, p)) && !hasUnmockableUsage(execution, inputsAndDes));
+            execution.setCanTest(IntStream.range(0, execution.getParams().size()).noneMatch(pID -> {
+                VarDetail p = this.getVarDetailByID(execution.getParams().get(pID));
+                Class<?> paramDeclaredType = sootTypeToClass(execution.getMethodInvoked().getParameterTypes().get(pID));
+                return isUnmockableParam(execution, paramDeclaredType, p);
+            }) && !hasUnmockableUsage(execution, inputsAndDes));
 
             if(!execution.getRequiredPackage().isEmpty() && !execution.getRequiredPackage().startsWith(Properties.getSingleton().getPUT()))
                 execution.setCanTest(false);
@@ -604,19 +608,16 @@ public class ExecutionTrace {
                     MethodDetails methodDetails = e.getMethodInvoked();
                     if (methodDetails.isFieldAccess() && vars.contains(e.getCalleeId()))
                         return true;
-                    if(vars.contains(e.getCalleeId()) && e.getParams().stream().map(this::getVarDetailByID).anyMatch(v -> isUnmockableParam(execution,v)))
+                    if(vars.contains(e.getCalleeId()) && IntStream.range(0, e.getParams().size()).anyMatch(pID -> {
+                        VarDetail p = this.getVarDetailByID(e.getParams().get(pID));
+                        Class<?> pDeclaredType = sootTypeToClass(e.getMethodInvoked().getParameterTypes().get(pID));
+                        return isUnmockableParam(execution, pDeclaredType, p);
+                    }))
                         return true;
 
                     if(vars.contains(e.getCalleeId())) {
                         try {
-                            Method toMock = methodDetails.getdClass().getMethod(methodDetails.getName(), methodDetails.getParameterTypes().stream().map(t -> {
-                                try {
-                                    return ClassUtils.getClass(t.toQuotedString());
-                                } catch (ClassNotFoundException classNotFoundException) {
-                                    classNotFoundException.printStackTrace();
-                                    return null;
-                                }
-                            }).toArray(Class<?>[]::new));
+                            Method toMock = methodDetails.getdClass().getMethod(methodDetails.getName(), methodDetails.getParameterTypes().stream().map(Helper::sootTypeToClass).toArray(Class<?>[]::new));
 
                             if(Modifier.isPrivate(toMock.getModifiers()) || methodDetails.getName().equals("equals") || methodDetails.getName().equals("hashCode"))
                                 return true;
@@ -649,12 +650,11 @@ public class ExecutionTrace {
         if(returnVal instanceof MapVarDetails) return ((MapVarDetails) returnVal).getKeyValuePairs().stream().flatMap(c-> Stream.of(c.getKey(), c.getValue())).map(this::getVarDetailByID).allMatch(c-> canProvideReturnVal(execution, c));
         return true;
     }
-
-    private boolean isUnmockableParam(MethodExecution execution, VarDetail p) {
+    private boolean isUnmockableParam(MethodExecution execution, Class<?> paramDeclaredType, VarDetail p) {
         if(p instanceof ObjVarDetails && (p.getType().isAnonymousClass() || p.getTypeSimpleName().startsWith("$"))) return true;
         if(p instanceof ObjVarDetails && p.getID()!=execution.getCalleeId() && !execution.getParams().contains(p.getID()) && !p.equals(nullVar)) return true;
-        if(p instanceof ArrVarDetails) return ((ArrVarDetails) p).getComponents().stream().map(this::getVarDetailByID).anyMatch(c -> isUnmockableParam(execution, c));
-        if(p instanceof MapVarDetails) return ((MapVarDetails) p).getKeyValuePairs().stream().flatMap(c-> Stream.of(c.getKey(), c.getValue())).map(this::getVarDetailByID).anyMatch(c-> isUnmockableParam(execution, c));
+        if(p instanceof ArrVarDetails) return ((ArrVarDetails) p).getComponents().stream().map(this::getVarDetailByID).anyMatch(c -> isUnmockableParam(execution, paramDeclaredType == null ? null : paramDeclaredType.getComponentType(), c));
+        if(p instanceof MapVarDetails) return ((MapVarDetails) p).getKeyValuePairs().stream().flatMap(c-> Stream.of(c.getKey(), c.getValue())).map(this::getVarDetailByID).anyMatch(c-> isUnmockableParam(execution, null, c));
         if(p instanceof EnumVarDetails && p.getType().equals(Class.class)) {
             try {
                 String requiredPackage = getRequiredPackage(ClassUtils.getClass(((EnumVarDetails) p).getValue()));
@@ -666,6 +666,23 @@ public class ExecutionTrace {
         }
         return false;
     }
+//    private boolean isUnmockableParam(MethodExecution execution, VarDetail p) {
+//        if(p instanceof ObjVarDetails && (p.getType().isAnonymousClass() || p.getTypeSimpleName().startsWith("$"))) return true;
+//        if(p instanceof ObjVarDetails && p.getID()!=execution.getCalleeId() && !execution.getParams().contains(p.getID()) && !p.equals(nullVar)) return true;
+//        if(p instanceof ArrVarDetails) return ((ArrVarDetails) p).getComponents().stream().map(this::getVarDetailByID).anyMatch(c -> isUnmockableParam(execution, c));
+//        if(p instanceof MapVarDetails) return ((MapVarDetails) p).getKeyValuePairs().stream().flatMap(c-> Stream.of(c.getKey(), c.getValue())).map(this::getVarDetailByID).anyMatch(c-> isUnmockableParam(execution, c));
+//        if(p instanceof EnumVarDetails && p.getType().equals(Class.class)) {
+//            try {
+//                String requiredPackage = getRequiredPackage(ClassUtils.getClass(((EnumVarDetails) p).getValue()));
+//                if(requiredPackage == null || (!execution.getRequiredPackage().isEmpty() && !execution.getRequiredPackage().equals(requiredPackage)) ) return true;
+//                else execution.setRequiredPackage(requiredPackage);
+//            } catch (ClassNotFoundException ignored) {
+//
+//            }
+//        }
+//        return false;
+//    }
+//
     /**
      * Get stack of method executions needed to create the var specified
      *
