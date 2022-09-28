@@ -40,6 +40,7 @@ public class ExecutionTrace {
     private final DirectedMultigraph<Integer, CallOrderEdge> callGraph;
     private final VarDetail nullVar;
     private final Map<VarDetail, Stack<MethodExecution>> varToParentStackCache = new HashMap<>(); // cache last retrieval results to save time
+    private final Map<MethodExecution, Boolean> exeToFaultyExeContainedCache = new HashMap<>(); // cache to save execution time
 
     /**
      * Constructor of ExecutionTrace, set up all vars.
@@ -723,22 +724,26 @@ public class ExecutionTrace {
 
     /**
      * @param execution MethodExecution under check
+     * @param useCache
      * @return if the execution provided is / runs faulty methods
      */
-    private boolean containsFaultyDef(MethodExecution execution) {
+    private boolean containsFaultyDef(MethodExecution execution, boolean useCache) {
         InstrumentResult instrumentResult = InstrumentResult.getSingleton();
         MethodDetails details = execution.getMethodInvoked();
-        return Properties.getSingleton().getFaultyFuncIds().stream()
+        if(useCache && exeToFaultyExeContainedCache.containsKey(execution)) return exeToFaultyExeContainedCache.get(execution);
+        exeToFaultyExeContainedCache.put(execution, Properties.getSingleton().getFaultyFuncIds().stream()
                 .map(instrumentResult::getMethodDetailByID)
-                .anyMatch(s -> s.equals(details) || (execution.getCalleeId() != -1 && s.getName().equals(details.getName()) && getVarDetailByID(execution.getCalleeId()).getType().equals(s.getdClass()))) || getChildren(execution.getID()).stream().anyMatch(this::containsFaultyDef);
+                .anyMatch(s -> s.equals(details) || (execution.getCalleeId() != -1 && s.getName().equals(details.getName()) && getVarDetailByID(execution.getCalleeId()).getType().equals(s.getdClass()))) || getChildren(execution.getID()).stream().anyMatch(exeID -> containsFaultyDef(exeID, true)));
+        return exeToFaultyExeContainedCache.get(execution);
     }
 
     /**
      * @param exeID id of MethodExecution under check
+     * @param useCache
      * @return if the execution provided is / runs faulty methods
      */
-    private boolean containsFaultyDef(int exeID) {
-        return containsFaultyDef(getMethodExecutionByID(exeID));
+    private boolean containsFaultyDef(int exeID, boolean useCache) {
+        return containsFaultyDef(getMethodExecutionByID(exeID), useCache);
     }
 
 
@@ -749,7 +754,7 @@ public class ExecutionTrace {
     private boolean canTestExecution(MethodExecution execution) {
         MethodDetails methodDetails = execution.getMethodInvoked();
         logger.debug("Checking can test execution " + execution.toSimpleString());
-        if (containsFaultyDef(execution) || getAllMethodExecs().values().stream().anyMatch(e -> e.sameCalleeParamNMethod(execution) && !e.sameContent(execution)))
+        if (containsFaultyDef(execution, true) || getAllMethodExecs().values().stream().anyMatch(e -> e.sameCalleeParamNMethod(execution) && !e.sameContent(execution)))
             return false;
         if (methodDetails.getAccess().equals(ACCESS.PRIVATE) || methodDetails.getName().startsWith("access$"))
             return false;
