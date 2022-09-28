@@ -158,6 +158,9 @@ public class ExecutionLogger {
     public static void logException(Object exception, long threadID) {
         if(!isLogging()) return;
         getLatestExecution(threadID).setExceptionClass(exception.getClass());
+        if(instrumentResult.isLibMethod(getLatestExecution(threadID).getMethodInvoked().getId())) {
+            getCurrentExecuting(threadID).get(getCurrentExecuting(threadID).size()-2).setExceptionClass(exception.getClass());
+        }
     }
 
     public static MethodExecution getLatestExecution(long threadID) {
