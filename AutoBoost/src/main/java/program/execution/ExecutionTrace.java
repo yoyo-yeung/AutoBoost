@@ -254,6 +254,7 @@ public class ExecutionTrace {
             return false;
         if(methodDetails.getType().equals(METHOD_TYPE.MEMBER) && (getParentExeStack(execution.getCallee(), false) == null || getParentExeStack(execution.getCallee(), false).contains(execution)))
             return false;
+        if(Helper.isCannotMockType(varDetail.getType()) && methodDetails.getDeclaringClass().getPackageName().startsWith(Properties.getSingleton().getPUT())) return false; // would not use as def if it is an un-mock-able param type created by PUT methods
         MethodExecution existingDef = getDefExeList(varDetail.getID()) == null ? null : getMethodExecutionByID(getDefExeList(varDetail.getID()));
         if (existingDef == null) return true;
         if (existingDef.sameCalleeParamNMethod(execution)) return false; // would compare method, callee, params
@@ -561,6 +562,7 @@ public class ExecutionTrace {
         Queue<MethodExecution> executionQueue = this.allMethodExecs.values().stream().sorted(Comparator.comparingInt(MethodExecution::getID)).collect(Collectors.toCollection(LinkedList::new));
         Set<Integer> checked = new HashSet<>();
         Map<Integer, Set<Integer>> exeToInputVarsMap = new HashMap<>();
+        Map<Integer, Set<Integer>> exeToUnmockableInputVarMap = new HashMap<>();
         while (!executionQueue.isEmpty()) {
             MethodExecution execution = executionQueue.poll();
             if(execution.getCalleeId()!=-1 && getParentExeStack(execution.getCallee(), true)==null) {
@@ -572,20 +574,24 @@ public class ExecutionTrace {
                 executionQueue.add(execution); // if the callee is not checked yet, wait
                 continue;
             }
-            logger.debug("checking " +  execution.toSimpleString());
+            logger.debug("checking " +  execution.getID() + "\t" + execution.getMethodInvoked().toString() );
             checked.add(execution.getID());
             execution.setCanTest(canTestExecution(execution) && canTestCallee(execution) && compatibilityCheck(execution));
             if (!execution.isCanTest()) continue;
 
             Set<Integer> inputsAndDes = getInputAndDes(execution);
+            Set<Integer> unmockableInputs = getUnmockableInputs(execution);
             exeToInputVarsMap.put(execution.getID(), inputsAndDes);
-            if (execution.getCalleeId() != -1 && execution.getCallee() instanceof ObjVarDetails)
+            exeToUnmockableInputVarMap.put(execution.getID(), unmockableInputs);
+            if (execution.getCalleeId() != -1 && execution.getCallee() instanceof ObjVarDetails) {
                 inputsAndDes.addAll(getParentExeStack(execution.getCallee(), true).stream().map(e -> exeToInputVarsMap.getOrDefault(e.getID(), new HashSet<>())).flatMap(Collection::stream).collect(Collectors.toSet())); // may change to accumulative putting to Map if it takes LONG
+                unmockableInputs.addAll(getParentExeStack(execution.getCallee(), true).stream().map(e -> exeToUnmockableInputVarMap.getOrDefault(e.getID(), new HashSet<>())).flatMap(Collection::stream).collect(Collectors.toSet())); // may change to accumulative putting to Map if it takes LONG
+            }
             execution.setCanTest(IntStream.range(0, execution.getParams().size()).noneMatch(pID -> {
                 VarDetail p = this.getVarDetailByID(execution.getParams().get(pID));
                 Class<?> paramDeclaredType = sootTypeToClass(execution.getMethodInvoked().getParameterTypes().get(pID));
                 return isUnmockableParam(execution, paramDeclaredType, p);
-            }) && !hasUnmockableUsage(execution, inputsAndDes));
+            }) && !hasUnmockableUsage(execution, inputsAndDes, unmockableInputs));
 
             if(!execution.getRequiredPackage().isEmpty() && !execution.getRequiredPackage().startsWith(Properties.getSingleton().getPUT()))
                 execution.setCanTest(false);
@@ -597,29 +603,29 @@ public class ExecutionTrace {
      * Check if there exist unmockable usage of vars specified in the provided execution
      *
      * @param execution Method Execution under investigation
-     * @param vars      VarDetail IDs to check
+     * @param allInputVars      VarDetail IDs to check
      * @return if there is unmockable usages of vars in execution
      */
-    private boolean hasUnmockableUsage(MethodExecution execution, Set<Integer> vars) {
+    private boolean hasUnmockableUsage(MethodExecution execution, Set<Integer> allInputVars, Set<Integer> allUnmockableVars) {
         logger.debug("Checking has unmockable usages " + execution.toSimpleString());
         return getChildren(execution.getID()).stream()
                 .map(this::getMethodExecutionByID)
                 .anyMatch(e -> {
                     MethodDetails methodDetails = e.getMethodInvoked();
-                    if (methodDetails.isFieldAccess() && vars.contains(e.getCalleeId()))
+                    if (methodDetails.isFieldAccess() && allInputVars.contains(e.getCalleeId()))
                         return true;
-                    if(vars.contains(e.getCalleeId()) && IntStream.range(0, e.getParams().size()).anyMatch(pID -> {
+                    if(allInputVars.contains(e.getCalleeId()) && IntStream.range(0, e.getParams().size()).anyMatch(pID -> {
                         VarDetail p = this.getVarDetailByID(e.getParams().get(pID));
                         Class<?> pDeclaredType = sootTypeToClass(e.getMethodInvoked().getParameterTypes().get(pID));
                         return isUnmockableParam(execution, pDeclaredType, p);
                     }))
                         return true;
 
-                    if(vars.contains(e.getCalleeId())) {
+                    if(allInputVars.contains(e.getCalleeId())) {
                         try {
-                            Method toMock = methodDetails.getdClass().getMethod(methodDetails.getName(), methodDetails.getParameterTypes().stream().map(Helper::sootTypeToClass).toArray(Class<?>[]::new));
+                            Method toMock = methodDetails.getdClass().getDeclaredMethod(methodDetails.getName(), methodDetails.getParameterTypes().stream().map(Helper::sootTypeToClass).toArray(Class<?>[]::new));
 
-                            if(Modifier.isPrivate(toMock.getModifiers()) || methodDetails.getName().equals("equals") || methodDetails.getName().equals("hashCode"))
+                            if(methodDetails.getName().equals("equals") || methodDetails.getName().equals("hashCode") || methodDetails.getName().equals("getClass"))
                                 return true;
                             if(e.getReturnValId()!=-1) {
                                 VarDetail returnVal = this.getVarDetailByID(e.getReturnValId());
@@ -628,10 +634,11 @@ public class ExecutionTrace {
                         } catch (NoSuchMethodException ignored) {
                         }
                     }
-                    if (InstrumentResult.getSingleton().isLibMethod(methodDetails.getId()) && e.getParams().stream().anyMatch(vars::contains))
+                    if(allUnmockableVars.contains(e.getCalleeId())) return true;
+                    if (InstrumentResult.getSingleton().isLibMethod(methodDetails.getId()) && e.getParams().stream().anyMatch(allInputVars::contains))
                         return true;
 
-                    return hasUnmockableUsage(e, vars);
+                    return hasUnmockableUsage(e, allInputVars, allUnmockableVars);
                 });
     }
 
@@ -840,9 +847,24 @@ public class ExecutionTrace {
                 .map(this::getVarDetailByID)
                 .map(this::getRelatedObjVarIDs)
                 .flatMap(Collection::stream)
+                .map(this::getVarDetailByID)
+                .filter(p -> !Helper.isCannotMockType(p.getType())) // do not track the var if they are NOT to be mocked
+                .map(VarDetail::getID)
                 .collect(Collectors.toSet());
 
         return getDes(execution, new HashSet<>(inputsAndDes));
+    }
+
+    private Set<Integer> getUnmockableInputs(MethodExecution execution) {
+        return  execution.getParams().stream()
+                .map(this::getVarDetailByID)
+                .map(this::getRelatedObjVarIDs)
+                .flatMap(Collection::stream)
+                .map(this::getVarDetailByID)
+                .filter(p -> !p.equals(nullVar))
+                .filter(p -> Helper.isCannotMockType(p.getType()) && (getParentExeStack(p, true) == null || getParentExeStack(p, true).stream().anyMatch(e -> e.getMethodInvoked().getDeclaringClass().getPackageName().startsWith(Properties.getSingleton().getPUT())))) // do not track the var if they are NOT to be mocked
+                .map(VarDetail::getID)
+                .collect(Collectors.toSet());
     }
 
     /**

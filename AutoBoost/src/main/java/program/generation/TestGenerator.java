@@ -397,7 +397,11 @@ public class TestGenerator {
 
                 return varStmt;
             }
-        } else {
+        } else if(p instanceof ObjVarDetails && Helper.isCannotMockType(p.getType()) && executionTrace.getParentExeStack(p, true)!=null) {
+            prepareCallee((ObjVarDetails) p, testCase);
+            return getCreatedOrConstantVar(p, testCase);
+        }
+        else {
             createMockVars(p, testCase);
             return getCreatedOrConstantVar(p, testCase);
         }

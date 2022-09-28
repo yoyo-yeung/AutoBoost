@@ -4,8 +4,11 @@ import org.apache.commons.lang3.ClassUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import soot.Modifier;
+import soot.RefType;
 import soot.Type;
 
+import java.io.StringReader;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -63,4 +66,16 @@ public class Helper {
         }
     }
 
+    public static boolean isCannotMockType(Type type) {
+        return isCannotMockType(type.toQuotedString()) && Arrays.stream(new Class[]{Boolean.class, Byte.class, Character.class, Class.class, Double.class, Enum.class, Float.class, Integer.class, Long.class, Short.class, Void.class, String.class, StringBuilder.class, StringBuffer.class}).map(Class::getName).map(RefType::v).noneMatch(type::equals);
+    }
+
+    public static boolean isCannotMockType(Class<?> type) {
+        return isCannotMockType(type.getName()) && !ClassUtils.isPrimitiveOrWrapper(type) && !type.equals(String.class) && !type.equals(StringBuilder.class) && !type.equals(StringBuffer.class) && !type.equals(Enum.class) ;
+    }
+
+    private static boolean isCannotMockType(String typeName) {
+//        logger.debug(typeName);
+        return typeName.replace("'", "").startsWith("java.lang.reflect.Method") || typeName.equals("java.io.StringReader");
+    }
 }
