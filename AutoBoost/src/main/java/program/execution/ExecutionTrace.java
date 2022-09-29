@@ -801,7 +801,7 @@ public class ExecutionTrace {
      */
     private boolean canTestCallee(MethodExecution execution) {
         if (execution.getCalleeId() == -1) return true;
-        logger.debug("Checking can test callee " + execution.getCallee().toString());
+        logger.debug("Checking can test callee " + execution.getCallee().getID() + "\t " + execution.getCallee().getType().getName());
         if (execution.getCallee() instanceof ObjVarDetails) {
             if(execution.getCallee().getType().isAnonymousClass()) return false;
             Stack<MethodExecution> parentStack = getParentExeStack(execution.getCallee(), true);
