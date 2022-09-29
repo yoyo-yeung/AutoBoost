@@ -120,10 +120,10 @@ public class ExecutionTrace {
      * @param type       type of the object to be stored
      * @param objValue   object to be stored
      * @param process    the current process, e.g. logging callee? param? or return value?
-     * @param subElement
+     * @param canOnlyBeUse
      * @return VarDetail storing the provided object
      */
-    public VarDetail getVarDetail(MethodExecution execution, Class<?> type, Object objValue, LOG_ITEM process, boolean subElement) {
+    public VarDetail getVarDetail(MethodExecution execution, Class<?> type, Object objValue, LOG_ITEM process, boolean canOnlyBeUse) {
         boolean artificialEnum = false;
         if (objValue == null) return nullVar;
         if (type.isEnum()) {
@@ -212,14 +212,12 @@ public class ExecutionTrace {
             }
             assert varDetail != null; // if null, then fail to generate test
             addNewVarDetail(varDetail);
-            if (!subElement) {
+            if (!canOnlyBeUse) {
                 if (setCurrentExeAsDef(varDetail, process, execution)) addNewVarDetailDef(varDetail, execution.getID());
                 else addVarDetailUsage(varDetail, execution.getID());
-
-
             }
         } else {
-            if (!subElement) {
+            if (!canOnlyBeUse) {
                 if (setCurrentExeAsDef(varDetail, process, execution))
                     addNewVarDetailDef(varDetail, execution.getID());
                 else
@@ -286,11 +284,12 @@ public class ExecutionTrace {
             throw new IllegalArgumentException("Provided Obj cannot be handled.");
         Stream<Integer> componentStream;
         if (type.isArray()) {
-            componentStream = IntStream.range(0, Array.getLength(obj)).mapToObj(i -> getVarDetail(execution, type.getComponentType(), Array.get(obj, i), process, true).getID());
-        } else
-            componentStream = ((Collection) obj).stream().map(v -> getVarDetail(execution, getClassOfObj(v), v, process, true).getID());
-        if (Set.class.isAssignableFrom(type))
-            componentStream = componentStream.sorted();
+            componentStream = IntStream.range(0, Array.getLength(obj)).mapToObj(i -> getVarDetail(execution, type.getComponentType(), Array.get(obj, i), process, false).getID());
+        }
+        else if (Set.class.isAssignableFrom(type) && obj instanceof Set)
+            componentStream = ((Set) obj).stream().map(v -> getVarDetail(execution, getClassOfObj(v), v, process, true).getID()).sorted(Comparator.comparingInt(x -> (int)x));
+        else
+            componentStream = ((Collection) obj).stream().map(v -> getVarDetail(execution, getClassOfObj(v), v, process, false).getID());
         return componentStream;
     }
 
