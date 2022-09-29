@@ -605,6 +605,12 @@ public class ExecutionTrace {
         }
     }
 
+    private boolean hasUsageAsCallee(MethodExecution execution, Set<Integer> vars) {
+        return getChildren(execution.getID()).stream()
+                .map(this::getMethodExecutionByID)
+                .anyMatch(e -> vars.contains(e.getCalleeId()) || hasUsageAsCallee(e, vars));
+    }
+
     /**
      * Check if there exist unmockable usage of vars specified in the provided execution
      *
@@ -667,6 +673,12 @@ public class ExecutionTrace {
     private boolean isUnmockableParam(MethodExecution execution, Class<?> paramDeclaredType, VarDetail p) {
         if(p instanceof ObjVarDetails && !p.equals(this.getNullVar()) && ((paramDeclaredType == null && getRequiredPackage(p.getType()) == null) || (paramDeclaredType!=null && !paramDeclaredType.isAssignableFrom(getAccessibleSuperType(p.getType(), execution.getRequiredPackage()))))) return true;
         if(p instanceof ObjVarDetails && p.getID()!=execution.getCalleeId() && !execution.getParams().contains(p.getID()) && !p.equals(nullVar)) return true;
+        if(p instanceof ObjVarDetails && !p.equals(this.getNullVar()) && Helper.isCannotMockType(p.getType()) && hasUsageAsCallee(execution, Collections.singleton(p.getID()))) {
+            Stack<MethodExecution> parentStack = getParentExeStack(p, true);
+            if(parentStack == null || parentStack.stream().anyMatch(e -> e.getMethodInvoked().getDeclaringClass().getPackageName().startsWith(Properties.getSingleton().getPUT()))) {
+                return true;
+            }
+        }
         if(p instanceof ArrVarDetails) return ((ArrVarDetails) p).getComponents().stream().map(this::getVarDetailByID).anyMatch(c -> isUnmockableParam(execution, paramDeclaredType == null ? null : paramDeclaredType.getComponentType(), c));
         if(p instanceof MapVarDetails) return ((MapVarDetails) p).getKeyValuePairs().stream().flatMap(c-> Stream.of(c.getKey(), c.getValue())).map(this::getVarDetailByID).anyMatch(c-> isUnmockableParam(execution, null, c));
         if(p instanceof EnumVarDetails && p.getType().equals(Class.class)) {
