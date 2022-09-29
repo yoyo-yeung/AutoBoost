@@ -150,11 +150,12 @@ public class TestGenerator {
      * @return if the method execution can be directly called in test cases (e.g. if it is an override method, calling the method would actually be calling the override one
      */
     private boolean methodIsDirectlyCallable(MethodExecution e) {
+
+        MethodDetails details = e.getMethodInvoked();
         try {
             // check if the method is actually called by subclass callee
             // if yes, they cannot be specified in test case and hence cannot be used as target
-            MethodDetails details = e.getMethodInvoked();
-            Method method = details.getdClass().getMethod(details.getName(), details.getParameterTypes().stream().map(Helper::sootTypeToClass).toArray(Class<?>[]::new));
+            Method method = details.getdClass().getDeclaredMethod(details.getName(), details.getParameterTypes().stream().map(Helper::sootTypeToClass).toArray(Class<?>[]::new));
             if (method.isBridge()) return false;
             if (e.getCalleeId() == -1) return true; // if no callee, no overriding problems
             if (e.getCallee().getType().equals(details.getdClass())) return true;
@@ -162,7 +163,7 @@ public class TestGenerator {
             // prevent incorrect method call
             if (method.getDeclaringClass().isAssignableFrom(callee.getType())) //if callee is subclass
                 try {
-                    return callee.getType().getMethod(method.getName(), method.getParameterTypes()).equals(method);
+                    return callee.getType().getDeclaredMethod(method.getName(), method.getParameterTypes()).equals(method);
                 } catch (NoSuchMethodException noSuchMethodException) {
                     return true;
                 }
