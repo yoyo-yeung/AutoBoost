@@ -259,11 +259,17 @@ public class ExecutionTrace {
         if (existingDef.sameCalleeParamNMethod(execution)) return false; // would compare method, callee, params
         MethodDetails existingDefDetails = existingDef.getMethodInvoked();
         if (existingDefDetails.getType().getRank() < methodDetails.getType().getRank()) return false;
-        if (methodDetails.getType().equals(METHOD_TYPE.MEMBER) && getParentExeStack(execution.getCallee(), false) == null)
-            return false;
+
         return Stream.of(execution, existingDef)
                 .map(e -> new AbstractMap.SimpleEntry<MethodExecution, Integer>(e,
-                        (e.getMethodInvoked().getType().equals(METHOD_TYPE.MEMBER) && e.getResultThisId() == varDetail.getID() ? -1000 : 0) + e.getMethodInvoked().getParameterCount() + e.getParams().stream().map(this::getVarDetailByID).filter(p -> p.getType().isAnonymousClass() ).mapToInt(i->1000).sum()))
+                        (e.getMethodInvoked().getType().equals(METHOD_TYPE.MEMBER) && e.getResultThisId() == varDetail.getID() ? -1000 : 0) +
+                                e.getMethodInvoked().getParameterCount() +
+                                e.getParams().stream().map(this::getVarDetailByID).filter(p -> p.getType().isAnonymousClass() ).mapToInt(i->1000).sum() +
+                                (InstrumentResult.getSingleton().isLibMethod(e.getMethodInvoked().getId()) ? 999999 : 0) +
+                                (e.getMethodInvoked().getType().equals(METHOD_TYPE.CONSTRUCTOR) || e.getMethodInvoked().getType().equals(METHOD_TYPE.STATIC) ? -2000: 0 )
+//                                +
+//                                (Properties.getSingleton().getFaultyFuncIds().contains(e.getMethodInvoked().getId()) ? 10000: 0)
+                ))
                 .min(Comparator.comparingInt(AbstractMap.SimpleEntry::getValue))
                 .get().getKey().equals(execution);
     }
