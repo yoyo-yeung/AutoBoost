@@ -744,13 +744,14 @@ public class ExecutionTrace {
      * @param useCache
      * @return if the execution provided is / runs faulty methods
      */
-    private boolean containsFaultyDef(MethodExecution execution, boolean useCache) {
+    public boolean containsFaultyDef(MethodExecution execution, boolean useCache) {
         InstrumentResult instrumentResult = InstrumentResult.getSingleton();
         MethodDetails details = execution.getMethodInvoked();
         if(useCache && exeToFaultyExeContainedCache.containsKey(execution)) return exeToFaultyExeContainedCache.get(execution);
         exeToFaultyExeContainedCache.put(execution, Properties.getSingleton().getFaultyFuncIds().stream()
                 .map(instrumentResult::getMethodDetailByID)
-                .anyMatch(s -> s.equals(details) || (execution.getCalleeId() != -1 && s.getName().equals(details.getName()) && getVarDetailByID(execution.getCalleeId()).getType().equals(s.getdClass()))) || getChildren(execution.getID()).stream().anyMatch(exeID -> containsFaultyDef(exeID, true)));
+                .anyMatch(s -> s.equals(details) || (execution.getCalleeId() != -1 && s.getName().equals(details.getName()) && getVarDetailByID(execution.getCalleeId()).getType().equals(s.getdClass())))
+                || getChildren(execution.getID()).stream().anyMatch(exeID -> containsFaultyDef(exeID, useCache)));
         return exeToFaultyExeContainedCache.get(execution);
     }
 
