@@ -405,8 +405,10 @@ public class TestGenerator {
                 return execution.getMethodInvoked().getDeclaringClass().getName().replace("$", ".");
             case MEMBER:
                 if (execution.getCallee() instanceof ObjVarDetails) {
-                    if (testCase.getExistingVar(execution.getCallee()) == null)
+                    if (testCase.getExistingVar(execution.getCallee()) == null) {
+                        logger.error(execution.getCallee().toDetailedString());
                         throw new RuntimeException("Illegal callee creation flow");
+                    }
                     VarStmt originalCallee = testCase.getExistingVar(execution.getCallee());
                     String originalCalleeString = originalCallee.getStmt(new HashSet<>());
                     return originalCalleeString;
