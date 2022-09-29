@@ -25,6 +25,7 @@ import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static helper.Helper.*;
@@ -328,13 +329,65 @@ public class TestGenerator {
                     testCase.addOrUpdateVar(returnVal.getID(), returnValStmt);
                     continue;
                 }
-            } else if (execution.getMethodInvoked().getType().equals(METHOD_TYPE.CONSTRUCTOR)) {
+                if(returnVal instanceof ArrVarDetails) {
+                    Map<Integer, VarDetail> matches = IntStream.range(0, ((ArrVarDetails) returnVal).getComponents().size())
+                            .mapToObj(i -> new AbstractMap.SimpleEntry<Integer, VarDetail>(i, executionTrace.getVarDetailByID(((ArrVarDetails) returnVal).getComponents().get(i))))
+                            .filter(e -> e.getValue() instanceof ObjVarDetails && varsToCreate.contains(e.getValue()))
+                            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+                    if(matches.size() > 0 ) {
+                        VarStmt baseReturnValStmt = new VarStmt(valType, testCase.getNewVarID(), returnVal.getID());
+                        if(!execution.getMethodInvoked().getReturnType().equals(valType))
+                            invStmt = new CastStmt(returnVal.getID(), valType, invStmt);
+                        testCase.addStmt(new AssignStmt(baseReturnValStmt, invStmt));
+                        testCase.addOrUpdateVar(returnVal.getID(), baseReturnValStmt);
+
+                        matches.entrySet().stream()
+                                .forEach(e -> {
+                                    Class<?> elementValType = getAccessibleSuperType(e.getValue().getType(), testCase.getPackageName());
+                                    VarStmt elementStmt =  new VarStmt(elementValType, testCase.getNewVarID(), e.getValue().getID());
+                                    testCase.addStmt(new AssignStmt(elementStmt, new CastStmt(e.getValue().getID(), elementValType, new ArrAcceessStmt(e.getValue().getID(), baseReturnValStmt, e.getKey(), returnVal.getType()))));
+                                    testCase.addOrUpdateVar(e.getValue().getID(), elementStmt);
+
+                                });
+
+                        continue;
+                    }
+                }
+
+
+            }
+            if (execution.getMethodInvoked().getType().equals(METHOD_TYPE.CONSTRUCTOR)) {
                 VarDetail resultThisVal = executionTrace.getVarDetailByID(execution.getResultThisId());
                 if (resultThisVal instanceof ObjVarDetails && varsToCreate.contains(resultThisVal)) {
                     VarStmt returnValStmt = new VarStmt(resultThisVal.getType(), testCase.getNewVarID(), resultThisVal.getID());
                     testCase.addStmt(new AssignStmt(returnValStmt, invStmt));
                     testCase.addOrUpdateVar(resultThisVal.getID(), returnValStmt);
                     continue;
+                }
+                if(resultThisVal instanceof ArrVarDetails) {
+                    Map<Integer, VarDetail> matches = IntStream.range(0, ((ArrVarDetails) resultThisVal).getComponents().size())
+                            .mapToObj(i -> new AbstractMap.SimpleEntry<Integer, VarDetail>(i, executionTrace.getVarDetailByID(((ArrVarDetails) resultThisVal).getComponents().get(i))))
+                            .filter(e -> e.getValue() instanceof ObjVarDetails && varsToCreate.contains(e.getValue()))
+                            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                    Class<?> valType = getAccessibleSuperType(resultThisVal.getType(), testCase.getPackageName());
+
+                    if(matches.size() > 0 ) {
+                        VarStmt baseReturnValStmt = new VarStmt(valType, testCase.getNewVarID(), resultThisVal.getID());
+                        testCase.addStmt(new AssignStmt(baseReturnValStmt, invStmt));
+                        testCase.addOrUpdateVar(resultThisVal.getID(), baseReturnValStmt);
+
+                        matches.entrySet().stream()
+                                .forEach(e -> {
+                                    Class<?> elementValType = getAccessibleSuperType(e.getValue().getType(), testCase.getPackageName());
+                                    VarStmt elementStmt =  new VarStmt(elementValType, testCase.getNewVarID(), e.getValue().getID());
+                                    testCase.addStmt(new AssignStmt(elementStmt, new CastStmt(e.getValue().getID(), elementValType, new ArrAcceessStmt(e.getValue().getID(), baseReturnValStmt, e.getKey(), resultThisVal.getType()))));
+                                    testCase.addOrUpdateVar(e.getValue().getID(), elementStmt);
+
+                                });
+
+                        continue;
+                    }
                 }
             }
             testCase.addStmt(invStmt);
