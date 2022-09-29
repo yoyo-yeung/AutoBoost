@@ -212,6 +212,7 @@ public class TestGenerator {
 
     private void setUpMockedParams(MethodExecution execution, TestCase testCase, Set<MockOccurrence> mockOccurrences) {
         executionTrace.getChildren(execution.getID()).stream().map(executionTrace::getMethodExecutionByID)
+                .filter(e -> !e.getMethodInvoked().isFieldAccess())
                 .forEach(e -> {
                     if (e.getCalleeId() != -1 && e.getCallee() instanceof ObjVarDetails && testCase.getExistingMockedVar(e.getCallee()) != null) {
                         VarStmt mockedVar = testCase.getExistingMockedVar(e.getCallee());
@@ -237,7 +238,7 @@ public class TestGenerator {
     }
 
     private void createMockVars(VarDetail v, TestCase testCase) {
-         Stmt res = prepareAndGetConstantVar(v);
+         Stmt res = prepareAndGetConstantVar(v, testCase.getPackageName());
          if(res != null) return;
          if(v instanceof ArrVarDetails)
              ((ArrVarDetails) v).getComponents().stream().map(executionTrace::getVarDetailByID).forEach(p -> createMockVars(p, testCase));
@@ -266,7 +267,7 @@ public class TestGenerator {
     private Stmt getCreatedOrConstantVar(VarDetail p, TestCase testCase) {
         Stmt varStmt = testCase.getExistingCreatedOrMockedVar(p);
         if (varStmt != null) return varStmt;
-        varStmt = prepareAndGetConstantVar(p);
+        varStmt = prepareAndGetConstantVar(p, testCase.getPackageName());
         if (varStmt != null) return varStmt;
         List<Stmt> components;
         if (p instanceof MapVarDetails) {
@@ -375,7 +376,7 @@ public class TestGenerator {
     private Stmt prepareAndGetRequiredParam(VarDetail p, TestCase testCase) {
         List<Stmt> components;
         if (testCase.getExistingMockedVar(p) != null) return testCase.getExistingMockedVar(p);
-        Stmt varStmt = prepareAndGetConstantVar(p);
+        Stmt varStmt = prepareAndGetConstantVar(p, testCase.getPackageName());
         if (varStmt != null) return varStmt;
         if (p instanceof MapVarDetails) {
             components = ((MapVarDetails) p).getKeyValuePairs().stream().map(e -> new PairStmt(prepareAndGetRequiredParam(executionTrace.getVarDetailByID(e.getKey()), testCase), prepareAndGetRequiredParam(executionTrace.getVarDetailByID(e.getValue()), testCase))).collect(Collectors.toList());
@@ -412,7 +413,7 @@ public class TestGenerator {
         List<Stmt> components;
         if (p instanceof ObjVarDetails && !executionTrace.getNullVar().equals(p))
             throw new IllegalArgumentException("VarDetail " + p.toDetailedString() + " provided cannot be asserted. ");
-        Stmt varStmt = prepareAndGetConstantVar(p);
+        Stmt varStmt = prepareAndGetConstantVar(p, testCase.getPackageName());
         if (varStmt != null) return varStmt;
         varStmt = testCase.getExistingVar(p);
         if (varStmt != null) return varStmt;
@@ -437,11 +438,25 @@ public class TestGenerator {
         throw new IllegalArgumentException("VarDetail " + p.toDetailedString() + " provided cannot be asserted. ");
     }
 
-    private Stmt prepareAndGetConstantVar(VarDetail v) {
+    private Stmt prepareAndGetConstantVar(VarDetail v, String testPackage) {
         if (v.equals(executionTrace.getNullVar()))
             return new ConstantStmt(v.getID());
-        else if (v instanceof PrimitiveVarDetails || v instanceof StringVarDetails || v instanceof WrapperVarDetails || v instanceof EnumVarDetails)
+        else if (v instanceof PrimitiveVarDetails || v instanceof StringVarDetails || v instanceof WrapperVarDetails)
             return new ConstantStmt(v.getID());
+        else if (v instanceof EnumVarDetails) {
+            if(v.getType().equals(Class.class)){
+                try {
+                    Class<?> representingClass = ClassUtils.getClass(((EnumVarDetails) v).getValue());
+                    Class<?> closestClass = getAccessibleSuperType(representingClass, testPackage);
+                    if (!representingClass.equals(closestClass)) {
+                        v = new EnumVarDetails(executionTrace.getNewVarID(), Class.class, closestClass.getName());
+                        executionTrace.addNewVarDetail(v);
+                    }
+                } catch (ClassNotFoundException ignored) {
+                }
+            }
+            return new ConstantStmt(v.getID());
+        }
         else if (v instanceof StringBVarDetails)
             return new ConstantStmt(((StringBVarDetails) v).getStringValID());
         return null;
