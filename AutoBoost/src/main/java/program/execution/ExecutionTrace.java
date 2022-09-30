@@ -183,7 +183,7 @@ public class ExecutionTrace {
                 }
             }
         }
-        VarDetail varDetail = findExistingVarDetail(execution, type, objValue, process, artificialEnum);
+        VarDetail varDetail = findExistingVarDetail(execution, type, objValue, process, artificialEnum, canOnlyBeUse);
         if (varDetail == null) {
             if (type.isEnum() || artificialEnum)
                 varDetail = new EnumVarDetails(getNewVarID(), type, (String) objValue);
@@ -199,7 +199,7 @@ public class ExecutionTrace {
             else if (StringBVarDetails.availableTypeCheck(type))
                 varDetail = new StringBVarDetails(getNewVarID(), type, getVarDetail(execution, String.class, objValue.toString(), process, true).getID());
             else if (ArrVarDetails.availableTypeCheck(type) && ArrVarDetails.availableTypeCheck(objValue.getClass())) {
-                varDetail = new ArrVarDetails(getNewVarID(), getComponentStream(execution, type, objValue, process).collect(Collectors.toList()), objValue);
+                varDetail = new ArrVarDetails(getNewVarID(), getComponentStream(execution, type, objValue, process, canOnlyBeUse).collect(Collectors.toList()), objValue);
             } else if (MapVarDetails.availableTypeCheck(type) && MapVarDetails.availableTypeCheck(objValue.getClass())) {
                 varDetail = new MapVarDetails(getNewVarID(), type, ((Map<?, ?>) objValue).entrySet().stream()
                         .map(e -> new AbstractMap.SimpleEntry<Integer, Integer>(getVarDetail(execution, getClassOfObj(e.getKey()), e.getKey(), process, true).getID(), getVarDetail(execution, getClassOfObj(e.getValue()), e.getValue(), process, true).getID()))
@@ -283,19 +283,20 @@ public class ExecutionTrace {
      * @param type      the type of variable (Array/subclasses of Collection/etc)
      * @param obj       the variable
      * @param process   the current logging step
+     * @param canOnlyBeUse
      * @return Stream of VarDetail IDs
      */
-    private Stream<Integer> getComponentStream(MethodExecution execution, Class<?> type, Object obj, LOG_ITEM process) {
+    private Stream<Integer> getComponentStream(MethodExecution execution, Class<?> type, Object obj, LOG_ITEM process, boolean canOnlyBeUse) {
         if (!ArrVarDetails.availableTypeCheck(type))
             throw new IllegalArgumentException("Provided Obj cannot be handled.");
         Stream<Integer> componentStream;
         if (type.isArray()) {
-            componentStream = IntStream.range(0, Array.getLength(obj)).mapToObj(i -> getVarDetail(execution, type.getComponentType(), Array.get(obj, i), process, false).getID());
+            componentStream = IntStream.range(0, Array.getLength(obj)).mapToObj(i -> getVarDetail(execution, type.getComponentType(), Array.get(obj, i), process, canOnlyBeUse).getID());
         }
         else if (Set.class.isAssignableFrom(type) && obj instanceof Set)
             componentStream = ((Set) obj).stream().map(v -> getVarDetail(execution, getClassOfObj(v), v, process, true).getID()).sorted(Comparator.comparingInt(x -> (int)x));
         else
-            componentStream = ((Collection) obj).stream().map(v -> getVarDetail(execution, getClassOfObj(v), v, process, false).getID());
+            componentStream = ((Collection) obj).stream().map(v -> getVarDetail(execution, getClassOfObj(v), v, process, canOnlyBeUse).getID());
         return componentStream;
     }
 
@@ -306,9 +307,10 @@ public class ExecutionTrace {
      * @param objValue
      * @param process
      * @param artificialEnum
+     * @param canOnlyBeUse
      * @return ObjVarDetails if the obj was defined and stored before, null if not
      */
-    private VarDetail findExistingVarDetail(MethodExecution execution, Class<?> type, Object objValue, LOG_ITEM process, boolean artificialEnum) {
+    private VarDetail findExistingVarDetail(MethodExecution execution, Class<?> type, Object objValue, LOG_ITEM process, boolean artificialEnum, boolean canOnlyBeUse) {
         Class<?> varDetailType = null;
 //        logger.debug("findExisting ");
         if (type.isEnum() || artificialEnum) {
@@ -316,7 +318,7 @@ public class ExecutionTrace {
                 objValue = objValue.toString().replace("$", ".") + ".class";
             varDetailType = EnumVarDetails.class;
         } else if (ArrVarDetails.availableTypeCheck(type) && ArrVarDetails.availableTypeCheck(objValue.getClass())) {
-            objValue = getComponentStream(execution, type, objValue, process).map(String::valueOf).collect(Collectors.joining(Properties.getDELIMITER()));
+            objValue = getComponentStream(execution, type, objValue, process, canOnlyBeUse).map(String::valueOf).collect(Collectors.joining(Properties.getDELIMITER()));
             varDetailType = ArrVarDetails.class;
         } else if (MapVarDetails.availableTypeCheck(type) && MapVarDetails.availableTypeCheck(objValue.getClass())) {
             objValue = ((Map<?, ?>) objValue).entrySet().stream().map(comp -> getVarDetail(execution, getClassOfObj(comp.getKey()), comp.getKey(), process, true).getID() + "=" + getVarDetail(execution, getClassOfObj(comp.getValue()), comp.getValue(), process, true).getID()).sorted().collect(Collectors.joining(Properties.getDELIMITER()));
