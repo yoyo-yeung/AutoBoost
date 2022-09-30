@@ -8,7 +8,7 @@ import java.util.Objects;
 public class StringBVarDetails extends VarDetail{
     private static final CREATION_TYPE createdBy = CREATION_TYPE.CONSTRUCTOR;
     private final Class<?> type;
-    private int stringValID;
+    private final int stringValID;
 
     public StringBVarDetails(int ID, Class<?> type, int stringValID) {
         super(ID);
