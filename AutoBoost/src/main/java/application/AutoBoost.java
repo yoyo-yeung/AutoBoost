@@ -62,6 +62,7 @@ public class AutoBoost {
         Options.v().set_output_dir(properties.getInsBinPath());
         Options.v().set_keep_line_number(true);
         Options.v().setPhaseOption("jb", "use-original-names:true");
+        Options.v().set_allow_phantom_refs(true);
 //        Options.v().set_include_all(true);
         Pack jtp = PackManager.v().getPack("jtp");
         Instrumenter instrumenter = new Instrumenter();
