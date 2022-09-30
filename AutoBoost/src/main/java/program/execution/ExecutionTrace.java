@@ -254,6 +254,7 @@ public class ExecutionTrace {
         if(methodDetails.getType().equals(METHOD_TYPE.MEMBER) && (getParentExeStack(execution.getCallee(), false) == null || getParentExeStack(execution.getCallee(), false).contains(execution)))
             return false;
         if(Helper.isCannotMockType(varDetail.getType()) && methodDetails.getDeclaringClass().getPackageName().startsWith(Properties.getSingleton().getPUT())) return false; // would not use as def if it is an un-mock-able param type created by PUT methods
+        if(Properties.getSingleton().getFaultyFuncIds().contains(execution.getMethodInvoked().getId()) || containsFaultyDef(execution, true)) return false;
         MethodExecution existingDef = getDefExeList(varDetail.getID()) == null ? null : getMethodExecutionByID(getDefExeList(varDetail.getID()));
         if (existingDef == null) return true;
         if (existingDef.sameCalleeParamNMethod(execution)) return false; // would compare method, callee, params
