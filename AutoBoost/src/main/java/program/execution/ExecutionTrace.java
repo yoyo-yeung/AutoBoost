@@ -517,6 +517,8 @@ public class ExecutionTrace {
             classesToGetFields.removeIf(c -> c.equals(Object.class) || c.equals(Serializable.class) || c.equals(Field.class) || c.equals(Class.class));
             InstrumentResult.getSingleton().addClassDetails(new ClassDetails(CUC.getName(), classesToGetFields.stream()
                     .flatMap(c -> Arrays.stream(c.getDeclaredFields()))
+                    .filter(f -> !f.isSynthetic())
+                    .distinct()
                     .collect(Collectors.toList())));
         }
         result.append("{");
