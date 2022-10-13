@@ -1,6 +1,7 @@
 package program.analysis;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -10,6 +11,7 @@ public class ClassDetails {
 
     public ClassDetails(String classFullName) {
         this.classFullName = classFullName;
+        this.classFields = new ArrayList<>();
     }
 
     public ClassDetails(String classFullName, List<Field> classFields) {
