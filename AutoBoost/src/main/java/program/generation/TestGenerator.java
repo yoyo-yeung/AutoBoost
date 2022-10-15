@@ -62,7 +62,9 @@ public class TestGenerator {
                     Stmt expected = prepareAndGetAssertVal(executionTrace.getVarDetailByID(e.getReturnValId()), testCase);
                     Stmt actual = new MethodInvStmt(callee, e.getMethodInvoked().getId(), params);
                     Class<?> returnType = executionTrace.getVarDetailByID(e.getReturnValId()).getType();
-                    if (ClassUtils.isPrimitiveWrapper(returnType) && !(executionTrace.getVarDetailByID(e.getReturnValId()) instanceof EnumVarDetails)) {
+                    if(ClassUtils.isPrimitiveWrapper(returnType) && !ClassUtils.isPrimitiveWrapper(e.getMethodInvoked().getReturnType()))
+                        actual = new CastStmt(actual.getResultVarDetailID(), returnType, actual);
+                    if (ClassUtils.isPrimitiveWrapper(returnType)) {
                         expected = new CastStmt(expected.getResultVarDetailID(), ClassUtils.wrapperToPrimitive(returnType), expected);
                         actual = new CastStmt(actual.getResultVarDetailID(), ClassUtils.wrapperToPrimitive(returnType), actual);
                     }
