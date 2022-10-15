@@ -42,7 +42,7 @@ public class StringBVarDetails extends VarDetail{
 
     @Override
     public boolean sameValue(Class<?> type, Object v) {
-        return this.type.equals(type) && ExecutionTrace.getSingleton().getVarDetailByID(stringValID).sameValue(type, v.toString());
+        return this.type.equals(type) && v instanceof Integer && ((Integer)v).equals(stringValID);
     }
 
     @Override

@@ -19,7 +19,7 @@ public class PrimitiveVarDetails extends VarDetail{
             throw new IllegalArgumentException("Non primitive type value are being stored as primitive var");
         if(!ClassUtils.isPrimitiveWrapper(wrappedValue.getClass()))
             throw new IllegalArgumentException("Non wrapper type value provided. Cannot be cast to primitive value");
-        if(!ClassUtils.wrapperToPrimitive(wrappedValue.getClass()).equals(type))
+        if(!wrappedValue.getClass().isPrimitive() && !wrappedValue.getClass().equals(type) && !ClassUtils.wrapperToPrimitive(wrappedValue.getClass()).equals(type))
             throw new IllegalArgumentException("Type specified and value provided do not match");
         this.type = type;
         this.value = wrappedValue;

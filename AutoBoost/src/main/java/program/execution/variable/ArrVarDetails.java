@@ -2,6 +2,8 @@ package program.execution.variable;
 
 import entity.CREATION_TYPE;
 import helper.Properties;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import program.execution.ExecutionTrace;
 import soot.Modifier;
 
@@ -11,13 +13,18 @@ import java.util.stream.Stream;
 
 public class ArrVarDetails extends VarDetail{
     private static final CREATION_TYPE createdBy = CREATION_TYPE.CONSTRUCTOR;
+    private static final Logger logger = LogManager.getLogger(ArrVarDetails.class);
     Class<?> componentType;
     Class<?> type;
     List<Integer> components;
     String componentValue;
     Object value;
 
-    public ArrVarDetails(int ID, List<Integer> components, Object value) {
+    Integer defaultComponent;
+
+    private int size;
+
+    public ArrVarDetails(int ID, List<Integer> components, Object value, int size, int defaultComponent) {
         super(ID);
         if(value == null || components == null) throw new IllegalArgumentException("Value details not provided");
         if (!availableTypeCheck(value.getClass())) throw new IllegalArgumentException("Non array type value provided");
@@ -26,6 +33,8 @@ public class ArrVarDetails extends VarDetail{
         this.components = components;
         this.componentValue = components.stream().map(String::valueOf).collect(Collectors.joining(Properties.getDELIMITER()));
         this.value = value;
+        this.size = size;
+        this.defaultComponent = defaultComponent;
     }
 
     public Class<?> getComponentType() {
@@ -33,7 +42,9 @@ public class ArrVarDetails extends VarDetail{
     }
 
     public List<Integer> getComponents() {
-        return components;
+        List<Integer> res = new ArrayList<>(components);
+        while(res.size()< size) res.add(defaultComponent);
+        return res;
     }
 
     public Set<Class<?>> getLeaveType() {
