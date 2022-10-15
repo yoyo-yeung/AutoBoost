@@ -653,6 +653,9 @@ public class ExecutionTrace {
                 .map(this::getMethodExecutionByID)
                 .anyMatch(e -> vars.contains(e.getCalleeId()) || hasUsageAsCallee(e, vars));
     }
+    private boolean hasUnmockableUsage(MethodExecution execution, Set<Integer> allInputVars, Set<Integer> allUnmockableVars) {
+        return hasUnmockableUsage(execution, allInputVars, allUnmockableVars, new HashSet<>());
+    }
 
     /**
      * Check if there exist unmockable usage of vars specified in the provided execution
@@ -661,8 +664,10 @@ public class ExecutionTrace {
      * @param allInputVars      VarDetail IDs to check
      * @return if there is unmockable usages of vars in execution
      */
-    private boolean hasUnmockableUsage(MethodExecution execution, Set<Integer> allInputVars, Set<Integer> allUnmockableVars) {
+    private boolean hasUnmockableUsage(MethodExecution execution, Set<Integer> allInputVars, Set<Integer> allUnmockableVars, Set<MethodExecution> covered) {
         logger.debug("Checking has unmockable usages " + execution.toSimpleString());
+        if(covered.contains(execution)) return false;
+        covered.add(execution);
         return getChildren(execution.getID()).stream()
                 .map(this::getMethodExecutionByID)
                 .anyMatch(e -> {
@@ -693,7 +698,7 @@ public class ExecutionTrace {
                     if (InstrumentResult.getSingleton().isLibMethod(methodDetails.getId()) && e.getParams().stream().anyMatch(allInputVars::contains))
                         return true;
 
-                    return hasUnmockableUsage(e, allInputVars, allUnmockableVars);
+                    return hasUnmockableUsage(e, allInputVars, allUnmockableVars, covered);
                 });
     }
 
@@ -782,20 +787,24 @@ public class ExecutionTrace {
         return executionStack;
     }
 
+    public boolean containsFaultyDef(MethodExecution execution, boolean useCache, HashSet<Integer> processed) {
+        InstrumentResult instrumentResult = InstrumentResult.getSingleton();
+        MethodDetails details = execution.getMethodInvoked();
+        if(useCache && exeToFaultyExeContainedCache.containsKey(execution)) return exeToFaultyExeContainedCache.get(execution);
+        processed.add(execution.getID());
+        exeToFaultyExeContainedCache.put(execution, Properties.getSingleton().getFaultyFuncIds().stream()
+                .map(instrumentResult::getMethodDetailByID)
+                .anyMatch(s -> s.equals(details) || (execution.getCalleeId() != -1 && s.getName().equals(details.getName()) && getVarDetailByID(execution.getCalleeId()).getType().equals(s.getdClass())))
+                || getChildren(execution.getID()).stream().filter(exeID -> !processed.contains(exeID)).anyMatch(exeID -> containsFaultyDef(exeID, useCache, processed)));
+        return exeToFaultyExeContainedCache.get(execution);
+    }
     /**
      * @param execution MethodExecution under check
      * @param useCache
      * @return if the execution provided is / runs faulty methods
      */
     public boolean containsFaultyDef(MethodExecution execution, boolean useCache) {
-        InstrumentResult instrumentResult = InstrumentResult.getSingleton();
-        MethodDetails details = execution.getMethodInvoked();
-        if(useCache && exeToFaultyExeContainedCache.containsKey(execution)) return exeToFaultyExeContainedCache.get(execution);
-        exeToFaultyExeContainedCache.put(execution, Properties.getSingleton().getFaultyFuncIds().stream()
-                .map(instrumentResult::getMethodDetailByID)
-                .anyMatch(s -> s.equals(details) || (execution.getCalleeId() != -1 && s.getName().equals(details.getName()) && getVarDetailByID(execution.getCalleeId()).getType().equals(s.getdClass())))
-                || getChildren(execution.getID()).stream().anyMatch(exeID -> containsFaultyDef(exeID, useCache)));
-        return exeToFaultyExeContainedCache.get(execution);
+        return containsFaultyDef(execution, useCache, new HashSet<>());
     }
 
     /**
@@ -803,8 +812,8 @@ public class ExecutionTrace {
      * @param useCache
      * @return if the execution provided is / runs faulty methods
      */
-    private boolean containsFaultyDef(int exeID, boolean useCache) {
-        return containsFaultyDef(getMethodExecutionByID(exeID), useCache);
+    private boolean containsFaultyDef(int exeID, boolean useCache, HashSet<Integer> processed) {
+        return containsFaultyDef(getMethodExecutionByID(exeID), useCache, processed);
     }
 
 
@@ -942,7 +951,19 @@ public class ExecutionTrace {
      * @return Set of ids of vardetails found in execution matching criteria
      */
     private Set<Integer> getDes(MethodExecution execution, Set<Integer> inputsAndDes) {
-        if (inputsAndDes.size() == 0) return inputsAndDes;
+        return getDes(execution, inputsAndDes, new HashSet<>());
+    }
+    /**
+     * Get descendants of provided inputs in the provided execution
+     * dfs approach
+     *
+     * @param execution    Method execution under review
+     * @param inputsAndDes ids of Set of inputs to investigate
+     * @return Set of ids of vardetails found in execution matching criteria
+     */
+    private Set<Integer> getDes(MethodExecution execution, Set<Integer> inputsAndDes, Set<MethodExecution> covered) {
+        if (inputsAndDes.size() == 0 || covered.contains(execution)) return inputsAndDes;
+        covered.add(execution);
         getChildren(execution.getID())
                 .forEach(cID -> {
                     MethodExecution c = getMethodExecutionByID(cID);
@@ -950,7 +971,7 @@ public class ExecutionTrace {
                         inputsAndDes.addAll(getRelatedObjVarIDs(c.getResultThisId()));
                         inputsAndDes.addAll(getRelatedObjVarIDs(c.getReturnValId()));
                     }
-                    inputsAndDes.addAll(getDes(c, inputsAndDes));
+                    inputsAndDes.addAll(getDes(c, inputsAndDes, covered));
                 });
         return inputsAndDes;
     }
