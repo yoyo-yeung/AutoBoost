@@ -212,8 +212,12 @@ public class TestGenerator {
         setUpMockedParams(execution, testCase, mockOccurrences);
         createMockedParamCalls(testCase, mockOccurrences);
     }
-
     private void setUpMockedParams(MethodExecution execution, TestCase testCase, Set<MockOccurrence> mockOccurrences) {
+        setUpMockedParams(execution, testCase, mockOccurrences, new HashSet<>());
+    }
+    private void setUpMockedParams(MethodExecution execution, TestCase testCase, Set<MockOccurrence> mockOccurrences, Set<MethodExecution> covered) {
+        if(covered.contains(execution)) return ;
+        covered.add(execution);
         executionTrace.getChildren(execution.getID()).stream().map(executionTrace::getMethodExecutionByID)
                 .filter(e -> !e.getMethodInvoked().isFieldAccess())
                 .forEach(e -> {
@@ -232,7 +236,7 @@ public class TestGenerator {
                         }
                         testCase.addOrUpdateMockedVar(executionTrace.getVarDetailByID(e.getResultThisId()), mockedVar);
                     } else {
-                        setUpMockedParams(e, testCase, mockOccurrences);
+                        setUpMockedParams(e, testCase, mockOccurrences, covered);
                     }
                 });
     }
@@ -243,6 +247,9 @@ public class TestGenerator {
     private void createMockVars(VarDetail v, TestCase testCase) {
          Stmt res = prepareAndGetConstantVar(v, testCase.getPackageName());
          if(res != null) return;
+         res = testCase.getExistingCreatedOrMockedVar(v);
+         if(res !=null) return;
+
          if(v instanceof ArrVarDetails)
              ((ArrVarDetails) v).getComponents().stream().map(executionTrace::getVarDetailByID).forEach(p -> createMockVars(p, testCase));
 
