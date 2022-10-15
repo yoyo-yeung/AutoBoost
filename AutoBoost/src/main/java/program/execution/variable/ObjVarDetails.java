@@ -8,9 +8,9 @@ import java.util.Objects;
 public class ObjVarDetails extends VarDetail{
     private static final CREATION_TYPE createdBy = CREATION_TYPE.CONSTRUCTOR;
     private final Class<?> type;
-    private final String value;
+    private final Object value;
 
-    public ObjVarDetails(int ID, Class<?> type, String value) {
+    public ObjVarDetails(int ID, Class<?> type, Object value) {
         super(ID);
         this.type = type;
         this.value = value;
