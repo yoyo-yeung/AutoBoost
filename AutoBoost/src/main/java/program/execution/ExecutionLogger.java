@@ -141,8 +141,9 @@ public class ExecutionLogger {
         else {
             MethodDetails details = execution.getMethodInvoked();
             if (!details.getReturnSootType().equals(VoidType.v()) && !(instrumentResult.isLibMethod(details.getId()) && returnVal == null)) {
-                if(details.getReturnSootType() instanceof soot.PrimType)
-                    setVarIDForExecution(execution, LOG_ITEM.RETURN_ITEM, executionTrace.getVarDetail(execution, ClassUtils.wrapperToPrimitive(returnVal.getClass()), returnVal, LOG_ITEM.RETURN_ITEM, false).getID());
+                if(details.getReturnSootType() instanceof soot.PrimType) {
+                    setVarIDForExecution(execution, LOG_ITEM.RETURN_ITEM, executionTrace.getVarDetail(execution, details.getReturnType(), returnVal, LOG_ITEM.RETURN_ITEM, false).getID());
+                }
                 else {
                     setVarIDForExecution(execution, LOG_ITEM.RETURN_ITEM, executionTrace.getVarDetail(execution, (returnVal == null ? Object.class : returnVal.getClass()), returnVal, LOG_ITEM.RETURN_ITEM, false).getID());
                 }
