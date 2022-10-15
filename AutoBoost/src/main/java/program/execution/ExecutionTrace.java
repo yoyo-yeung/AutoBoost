@@ -516,6 +516,9 @@ public class ExecutionTrace {
         if (depth == 0) {
             result.append("[]");
             return;
+        } else if (obj.getClass().isArray() && obj.getClass().getComponentType() != null && (obj.getClass().getComponentType().isPrimitive() || obj.getClass().getComponentType().equals(String.class))) {
+            result.append("[").append(IntStream.range(0, Array.getLength(obj)).mapToObj(i -> Array.get(obj, i)).map(o -> o == null ? "null" : o.toString()).collect(Collectors.joining(","))).append("]");
+            return;
         } else if (obj.getClass().isArray()) {
             result.append("[");
             IntStream.range(0, Array.getLength(obj)).forEach(i -> {
