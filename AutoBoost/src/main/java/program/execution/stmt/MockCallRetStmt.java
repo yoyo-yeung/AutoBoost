@@ -31,8 +31,8 @@ public class MockCallRetStmt extends Stmt {
     @Override
     public String getStmt(Set<Class<?>> fullCNameNeeded) {
         if (skipChecking)
-            return "PowerMockito.doReturn(" + returnStmts.stream().map(s -> s.getStmt(fullCNameNeeded)).collect(Collectors.joining(",")) + ").when(" + (methodInvStmt.getCallee() + ")." + methodInvStmt.getInstanceCallString(fullCNameNeeded));
-        return "PowerMockito.when(" + methodInvStmt.getStmt(fullCNameNeeded) + ")" + returnStmts.stream().map(s -> ".thenReturn(" + s.getStmt(fullCNameNeeded) + ")").collect(Collectors.joining("\n"));
+            return "Mockito.doReturn(" + returnStmts.stream().map(s -> s.getStmt(fullCNameNeeded)).collect(Collectors.joining(",")) + ").when(" + (methodInvStmt.getCallee() + ")." + methodInvStmt.getInstanceCallString(fullCNameNeeded));
+        return "Mockito.when(" + methodInvStmt.getStmt(fullCNameNeeded) + ")" + returnStmts.stream().map(s -> ".thenReturn(" + s.getStmt(fullCNameNeeded) + ")").collect(Collectors.joining("\n"));
     }
 
     @Override

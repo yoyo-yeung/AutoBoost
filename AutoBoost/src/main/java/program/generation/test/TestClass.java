@@ -4,9 +4,6 @@ import helper.Properties;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.junit.runner.RunWith;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -95,9 +92,6 @@ public class TestClass {
     }
 
     public String output() {
-            this.addImports(PowerMockRunner.class);
-            this.addImports(PrepareForTest.class);
-            this.addImports(RunWith.class);
         Set<Class<?>> fullCNameNeeded= this.imports.stream().collect(Collectors.groupingBy(Class::getSimpleName, Collectors.toSet())).entrySet().stream().filter(e -> e.getValue().size() > 1 )
                 .flatMap(e -> e.getValue().stream()).collect(Collectors.toSet());
         fullCNameNeeded.addAll(this.imports.stream().filter(c-> ClassUtils.isInnerClass(c) || c.getPackage() == null).collect(Collectors.toSet()));
@@ -106,18 +100,11 @@ public class TestClass {
         this.imports.stream().filter(i -> !fullCNameNeeded.contains(i)).filter(i -> i.getPackage() != null && !i.getPackage().getName().equals(packageName)).map(i -> {
             return "import " + i.getName().replace("$", ".") + ";" + Properties.getNewLine();
         }).forEach(result::append);
-        mockAnnotationsSetUp(fullCNameNeeded).forEach(result::append);
         result.append("public class ").append(this.className).append("{").append(Properties.getNewLine());
         this.getEnclosedTestCases().stream().map(t-> t.output(fullCNameNeeded)+Properties.getNewLine()).forEach(result::append);
         result.append("}").append(Properties.getNewLine());
         return result.toString();
     }
 
-    public List<String> mockAnnotationsSetUp(Set<Class<?>> fullCNameNeeded){
-        List<String> res = new ArrayList<>();
-//        if(this.mockedTypes.size() == 0) return res;
-        res.add("@RunWith(PowerMockRunner.class)\n");
-        res.add("@PrepareForTest({" + this.mockedTypes.stream().map(t -> (fullCNameNeeded.contains(t)? t.getName().replace("$", ".") : t.getSimpleName()) + ".class").collect(Collectors.joining(",") )+ "})\n");
-        return res;
-    }
+
 }
