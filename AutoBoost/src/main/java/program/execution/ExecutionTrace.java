@@ -555,12 +555,14 @@ public class ExecutionTrace {
 
         if (!InstrumentResult.getSingleton().getClassDetailsMap().containsKey(obj.getClass().getName())) {
             Class<?> CUC = obj.getClass();
-            List<Class> classesToGetFields = new ArrayList<>(ClassUtils.getAllSuperclasses(CUC));
+            List<Class> classesToGetFields = new ArrayList<>();
             classesToGetFields.add(CUC);
+            classesToGetFields.addAll(ClassUtils.getAllSuperclasses(CUC));
             classesToGetFields.removeIf(c -> c.equals(Object.class) || c.equals(Serializable.class) || c.equals(Field.class) || c.equals(Class.class));
             InstrumentResult.getSingleton().addClassDetails(new ClassDetails(CUC.getName(), classesToGetFields.stream()
                     .flatMap(c -> Arrays.stream(c.getDeclaredFields()))
                     .filter(f -> !f.isSynthetic())
+                    .filter(f -> !(f.getType().isPrimitive() && Modifier.isStatic(f.getModifiers()) && Modifier.isFinal(f.getModifiers())))
                     .distinct()
                     .collect(Collectors.toList())));
         }
