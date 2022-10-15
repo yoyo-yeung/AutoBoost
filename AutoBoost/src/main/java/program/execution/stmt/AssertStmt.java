@@ -28,7 +28,7 @@ public class AssertStmt extends Stmt{
     }
 
     private boolean deltaChecking(Class<?> type){
-        return (type.equals(Double.class) || type.equals(double.class) || type.equals(Float.class) || type.equals(float.class)) && !(ExecutionTrace.getSingleton().getVarDetailByID(expected.getResultVarDetailID()) instanceof EnumVarDetails);
+        return (type.equals(Double.class) || type.equals(double.class) || type.equals(Float.class) || type.equals(float.class)) ;
     }
     @Override
     public Set<Class<?>> getImports(String packageName) {
