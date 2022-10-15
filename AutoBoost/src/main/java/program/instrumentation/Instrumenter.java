@@ -21,6 +21,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static helper.Helper.isCannotMockType;
+
 public class Instrumenter extends BodyTransformer {
     private static final Logger logger = LogManager.getLogger(Instrumenter.class);
     // for information storing and retrieving
@@ -174,9 +176,86 @@ public class Instrumenter extends BodyTransformer {
                 MethodDetails fieldAccessDetails = getFieldAccessingMethodDetails((InstanceFieldRef) stmt.getFieldRef());
                 reverse(getLogFieldAccessStmts((InstanceFieldRef) stmt.getFieldRef(), ((DefinitionStmt) stmt).getLeftOp(), localGenerator, fieldAccessDetails, threadIDLocal)).forEach(s -> units.insertAfter(s, stmt));
             }
+
+//            if(stmt.containsInvokeExpr() && stmt.getInvokeExpr().getMethodRef().getDeclaringClass().getPackageName().startsWith(properties.getPUT()))
+//                addLoggingToUnmockableParamCreation(localGenerator, currentSootMethod, localUses, localDefs, units, threadIDLocal, stmt, stmt.getInvokeExpr());
         }
         instrumentResult.addMethod(methodDetails);
+    }
 
+    private void addLoggingToUnmockableParamCreation(LocalGenerator localGenerator, SootMethod currentMethod, SimpleLocalUses localUses, SimpleLocalDefs localDefs, PatchingChain<Unit> units, Value threadIDLocal, Stmt stmt, InvokeExpr expr) {
+        expr.getArgs().stream()
+                .filter(a -> isCannotMockType(a.getType())).flatMap(a -> getAllStmtsToLogRelatedToDef(stmt, localUses, localDefs, a, new HashSet<>()).stream())
+                .distinct()
+                .filter(s -> !CUSTOM_TAGS.containsCustomTag(s))
+                .forEach(s -> {
+                    logger.debug(currentMethod + "\t" + expr);
+                    if(s.hasTag(CUSTOM_TAGS.PARAM_TRACK_TO_LOG_TAG.name())) return;
+                    if(s instanceof AssignStmt && ((AssignStmt) s).getRightOp() instanceof InstanceFieldRef && s.getFieldRef() instanceof InstanceFieldRef)
+                        reverse(getLogFieldAccessStmts((InstanceFieldRef) s.getFieldRef(), ((AssignStmt) s).getLeftOp(), localGenerator, getFieldAccessingMethodDetails((InstanceFieldRef) s.getFieldRef()), threadIDLocal)).forEach(v -> units.insertAfter(v, s));
+                    else if (s.containsInvokeExpr()) {
+                        InvokeExpr invokeExpr = s.getInvokeExpr();
+                        MethodDetails invoked = instrumentResult.findExistingLibMethod(invokeExpr.getMethod().getSignature());
+                        if(invoked == null ) {
+                            invoked = new MethodDetails(invokeExpr.getMethod());
+                            instrumentResult.addLibMethod(invoked);
+                        }
+                        Local invokedIDLocal = localGenerator.generateLocal(IntType.v());
+                        getLogStartStmts(invokeExpr.getMethod(), localGenerator, invoked, threadIDLocal, invokedIDLocal, invoked.getType().equals(METHOD_TYPE.MEMBER) && invokeExpr instanceof InstanceInvokeExpr ? ((InstanceInvokeExpr) invokeExpr).getBase() : NullConstant.v(), invokeExpr.getArgs()).forEach(v -> units.insertBefore(v, s));
+//
+                        reverse(getLogInvEndStmts(invokeExpr.getMethod(), localGenerator, invoked, threadIDLocal, invokedIDLocal, (invoked.getType().equals(METHOD_TYPE.CONSTRUCTOR) || invoked.getType().equals(METHOD_TYPE.MEMBER)) && invokeExpr instanceof InstanceInvokeExpr ? ((InstanceInvokeExpr) invokeExpr).getBase() : NullConstant.v(), s)).forEach(v -> units.insertAfter(v, s));
+                    }
+                    s.addTag(CUSTOM_TAGS.PARAM_TRACK_TO_LOG_TAG.getTag());
+                });
+
+    }
+
+    private List<Stmt> getAllStmtsToLogRelatedToDef(Stmt currentStmt, SimpleLocalUses localUses, SimpleLocalDefs localDefs, Value local, HashSet<Value>checked) {
+        List<Stmt> toLog = new ArrayList<>();
+        if(checked.contains(local) || !(local instanceof Local)) return toLog;
+        checked.add(local);
+        localDefs.getDefsOf((Local) local).stream()
+                .map(s -> (Stmt)s)
+                .distinct()
+                .filter(s -> !(s instanceof JIdentityStmt))
+                .filter(s -> s instanceof AssignStmt) // just in case
+                .map(s -> (AssignStmt)s)
+                .filter(s -> !(s.getRightOp() instanceof InvokeExpr) || !s.getInvokeExpr().getMethodRef().getDeclaringClass().getPackageName().startsWith(properties.getPUT())) // either NOT invoking method / the invoked method is not one that would be instrumented in the first place
+                .filter(s-> !s.getRightOp().getType().toQuotedString().replace("'","").startsWith(properties.getPUT())) // the assigned value should NOT be of PUT type as they can then be mocked
+                .filter(s -> !(s.getRightOp() instanceof InstanceFieldRef && ((InstanceFieldRef) s.getFieldRef()).getBase().getType().toQuotedString().replace("'", "").startsWith(properties.getPUT()))) // avoid creation using PUT classes + methods
+                .filter(s -> !(s.getRightOp() instanceof NewArrayExpr || s.getRightOp() instanceof Constant || s.getRightOp() instanceof StaticFieldRef || s.getRightOp() instanceof NewExpr))
+                .forEach(s -> {
+                    if(s.getRightOp() instanceof CastExpr || s.getRightOp() instanceof ArrayRef || s.getRightOp() instanceof Immediate) {
+                        if(s.getRightOp() instanceof CastExpr)
+                            toLog.addAll(getAllStmtsToLogRelatedToDef(s, localUses, localDefs, ((CastExpr) s.getRightOp()).getOpBox().getValue(), checked));
+                        else if(s.getRightOp() instanceof ArrayRef)
+                            toLog.addAll(getAllStmtsToLogRelatedToDef(s, localUses, localDefs, ((ArrayRef) s.getRightOp()).getBase(), checked));
+                        else if(s.getRightOp() instanceof Immediate)
+                            toLog.addAll(getAllStmtsToLogRelatedToDef(s, localUses, localDefs, s.getRightOp(), checked));
+                    }
+                    else {
+                        if(s.getRightOp() instanceof InvokeExpr) {
+                            if (s.getRightOp() instanceof InstanceInvokeExpr)
+                                toLog.addAll(getAllStmtsToLogRelatedToDef(s, localUses, localDefs, ((InstanceInvokeExpr) s.getRightOp()).getBase(), checked));
+                            toLog.addAll(((InvokeExpr) s.getRightOp()).getArgs().stream().filter(a -> isCannotMockType(a.getType())).flatMap(a -> getAllStmtsToLogRelatedToDef(s, localUses, localDefs, a, checked).stream()).collect(Collectors.toList()));
+                        }
+                        else if(s.getRightOp() instanceof InstanceFieldRef)
+                            toLog.addAll(getAllStmtsToLogRelatedToDef(s, localUses, localDefs, ((InstanceFieldRef) s.getRightOp()).getBase(), checked));
+                        toLog.add(s);
+                    }
+
+                    for (UnitValueBoxPair use : localUses.getUsesOf( s)) {
+                        if (use.getUnit().equals(currentStmt)) {
+                            break;
+                        }
+                        Stmt useStmt = (Stmt) use.getUnit();
+                        if (!useStmt.containsInvokeExpr() || !(useStmt.getInvokeExpr() instanceof InstanceInvokeExpr) || !((InstanceInvokeExpr) useStmt.getInvokeExpr()).getBase().equals(use.getValueBox().getValue()))
+                            continue;
+                        toLog.add(useStmt);
+                    }
+                });
+
+        return toLog;
     }
 
     private void addTagForDangerousCallsToLog(SimpleLocalUses localUses, Queue<DefinitionStmt> inputs) {
@@ -429,7 +508,8 @@ public class Instrumenter extends BodyTransformer {
         NEWLY_ADDED_TAG("NEWLY_ADDED_TAG"),
         INV_TO_LOG_TAG("INV_TO_LOG_TAG"),
         DAN_FIELD_ACCESS_TO_LOG_TAG("DAN_FIELD_ACCESS_TO_LOG_TAG"),
-        DAN_LIB_CALL_TO_LOG_TAG("DAN_LIB_CALL_TO_LOG_TAG");
+        DAN_LIB_CALL_TO_LOG_TAG("DAN_LIB_CALL_TO_LOG_TAG"),
+        PARAM_TRACK_TO_LOG_TAG("PARAM_TRACK_TO_LOG_TAG");
         private final Tag tag;
 
         CUSTOM_TAGS(String name) {
@@ -448,6 +528,10 @@ public class Instrumenter extends BodyTransformer {
 
         public Tag getTag() {
             return tag;
+        }
+
+        public static boolean containsCustomTag(Stmt stmt) {
+            return Arrays.stream(CUSTOM_TAGS.values()).anyMatch(t -> stmt.hasTag(t.getTag().getName()));
         }
     }
 
