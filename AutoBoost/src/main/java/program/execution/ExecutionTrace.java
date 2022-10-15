@@ -499,9 +499,10 @@ public class ExecutionTrace {
 
     private void toCustomString(String fieldName, Object obj, int depth, StringBuilder result, Map<Integer, String> hashCodeToFieldMap) {
         if (obj == null) {
-            result.append(nullVar.getID());
+            result.append("null");
             return;
-        } else if (ClassUtils.isPrimitiveOrWrapper(obj.getClass()) || obj.getClass().equals(String.class)) {
+        }
+        if (ClassUtils.isPrimitiveOrWrapper(obj.getClass()) || obj.getClass().equals(String.class)) {
             if (obj.getClass().equals(String.class) && ((String) obj).length() > 100)
                 result.append("ID:").append(getVarDetail(null, obj.getClass(), obj, null, true).getID());
             else
