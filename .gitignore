@@ -1,4 +1,5 @@
 resources/*
+resources-v2.0/*
 AutoBoost/target
 AutoBoost/.idea/*
 AutoBoost/logs/*
@@ -9,3 +10,7 @@ TestInspector/*
 *.sh
 AutoBoost/src/main/resources/log4j2.xml
 AutoBoost/dependency-reduced-pom.xml
+
+AutoBoost/src/test/resources/mockito-extensions/org.mockito.plugins.MockMaker
+
+AutoBoost/backup/
