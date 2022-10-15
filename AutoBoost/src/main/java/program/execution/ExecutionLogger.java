@@ -128,11 +128,11 @@ public class ExecutionLogger {
                     execution.setExceptionClass(exceptionClass);
                     endLogMethod(threadID, execution);
                     if(exceptionClass.equals(UnrecognizableException.class)) {
-                        logger.error(execution.toDetailedString());
-                        logger.error(getCurrentExecuting(threadID).stream().map(MethodExecution::toDetailedString).collect(Collectors.joining(",")));
-                        logger.error(getCurrentExecuting(threadID).stream().filter(e -> e.getID()==executionID).findFirst().map(MethodExecution::toDetailedString).orElse("null"));
+                        logger.error("ending " +"\t" + execution.toDetailedString());
+//                        logger.error(getCurrentExecuting(threadID).stream().map(MethodExecution::toDetailedString).collect(Collectors.joining(",")));
+//                        logger.error(getCurrentExecuting(threadID).stream().filter(e -> e.getID()==executionID).findFirst().map(MethodExecution::toDetailedString).orElse("null"));
                     }
-                    logger.debug("force end "+ execution.toDetailedString());
+//                    logger.debug("force end "+ execution.toSimpleString());
                     execution = getLatestExecution(threadID);
                 }
             }
