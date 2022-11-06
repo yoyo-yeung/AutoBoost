@@ -98,7 +98,7 @@ public class TestClass {
         StringBuilder result = new StringBuilder();
         result.append("package " + packageName).append(";").append(Properties.getNewLine());
         this.imports.stream().filter(i -> !fullCNameNeeded.contains(i)).filter(i -> i.getPackage() != null && !i.getPackage().getName().equals(packageName)).map(i -> {
-            return "import " + i.getName().replace("$", ".") + ";" + Properties.getNewLine();
+            return "import " + i.getName().replace("$", ".").replace("kwyyeung.autoboost.internal.", "") + ";" + Properties.getNewLine();
         }).forEach(result::append);
         result.append("public class ").append(this.className).append("{").append(Properties.getNewLine());
         this.getEnclosedTestCases().stream().map(t-> t.output(fullCNameNeeded)+Properties.getNewLine()).forEach(result::append);
