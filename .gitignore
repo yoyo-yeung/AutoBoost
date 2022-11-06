@@ -14,3 +14,5 @@ AutoBoost/dependency-reduced-pom.xml
 AutoBoost/src/test/resources/mockito-extensions/org.mockito.plugins.MockMaker
 
 AutoBoost/backup/
+
+AutoBoost/log4j-core-2.17.1.jar
