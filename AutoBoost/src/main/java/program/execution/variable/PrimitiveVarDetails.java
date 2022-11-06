@@ -10,10 +10,10 @@ public class PrimitiveVarDetails extends VarDetail{
     private final Object value;
 
     // must provide all details when constructed, no updating allowed
-    public PrimitiveVarDetails(int ID, Object wrapperValue) throws NoSuchFieldException, IllegalAccessException {
+    public PrimitiveVarDetails(int ID, Object wrapperValue)  {
         this(ID, wrapperValue.getClass(), wrapperValue);
     }
-    public PrimitiveVarDetails(int ID, Class<?>type, Object wrappedValue) throws NoSuchFieldException, IllegalAccessException {
+    public PrimitiveVarDetails(int ID, Class<?>type, Object wrappedValue) {
         super(ID);
         if(!type.isPrimitive())
             throw new IllegalArgumentException("Non primitive type value are being stored as primitive var");
