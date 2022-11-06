@@ -31,17 +31,23 @@ import static helper.Helper.*;
 
 public class ExecutionTrace {
     private static final Logger logger = LogManager.getLogger(ExecutionTrace.class);
-    private static final ExecutionTrace singleton = new ExecutionTrace();
     private static final AtomicInteger exeIDGenerator = new AtomicInteger(0);
     private static final AtomicInteger varIDGenerator = new AtomicInteger(1);
     private final Map<Integer, MethodExecution> allMethodExecs;
     private final Map<Integer, VarDetail> allVars; // store all vardetail used, needed for lookups
     private final Map<Integer, Integer> varToDefMap;
     private final DirectedMultigraph<Integer, CallOrderEdge> callGraph;
-    private final VarDetail nullVar;
+    private static VarDetail nullVar;
     private final Map<VarDetail, Stack<MethodExecution>> varToParentStackCache = new HashMap<>(); // cache last retrieval results to save time
     private final Map<MethodExecution, Boolean> exeToFaultyExeContainedCache = new HashMap<>(); // cache to save execution time
 
+    private static Map<Class<?>, VarDetail> defaultValVar;
+    static {
+        nullVar = new ObjVarDetails(0, Object.class, "null");
+        defaultValVar = Arrays.stream(new Class<?>[]{char.class, boolean.class, byte.class, int.class, short.class, long.class, float.class, double.class}).flatMap(c -> Stream.of(new AbstractMap.SimpleEntry<Class<?>, VarDetail>(c, new PrimitiveVarDetails(getNewVarID(), c, Helper.getDefaultValue(c))), new AbstractMap.SimpleEntry<Class<?>, VarDetail>(ClassUtils.primitiveToWrapper(c), new WrapperVarDetails(getNewVarID(), ClassUtils.primitiveToWrapper(c), getDefaultValue(c))))).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        defaultValVar.put(String.class, nullVar);
+    }
+    private static final ExecutionTrace singleton = new ExecutionTrace();
     /**
      * Constructor of ExecutionTrace, set up all vars.
      */
@@ -50,8 +56,8 @@ public class ExecutionTrace {
         this.allVars = new ConcurrentHashMap<>();
         this.varToDefMap = new HashMap<Integer, Integer>();
         callGraph = new DirectedMultigraph<>(CallOrderEdge.class);
-        nullVar = new ObjVarDetails(0, Object.class, "null");
-        this.allVars.put(nullVar.getID(), nullVar);
+        allVars.put(nullVar.getID(), nullVar);
+        defaultValVar.values().stream().forEach(v -> allVars.put(v.getID(), v));
     }
 
     /**
@@ -108,7 +114,7 @@ public class ExecutionTrace {
     /**
      * @return new ID for VarDetail
      */
-    public int getNewVarID() {
+    public static int getNewVarID() {
         return varIDGenerator.incrementAndGet();
     }
 
@@ -223,12 +229,7 @@ public class ExecutionTrace {
             if (varDetailClass.equals(EnumVarDetails.class))
                 varDetail = new EnumVarDetails(getNewVarID(), type, (String) objValue);
             else if (varDetailClass.equals(PrimitiveVarDetails.class)) {
-                try {
-                    varDetail = new PrimitiveVarDetails(getNewVarID(), type, objValue);
-                } catch (NoSuchFieldException | IllegalAccessException e) {
-                    logger.error("Error when trying to create PrimitiveVarDetails");
-                    varDetail = null;
-                }
+                varDetail = new PrimitiveVarDetails(getNewVarID(), type, objValue);
             } else if (varDetailClass.equals(StringVarDetails.class))
                 varDetail = new StringVarDetails(getNewVarID(), (String) objValue);
             else if (varDetailClass.equals(StringBVarDetails.class))
@@ -238,16 +239,9 @@ public class ExecutionTrace {
                 int arrSize = 0;
                 if(objValue.getClass().isArray()) {
                     arrSize = Array.getLength(objValue);
-                    if(objValue.getClass().getComponentType().isPrimitive()) {
+                    if(ClassUtils.isPrimitiveOrWrapper(objValue.getClass().getComponentType()) || objValue.getClass().getComponentType().equals(String.class)) {
                         Class<?> componentType = objValue.getClass().getComponentType();
-                        if(componentType.equals(char.class)) defaultComponentID = getVarDetail(execution, componentType, '\u0000', process, true, processedHash).getID();
-                        else if (componentType.equals(boolean.class)) defaultComponentID = getVarDetail(execution, componentType, false, process, true , processedHash).getID();
-                        else if (componentType.equals(byte.class)) defaultComponentID = getVarDetail(execution, componentType, (byte) 0, process, true, processedHash).getID();
-                        else if (componentType.equals(int.class)) defaultComponentID = getVarDetail(execution, componentType, 0, process, true, processedHash).getID();
-                        else if (componentType.equals(short.class)) defaultComponentID = getVarDetail(execution, componentType, (short)0, process, true, processedHash).getID();
-                        else if (componentType.equals(long.class)) defaultComponentID = getVarDetail(execution, componentType, 0L, process, true, processedHash).getID();
-                        else if (componentType.equals(float.class)) defaultComponentID = getVarDetail(execution, componentType, 0.0f, process, true, processedHash).getID();
-                        else if (componentType.equals(double.class)) defaultComponentID = getVarDetail(execution, componentType, 0.0d, process, true, processedHash).getID();
+                        defaultComponentID = this.defaultValVar.get(componentType).getID();
                     }
                 }
                 else if(objValue instanceof Collection) arrSize = ((Collection<?>) objValue).size();
@@ -346,7 +340,7 @@ public class ExecutionTrace {
         Stream<Integer> componentStream;
         if (type.isArray()) {
             int trimmedLength = Array.getLength(obj);
-            componentStream = IntStream.range(0, trimmedLength).filter(i -> !processedHash.contains(System.identityHashCode(Array.get(obj,i)))).mapToObj(i -> getVarDetail(execution, type.getComponentType(), Array.get(obj, i), process, canOnlyBeUse, processedHash).getID());
+            componentStream = IntStream.range(0, trimmedLength).filter(i -> !processedHash.contains(System.identityHashCode(Helper.getArrayElement(obj,i)))).mapToObj(i -> getVarDetail(execution, type.getComponentType(), Helper.getArrayElement(obj, i), process, canOnlyBeUse, processedHash).getID());
         }
         else if (Set.class.isAssignableFrom(type) && obj instanceof Set)
             componentStream = ((Set) obj).stream().filter(v -> ! processedHash.contains(System.identityHashCode(v))).map(v -> getVarDetail(execution, getClassOfObj(v), v, process, true, processedHash).getID()).sorted(Comparator.comparingInt(x -> (int)x));
@@ -517,13 +511,15 @@ public class ExecutionTrace {
             result.append("[]");
             return;
         } else if (obj.getClass().isArray() && obj.getClass().getComponentType() != null && (obj.getClass().getComponentType().isPrimitive() || obj.getClass().getComponentType().equals(String.class))) {
-            result.append("[").append(IntStream.range(0, Array.getLength(obj)).mapToObj(i -> Array.get(obj, i)).map(o -> o == null ? "null" : o.toString()).collect(Collectors.joining(","))).append("]");
+            int length = Array.getLength(obj);
+//            while (length > 0 && (Helper.getArrayElement(obj, length-1) == null || Helper.getArrayElement(obj, length-1).equals(Helper.getDefaultValue(obj.getClass().getComponentType())))) length -- ;
+            result.append("[").append(IntStream.range(0, length).mapToObj(i -> Helper.getArrayElement(obj, i)).map(String::valueOf).collect(Collectors.joining(","))).append("]");
             return;
         } else if (obj.getClass().isArray()) {
             result.append("[");
             IntStream.range(0, Array.getLength(obj)).forEach(i -> {
-                if (Array.get(obj, i) == null) result.append("null");
-                else toCustomString(fieldName + "." + i, Array.get(obj, i), depth - 1, result, hashCodeToFieldMap);
+                if (Helper.getArrayElement(obj, i) == null) result.append("null");
+                else toCustomString(fieldName + "." + i, Helper.getArrayElement(obj, i), depth - 1, result, hashCodeToFieldMap);
                 if (i < Array.getLength(obj) - 1) result.append(",");
             });
             result.append("]");
@@ -779,7 +775,7 @@ public class ExecutionTrace {
             Integer def = getDefExeList(var.getID());
             if (def == null) return null; // i.e. can not be produced
             MethodExecution defExe = getMethodExecutionByID(def);
-            if (executionStack.contains(defExe))
+            if (executionStack.stream().anyMatch(e -> e.getID() == defExe.getID()))
                 return null; // if its a loop def
 
             executionStack.push(defExe);

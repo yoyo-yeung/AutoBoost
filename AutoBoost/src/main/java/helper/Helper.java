@@ -78,4 +78,42 @@ public class Helper {
 //        logger.debug(typeName);
         return typeName.replace("'", "").startsWith("java.lang.reflect.Method") || typeName.equals("java.io.StringReader");
     }
+
+    public static Object getDefaultValue(Class<?> type) {
+        if(!ClassUtils.isPrimitiveOrWrapper(type) && !type.equals(String.class)) return null;
+        if(type.equals(char.class) || type.equals(Character.class)) return '\u0000';
+        else if (type.equals(boolean.class) || type.equals(Boolean.class)) return false;
+        else if (type.equals(byte.class) || type.equals(Byte.class)) return (byte) 0;
+        else if (type.equals(int.class) || type.equals(Integer.class)) return 0;
+        else if (type.equals(short.class) || type.equals(Short.class)) return (short)0;
+        else if (type.equals(long.class) || type.equals(Long.class)) return 0L;
+        else if (type.equals(float.class) || type.equals(Float.class)) return 0.0f;
+        else if (type.equals(double.class) || type.equals(Double.class)) return 0.0d;
+        return null;
+    }
+
+    public static Object getArrayElement(Object arr, int ind) {
+        if(arr.getClass().isArray()) return arr;
+        Class<?> c = arr.getClass();
+        if (int[].class == c) {
+            return ((int[])arr)[ind];
+        } else if (float[].class == c) {
+            return ((float[])arr)[ind];
+        } else if (boolean[].class == c) {
+            return ((boolean[])arr)[ind];
+        } else if (char[].class == c) {
+            return ((char[])arr)[ind];
+        } else if (double[].class == c) {
+            return ((double[])arr)[ind];
+        } else if (long[].class == c) {
+            return ((long[])arr)[ind];
+        } else if (short[].class == c) {
+            return ((short[])arr)[ind];
+        } else if (byte[].class == c) {
+            return ((byte[])arr)[ind];
+        }
+        return ((Object[])arr)[ind];
+
+    }
+
 }
