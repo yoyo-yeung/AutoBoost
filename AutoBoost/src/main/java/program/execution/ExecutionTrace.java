@@ -5,18 +5,17 @@ import entity.LOG_ITEM;
 import entity.METHOD_TYPE;
 import helper.Helper;
 import helper.Properties;
+import helper.xml.XMLWriter;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.DirectedMultigraph;
-import program.analysis.ClassDetails;
 import program.analysis.MethodDetails;
 import program.execution.variable.*;
 import program.instrumentation.InstrumentResult;
 import soot.Modifier;
 
-import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -31,7 +30,6 @@ import static helper.Helper.*;
 
 public class ExecutionTrace {
     private static final Logger logger = LogManager.getLogger(ExecutionTrace.class);
-    private static final AtomicInteger exeIDGenerator = new AtomicInteger(0);
     private static final AtomicInteger varIDGenerator = new AtomicInteger(1);
     private final Map<Integer, MethodExecution> allMethodExecs;
     private final Map<Integer, VarDetail> allVars; // store all vardetail used, needed for lookups
@@ -104,12 +102,6 @@ public class ExecutionTrace {
     }
 
 
-    /**
-     * @return new ID for MethodExecution
-     */
-    public int getNewExeID() {
-        return exeIDGenerator.incrementAndGet();
-    }
 
     /**
      * @return new ID for VarDetail
@@ -486,96 +478,11 @@ public class ExecutionTrace {
     private String toStringWithAttr(Object obj) {
         if (obj == null) return "null";
         StringBuilder result = new StringBuilder(1000);
-        toCustomString("this", obj, 7, result, new HashMap<>());
-        result.trimToSize();
-        return result.toString();
-    }
-
-    private void toCustomString(String fieldName, Object obj, int depth, StringBuilder result, Map<Integer, String> hashCodeToFieldMap) {
-        if (obj == null) {
-            result.append("null");
-            return;
-        }
-        if (ClassUtils.isPrimitiveOrWrapper(obj.getClass()) || obj.getClass().equals(String.class)) {
-            if (obj.getClass().equals(String.class) && ((String) obj).length() > 100)
-                result.append("ID:").append(getVarDetail(null, obj.getClass(), obj, null, true).getID());
-            else
-                result.append(obj);
-            return;
-        }
-        if (hashCodeToFieldMap.containsKey(System.identityHashCode(obj))) {
-            result.append(hashCodeToFieldMap.get(System.identityHashCode(obj)));
-            return;
-        } else hashCodeToFieldMap.put(System.identityHashCode(obj), fieldName);
-        if (depth == 0) {
-            result.append("[]");
-            return;
-        } else if (obj.getClass().isArray() && obj.getClass().getComponentType() != null && (obj.getClass().getComponentType().isPrimitive() || obj.getClass().getComponentType().equals(String.class))) {
-            int length = Array.getLength(obj);
-//            while (length > 0 && (Helper.getArrayElement(obj, length-1) == null || Helper.getArrayElement(obj, length-1).equals(Helper.getDefaultValue(obj.getClass().getComponentType())))) length -- ;
-            result.append("[").append(IntStream.range(0, length).mapToObj(i -> Helper.getArrayElement(obj, i)).map(String::valueOf).collect(Collectors.joining(","))).append("]");
-            return;
-        } else if (obj.getClass().isArray()) {
-            result.append("[");
-            IntStream.range(0, Array.getLength(obj)).forEach(i -> {
-                if (Helper.getArrayElement(obj, i) == null) result.append("null");
-                else toCustomString(fieldName + "." + i, Helper.getArrayElement(obj, i), depth - 1, result, hashCodeToFieldMap);
-                if (i < Array.getLength(obj) - 1) result.append(",");
-            });
-            result.append("]");
-            return;
-        } else if (MapVarDetails.availableTypeCheck(obj.getClass())) {
-
-            result.append("{");
-            AtomicInteger i = new AtomicInteger();
-            ((Map<?, ?>) obj).forEach((key, value) -> {
-                result.append("[");
-                toCustomString(fieldName + "." + i.get() + ".key", key, depth - 1, result, hashCodeToFieldMap);
-                result.append("=");
-                toCustomString(fieldName + "." + i.getAndIncrement() + ".value", value, depth - 1, result, hashCodeToFieldMap);
-                result.append("]");
-            });
-            result.append("}");
-            return;
-        } else if (obj instanceof Collection && obj.getClass().getName().startsWith("java.")) {
-            result.append("{");
-            AtomicInteger y = new AtomicInteger();
-            ((Collection) obj).forEach(i -> {
-                toCustomString(fieldName + "." + y.getAndIncrement(), i, depth - 1, result, hashCodeToFieldMap);
-                result.append(",");
-            });
-            result.deleteCharAt(result.length() - 1);
-            result.append("}");
-
-        }
-
-        if (!InstrumentResult.getSingleton().getClassDetailsMap().containsKey(obj.getClass().getName())) {
-            Class<?> CUC = obj.getClass();
-            List<Class> classesToGetFields = new ArrayList<>();
-            classesToGetFields.add(CUC);
-            classesToGetFields.addAll(ClassUtils.getAllSuperclasses(CUC));
-            classesToGetFields.removeIf(c -> c.equals(Object.class) || c.equals(Serializable.class) || c.equals(Field.class) || c.equals(Class.class));
-            InstrumentResult.getSingleton().addClassDetails(new ClassDetails(CUC.getName(), classesToGetFields.stream()
-                    .flatMap(c -> Arrays.stream(c.getDeclaredFields()))
-                    .filter(f -> !f.isSynthetic())
-                    .filter(f -> !(f.getType().isPrimitive() && Modifier.isStatic(f.getModifiers()) && Modifier.isFinal(f.getModifiers())))
-                    .distinct()
-                    .collect(Collectors.toList())));
-        }
-        result.append("{");
-        InstrumentResult.getSingleton().getClassDetailsByID(obj.getClass().getName()).getClassFields()
-                .forEach(f -> {
-                    f.setAccessible(true);
-                    try {
-                        result.append(f.getName()).append("=");
-                        toCustomString(fieldName + "." + f.getName(), f.get(obj), depth - 1, result, hashCodeToFieldMap);
-                        result.append(",");
-                    } catch (IllegalAccessException e) {
-                        e.printStackTrace();
-                    }
-                });
-        result.deleteCharAt(result.length() - 1);
-        result.append("}");
+//        toCustomString("this", obj, 7, result, new HashMap<>());
+//        result.trimToSize();
+//        logger.debug();
+//        logger.debug(result.toString());
+        return new XMLWriter().getXML(obj);
     }
 
     public void clear() {
