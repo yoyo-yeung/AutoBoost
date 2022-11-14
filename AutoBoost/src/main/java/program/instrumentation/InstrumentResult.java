@@ -38,12 +38,13 @@ public class InstrumentResult {
         this.addMethod(details);
         this.fieldAccessToMethIDMap.put(getFieldAccessMapKey(details.getDeclaringClass().getName(), details.getName()), details.getId());
     }
+
     public Map<Integer, MethodDetails> getMethodDetailsMap() {
         return methodDetailsMap;
     }
 
     public MethodDetails getMethodDetailByID(int methodID) {
-        if(!this.methodDetailsMap.containsKey(methodID))
+        if (!this.methodDetailsMap.containsKey(methodID))
             throw new IllegalArgumentException("MethodDetails for " + methodID + " does not exist");
         else return this.getMethodDetailsMap().get(methodID);
     }
@@ -53,13 +54,13 @@ public class InstrumentResult {
     }
 
     public ClassDetails getClassDetailsByID(String className) {
-        if(!this.classDetailsMap.containsKey(className))
+        if (!this.classDetailsMap.containsKey(className))
             throw new IllegalArgumentException("ClassDetails for " + className + " does not exist");
         else return this.classDetailsMap.get(className);
     }
 
     public void addClassDetails(ClassDetails classDetails) {
-        if(!this.classDetailsMap.containsKey(classDetails.getClassFullName()))
+        if (!this.classDetailsMap.containsKey(classDetails.getClassFullName()))
             this.classDetailsMap.put(classDetails.getClassFullName(), classDetails);
     }
 
@@ -69,18 +70,19 @@ public class InstrumentResult {
 
     /**
      * Not using bidirectional map / additional map as this method is only expected to be used during instrumentation for java lib method finding
+     *
      * @param methodSignature Signature of method
      * @return MethodDetails if the details already exist, else return null
      */
     public MethodDetails findExistingLibMethod(String methodSignature) {
-        if(this.libMethSignToMethIDMap.containsKey(methodSignature))
+        if (this.libMethSignToMethIDMap.containsKey(methodSignature))
             return this.getMethodDetailByID(this.libMethSignToMethIDMap.get(methodSignature));
         else return null;
     }
 
-    public MethodDetails findExistingFieldAccessMethod(String declaringClass, String fieldName ) {
+    public MethodDetails findExistingFieldAccessMethod(String declaringClass, String fieldName) {
         String key = getFieldAccessMapKey(declaringClass, fieldName);
-        if(this.fieldAccessToMethIDMap.containsKey(key))
+        if (this.fieldAccessToMethIDMap.containsKey(key))
             return this.getMethodDetailByID(this.fieldAccessToMethIDMap.get(key));
         else return null;
     }
@@ -94,17 +96,17 @@ public class InstrumentResult {
     }
 
     public void addClassPublicFields(String className, SootClass sootClass) {
-        if(this.getClassPublicFieldsMap().containsKey(className)) return;
+        if (this.getClassPublicFieldsMap().containsKey(className)) return;
         this.getClassPublicFieldsMap().put(className, sootClass.getFields().stream()
-                        .filter(f -> f.isPublic() && f.isStatic())
-                        .map(SootField::getName)
-                        .collect(Collectors.toSet())
-                );
+                .filter(f -> f.isPublic() && f.isStatic())
+                .map(SootField::getName)
+                .collect(Collectors.toSet())
+        );
     }
 
     public List<Field> getClassFields(Class<?> CUC) {
 
-        if(classDetailsMap.containsKey(CUC.getName()))return classDetailsMap.get(CUC.getName()).getClassFields();
+        if (classDetailsMap.containsKey(CUC.getName())) return classDetailsMap.get(CUC.getName()).getClassFields();
         List<Class> classesToGetFields = new ArrayList<>();
         classesToGetFields.add(CUC);
         classesToGetFields.addAll(ClassUtils.getAllSuperclasses(CUC));
@@ -119,7 +121,7 @@ public class InstrumentResult {
     }
 
     private String getFieldAccessMapKey(String declaringClass, String fieldName) {
-        return declaringClass+"_"+fieldName;
+        return declaringClass + "_" + fieldName;
     }
 
     public Map<String, Integer> getFieldAccessToMethIDMap() {
