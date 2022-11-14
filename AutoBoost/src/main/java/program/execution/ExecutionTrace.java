@@ -31,21 +31,23 @@ import static helper.Helper.*;
 public class ExecutionTrace {
     private static final Logger logger = LogManager.getLogger(ExecutionTrace.class);
     private static final AtomicInteger varIDGenerator = new AtomicInteger(1);
-    private final Map<Integer, MethodExecution> allMethodExecs;
-    private final Map<Integer, VarDetail> allVars; // store all vardetail used, needed for lookups
-    private final Map<Integer, Integer> varToDefMap;
-    private final DirectedMultigraph<Integer, CallOrderEdge> callGraph;
-    private static VarDetail nullVar;
-    private final Map<VarDetail, Stack<MethodExecution>> varToParentStackCache = new HashMap<>(); // cache last retrieval results to save time
-    private final Map<MethodExecution, Boolean> exeToFaultyExeContainedCache = new HashMap<>(); // cache to save execution time
+    private static final ExecutionTrace singleton = new ExecutionTrace();
+    private static final VarDetail nullVar;
+    private static final Map<Class<?>, VarDetail> defaultValVar;
 
-    private static Map<Class<?>, VarDetail> defaultValVar;
     static {
         nullVar = new ObjVarDetails(0, Object.class, "null");
         defaultValVar = Arrays.stream(new Class<?>[]{char.class, boolean.class, byte.class, int.class, short.class, long.class, float.class, double.class}).flatMap(c -> Stream.of(new AbstractMap.SimpleEntry<Class<?>, VarDetail>(c, new PrimitiveVarDetails(getNewVarID(), c, Helper.getDefaultValue(c))), new AbstractMap.SimpleEntry<Class<?>, VarDetail>(ClassUtils.primitiveToWrapper(c), new WrapperVarDetails(getNewVarID(), ClassUtils.primitiveToWrapper(c), getDefaultValue(c))))).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         defaultValVar.put(String.class, nullVar);
     }
-    private static final ExecutionTrace singleton = new ExecutionTrace();
+
+    private final Map<Integer, MethodExecution> allMethodExecs;
+    private final Map<Integer, VarDetail> allVars; // store all vardetail used, needed for lookups
+    private final Map<Integer, Integer> varToDefMap;
+    private final DirectedMultigraph<Integer, CallOrderEdge> callGraph;
+    private final Map<VarDetail, Stack<MethodExecution>> varToParentStackCache = new HashMap<>(); // cache last retrieval results to save time
+    private final Map<MethodExecution, Boolean> exeToFaultyExeContainedCache = new HashMap<>(); // cache to save execution time
+
     /**
      * Constructor of ExecutionTrace, set up all vars.
      */
@@ -65,6 +67,12 @@ public class ExecutionTrace {
         return singleton;
     }
 
+    /**
+     * @return new ID for VarDetail
+     */
+    public static int getNewVarID() {
+        return varIDGenerator.incrementAndGet();
+    }
 
     /**
      * @return all method executions stored, ID -> MethodExecution
@@ -73,14 +81,12 @@ public class ExecutionTrace {
         return allMethodExecs;
     }
 
-
     /**
      * @return All Variables and their details stored, ID -> VarDetail
      */
     public Map<Integer, VarDetail> getAllVars() {
         return allVars;
     }
-
 
     /**
      * List all VarDetail ID and MethodExecution ID where the VarDetail is defined
@@ -101,15 +107,6 @@ public class ExecutionTrace {
         return this.varToDefMap.getOrDefault(varID, null);
     }
 
-
-
-    /**
-     * @return new ID for VarDetail
-     */
-    public static int getNewVarID() {
-        return varIDGenerator.incrementAndGet();
-    }
-
     public VarDetail getVarDetail(MethodExecution execution, Class<?> type, Object objValue, LOG_ITEM process, boolean canOnlyBeUse) {
         return getVarDetail(execution, type, objValue, process, canOnlyBeUse, new HashSet<Integer>());
     }
@@ -119,9 +116,9 @@ public class ExecutionTrace {
      * If not, create a new VarDetail and return the corresponding ID
      *
      * @param execution
-     * @param type       type of the object to be stored
-     * @param objValue   object to be stored
-     * @param process    the current process, e.g. logging callee? param? or return value?
+     * @param type          type of the object to be stored
+     * @param objValue      object to be stored
+     * @param process       the current process, e.g. logging callee? param? or return value?
      * @param canOnlyBeUse
      * @param processedHash
      * @return VarDetail storing the provided object
@@ -189,7 +186,7 @@ public class ExecutionTrace {
                     objValue = "MIN_VALUE";
                 }
             }
-        }else  if(!type.equals(String.class))       processedHash.add(System.identityHashCode(objValue));
+        } else if (!type.equals(String.class)) processedHash.add(System.identityHashCode(objValue));
         Class<?> varDetailClass;
         Object checkVal = objValue;
         if (type.isEnum() || artificialEnum) varDetailClass = EnumVarDetails.class;
@@ -198,22 +195,18 @@ public class ExecutionTrace {
         else if (StringBVarDetails.availableTypeCheck(type)) {
             varDetailClass = StringBVarDetails.class;
             checkVal = getVarDetail(execution, String.class, objValue.toString(), process, true, processedHash).getID();
-        }
-        else if(ArrVarDetails.availableTypeCheck(type) && ArrVarDetails.availableTypeCheck(objValue.getClass())) {
+        } else if (ArrVarDetails.availableTypeCheck(type) && ArrVarDetails.availableTypeCheck(objValue.getClass())) {
             varDetailClass = ArrVarDetails.class;
             checkVal = getComponentStream(execution, type, objValue, process, canOnlyBeUse, processedHash).collect(Collectors.toList());
-        }
-        else if(MapVarDetails.availableTypeCheck(type) && MapVarDetails.availableTypeCheck(objValue.getClass())) {
+        } else if (MapVarDetails.availableTypeCheck(type) && MapVarDetails.availableTypeCheck(objValue.getClass())) {
             varDetailClass = MapVarDetails.class;
             checkVal = ((Map<?, ?>) objValue).entrySet().stream()
                     .filter(e -> !processedHash.contains(System.identityHashCode(e.getKey())) && !processedHash.contains(System.identityHashCode(e.getValue())))
                     .map(e -> new AbstractMap.SimpleEntry<Integer, Integer>(getVarDetail(execution, getClassOfObj(e.getKey()), e.getKey(), process, true, processedHash).getID(), getVarDetail(execution, getClassOfObj(e.getValue()), e.getValue(), process, true, processedHash).getID()))
                     .collect(Collectors.<Map.Entry<Integer, Integer>>toSet());
-        }
-        else if (ClassUtils.isPrimitiveWrapper(type)) {
+        } else if (ClassUtils.isPrimitiveWrapper(type)) {
             varDetailClass = WrapperVarDetails.class;
-        }
-        else {
+        } else {
             varDetailClass = ObjVarDetails.class;
         }
         VarDetail varDetail = findExistingVarDetail(type, varDetailClass, checkVal);
@@ -225,18 +218,17 @@ public class ExecutionTrace {
             } else if (varDetailClass.equals(StringVarDetails.class))
                 varDetail = new StringVarDetails(getNewVarID(), (String) objValue);
             else if (varDetailClass.equals(StringBVarDetails.class))
-                varDetail = new StringBVarDetails(getNewVarID(), type, (Integer)checkVal);
+                varDetail = new StringBVarDetails(getNewVarID(), type, (Integer) checkVal);
             else if (varDetailClass.equals(ArrVarDetails.class)) {
                 int defaultComponentID = 0;
                 int arrSize = 0;
-                if(objValue.getClass().isArray()) {
+                if (objValue.getClass().isArray()) {
                     arrSize = Array.getLength(objValue);
-                    if(ClassUtils.isPrimitiveOrWrapper(objValue.getClass().getComponentType()) || objValue.getClass().getComponentType().equals(String.class)) {
+                    if (ClassUtils.isPrimitiveOrWrapper(objValue.getClass().getComponentType()) || objValue.getClass().getComponentType().equals(String.class)) {
                         Class<?> componentType = objValue.getClass().getComponentType();
-                        defaultComponentID = this.defaultValVar.get(componentType).getID();
+                        defaultComponentID = defaultValVar.get(componentType).getID();
                     }
-                }
-                else if(objValue instanceof Collection) arrSize = ((Collection<?>) objValue).size();
+                } else if (objValue instanceof Collection) arrSize = ((Collection<?>) objValue).size();
 
 
                 varDetail = new ArrVarDetails(getNewVarID(), (List<Integer>) checkVal, objValue, arrSize, defaultComponentID);
@@ -289,10 +281,12 @@ public class ExecutionTrace {
             return false; // if they were inputs to begin with
         if (methodDetails.getAccess().equals(ACCESS.PRIVATE) || methodDetails.isFieldAccess())
             return false;
-        if(methodDetails.getType().equals(METHOD_TYPE.MEMBER) && (getParentExeStack(execution.getCallee(), false) == null || getParentExeStack(execution.getCallee(), false).contains(execution)))
+        if (methodDetails.getType().equals(METHOD_TYPE.MEMBER) && (getParentExeStack(execution.getCallee(), false) == null || getParentExeStack(execution.getCallee(), false).contains(execution)))
             return false;
-        if(Helper.isCannotMockType(varDetail.getType()) && methodDetails.getDeclaringClass().getPackageName().startsWith(Properties.getSingleton().getPUT())) return false; // would not use as def if it is an un-mock-able param type created by PUT methods
-        if(Properties.getSingleton().getFaultyFuncIds().contains(execution.getMethodInvoked().getId()) || containsFaultyDef(execution, true)) return false;
+        if (Helper.isCannotMockType(varDetail.getType()) && methodDetails.getDeclaringClass().getPackageName().startsWith(Properties.getSingleton().getPUT()))
+            return false; // would not use as def if it is an un-mock-able param type created by PUT methods
+        if (Properties.getSingleton().getFaultyFuncIds().contains(execution.getMethodInvoked().getId()) || containsFaultyDef(execution, true))
+            return false;
         MethodExecution existingDef = getDefExeList(varDetail.getID()) == null ? null : getMethodExecutionByID(getDefExeList(varDetail.getID()));
         if (existingDef == null) return true;
         if (existingDef.sameCalleeParamNMethod(execution)) return false; // would compare method, callee, params
@@ -303,9 +297,9 @@ public class ExecutionTrace {
                 .map(e -> new AbstractMap.SimpleEntry<MethodExecution, Integer>(e,
                         (e.getMethodInvoked().getType().equals(METHOD_TYPE.MEMBER) && e.getResultThisId() == varDetail.getID() ? -1000 : 0) +
                                 e.getMethodInvoked().getParameterCount() +
-                                e.getParams().stream().map(this::getVarDetailByID).filter(p -> p.getType().isAnonymousClass() ).mapToInt(i->1000).sum() +
+                                e.getParams().stream().map(this::getVarDetailByID).filter(p -> p.getType().isAnonymousClass()).mapToInt(i -> 1000).sum() +
                                 (InstrumentResult.getSingleton().isLibMethod(e.getMethodInvoked().getId()) ? 999999 : 0) +
-                                (e.getMethodInvoked().getType().equals(METHOD_TYPE.CONSTRUCTOR) || e.getMethodInvoked().getType().equals(METHOD_TYPE.STATIC) ? -2000: 0 )
+                                (e.getMethodInvoked().getType().equals(METHOD_TYPE.CONSTRUCTOR) || e.getMethodInvoked().getType().equals(METHOD_TYPE.STATIC) ? -2000 : 0)
 //                                +
 //                                (Properties.getSingleton().getFaultyFuncIds().contains(e.getMethodInvoked().getId()) ? 10000: 0)
                 ))
@@ -319,9 +313,9 @@ public class ExecutionTrace {
      * Retrieve Stream of VarDetail IDs of components in the array/Collection
      *
      * @param execution
-     * @param type      the type of variable (Array/subclasses of Collection/etc)
-     * @param obj       the variable
-     * @param process   the current logging step
+     * @param type          the type of variable (Array/subclasses of Collection/etc)
+     * @param obj           the variable
+     * @param process       the current logging step
      * @param canOnlyBeUse
      * @param processedHash
      * @return Stream of VarDetail IDs
@@ -332,12 +326,11 @@ public class ExecutionTrace {
         Stream<Integer> componentStream;
         if (type.isArray()) {
             int trimmedLength = Array.getLength(obj);
-            componentStream = IntStream.range(0, trimmedLength).filter(i -> !processedHash.contains(System.identityHashCode(Helper.getArrayElement(obj,i)))).mapToObj(i -> getVarDetail(execution, type.getComponentType(), Helper.getArrayElement(obj, i), process, canOnlyBeUse, processedHash).getID());
-        }
-        else if (Set.class.isAssignableFrom(type) && obj instanceof Set)
-            componentStream = ((Set) obj).stream().filter(v -> ! processedHash.contains(System.identityHashCode(v))).map(v -> getVarDetail(execution, getClassOfObj(v), v, process, true, processedHash).getID()).sorted(Comparator.comparingInt(x -> (int)x));
+            componentStream = IntStream.range(0, trimmedLength).filter(i -> !processedHash.contains(System.identityHashCode(Helper.getArrayElement(obj, i)))).mapToObj(i -> getVarDetail(execution, type.getComponentType(), Helper.getArrayElement(obj, i), process, canOnlyBeUse, processedHash).getID());
+        } else if (Set.class.isAssignableFrom(type) && obj instanceof Set)
+            componentStream = ((Set) obj).stream().filter(v -> !processedHash.contains(System.identityHashCode(v))).map(v -> getVarDetail(execution, getClassOfObj(v), v, process, true, processedHash).getID()).sorted(Comparator.comparingInt(x -> (int) x));
         else
-            componentStream = ((Collection) obj).stream().filter(v-> !processedHash.contains(System.identityHashCode(v))).map(v -> getVarDetail(execution, getClassOfObj(v), v, process, canOnlyBeUse, processedHash).getID());
+            componentStream = ((Collection) obj).stream().filter(v -> !processedHash.contains(System.identityHashCode(v))).map(v -> getVarDetail(execution, getClassOfObj(v), v, process, canOnlyBeUse, processedHash).getID());
         return componentStream;
     }
 
@@ -352,11 +345,10 @@ public class ExecutionTrace {
         if (varDetailClass.equals(EnumVarDetails.class)) {
             if (type.equals(Class.class))
                 objValue = objValue.toString().replace("$", ".") + ".class";
-        }else if (varDetailClass.equals(ArrVarDetails.class)) {
-            objValue = ((List)objValue).stream().map(String::valueOf).collect(Collectors.joining(Properties.getDELIMITER())) ;
-        }
-        else if (varDetailClass.equals(MapVarDetails.class)) {
-            objValue = ((Set<Map.Entry>)objValue).stream().map(e -> e.getKey()+"="+e.getValue()).sorted().collect(Collectors.joining(Properties.getDELIMITER()));
+        } else if (varDetailClass.equals(ArrVarDetails.class)) {
+            objValue = ((List) objValue).stream().map(String::valueOf).collect(Collectors.joining(Properties.getDELIMITER()));
+        } else if (varDetailClass.equals(MapVarDetails.class)) {
+            objValue = ((Set<Map.Entry>) objValue).stream().map(e -> e.getKey() + "=" + e.getValue()).sorted().collect(Collectors.joining(Properties.getDELIMITER()));
         }
         // high chance of having the same value
 //        if (process.equals(LOG_ITEM.RETURN_THIS) && ExecutionLogger.getLatestExecution().getCalleeId() != -1) {
@@ -523,7 +515,7 @@ public class ExecutionTrace {
         Map<Integer, Set<Integer>> exeToUnmockableInputVarMap = new HashMap<>();
         while (!executionQueue.isEmpty()) {
             MethodExecution execution = executionQueue.poll();
-            if(execution.getCalleeId()!=-1 && getParentExeStack(execution.getCallee(), true)==null) {
+            if (execution.getCalleeId() != -1 && getParentExeStack(execution.getCallee(), true) == null) {
                 execution.setCanTest(false);
                 checked.add(execution.getID());
                 continue;
@@ -532,7 +524,7 @@ public class ExecutionTrace {
                 executionQueue.add(execution); // if the callee is not checked yet, wait
                 continue;
             }
-            logger.debug("checking " +  execution.getID() + "\t" + execution.getMethodInvoked().toString() );
+            logger.debug("checking " + execution.getID() + "\t" + execution.getMethodInvoked().toString());
             checked.add(execution.getID());
             execution.setCanTest(canTestExecution(execution) && canTestCallee(execution) && compatibilityCheck(execution));
             if (!execution.isCanTest()) continue;
@@ -551,9 +543,9 @@ public class ExecutionTrace {
                 return isUnmockableParam(execution, paramDeclaredType, p);
             }) && !hasUnmockableUsage(execution, inputsAndDes, unmockableInputs));
 
-            if(!execution.getRequiredPackage().isEmpty() && !execution.getRequiredPackage().startsWith(Properties.getSingleton().getPUT()))
+            if (!execution.getRequiredPackage().isEmpty() && !execution.getRequiredPackage().startsWith(Properties.getSingleton().getPUT()))
                 execution.setCanTest(false);
-            logger.debug(executionQueue.size() +" checks remaining");
+            logger.debug(executionQueue.size() + " checks remaining");
         }
     }
 
@@ -562,6 +554,7 @@ public class ExecutionTrace {
                 .map(this::getMethodExecutionByID)
                 .anyMatch(e -> vars.contains(e.getCalleeId()) || hasUsageAsCallee(e, vars));
     }
+
     private boolean hasUnmockableUsage(MethodExecution execution, Set<Integer> allInputVars, Set<Integer> allUnmockableVars) {
         return hasUnmockableUsage(execution, allInputVars, allUnmockableVars, new HashSet<>());
     }
@@ -569,13 +562,13 @@ public class ExecutionTrace {
     /**
      * Check if there exist unmockable usage of vars specified in the provided execution
      *
-     * @param execution Method Execution under investigation
-     * @param allInputVars      VarDetail IDs to check
+     * @param execution    Method Execution under investigation
+     * @param allInputVars VarDetail IDs to check
      * @return if there is unmockable usages of vars in execution
      */
     private boolean hasUnmockableUsage(MethodExecution execution, Set<Integer> allInputVars, Set<Integer> allUnmockableVars, Set<MethodExecution> covered) {
         logger.debug("Checking has unmockable usages " + execution.toSimpleString());
-        if(covered.contains(execution)) return false;
+        if (covered.contains(execution)) return false;
         covered.add(execution);
         return getChildren(execution.getID()).stream()
                 .map(this::getMethodExecutionByID)
@@ -583,27 +576,27 @@ public class ExecutionTrace {
                     MethodDetails methodDetails = e.getMethodInvoked();
                     if (methodDetails.isFieldAccess() && allInputVars.contains(e.getCalleeId()))
                         return true;
-                    if(allInputVars.contains(e.getCalleeId()) && IntStream.range(0, e.getParams().size()).anyMatch(pID -> {
+                    if (allInputVars.contains(e.getCalleeId()) && IntStream.range(0, e.getParams().size()).anyMatch(pID -> {
                         VarDetail p = this.getVarDetailByID(e.getParams().get(pID));
                         Class<?> pDeclaredType = sootTypeToClass(e.getMethodInvoked().getParameterTypes().get(pID));
                         return isUnmockableParam(execution, pDeclaredType, p);
                     }))
                         return true;
 
-                    if(allInputVars.contains(e.getCalleeId())) {
+                    if (allInputVars.contains(e.getCalleeId())) {
                         try {
                             Method toMock = methodDetails.getdClass().getDeclaredMethod(methodDetails.getName(), methodDetails.getParameterTypes().stream().map(Helper::sootTypeToClass).toArray(Class<?>[]::new));
 
-                            if(methodDetails.getName().equals("equals") || methodDetails.getName().equals("hashCode") || methodDetails.getName().equals("getClass"))
+                            if (methodDetails.getName().equals("equals") || methodDetails.getName().equals("hashCode") || methodDetails.getName().equals("getClass"))
                                 return true;
-                            if(e.getReturnValId()!=-1) {
+                            if (e.getReturnValId() != -1) {
                                 VarDetail returnVal = this.getVarDetailByID(e.getReturnValId());
-                                if(!canProvideReturnVal(execution, returnVal)) return true;
+                                if (!canProvideReturnVal(execution, returnVal)) return true;
                             }
                         } catch (NoSuchMethodException ignored) {
                         }
                     }
-                    if(allUnmockableVars.contains(e.getCalleeId())) return true;
+                    if (allUnmockableVars.contains(e.getCalleeId())) return true;
                     if (InstrumentResult.getSingleton().isLibMethod(methodDetails.getId()) && e.getParams().stream().anyMatch(allInputVars::contains))
                         return true;
 
@@ -618,30 +611,40 @@ public class ExecutionTrace {
                 neededPackage = getRequiredPackage(ClassUtils.getClass(((EnumVarDetails) returnVal).getValue()));
             } catch (ClassNotFoundException ignored) {
             }
-            if(neededPackage == null || (!neededPackage.isEmpty() && !execution.getRequiredPackage().equals(neededPackage))) return false;
+            if (neededPackage == null || (!neededPackage.isEmpty() && !execution.getRequiredPackage().equals(neededPackage)))
+                return false;
             execution.setRequiredPackage(neededPackage);
         }
         Class<?> declaredReturnType = execution.getReturnValId() == -1 ? null : execution.getMethodInvoked().getReturnType();
-        if(returnVal instanceof ObjVarDetails && !returnVal.equals(nullVar) && ((declaredReturnType == null && getRequiredPackage(returnVal.getType()) == null) || (declaredReturnType!=null && !declaredReturnType.isAssignableFrom(getAccessibleSuperType(returnVal.getType(), execution.getRequiredPackage()))))) return false;
-        if(returnVal instanceof ArrVarDetails) return ((ArrVarDetails) returnVal).getComponents().stream().map(this::getVarDetailByID).allMatch(c -> canProvideReturnVal(execution, c));
-        if(returnVal instanceof MapVarDetails) return ((MapVarDetails) returnVal).getKeyValuePairs().stream().flatMap(c-> Stream.of(c.getKey(), c.getValue())).map(this::getVarDetailByID).allMatch(c-> canProvideReturnVal(execution, c));
+        if (returnVal instanceof ObjVarDetails && !returnVal.equals(nullVar) && ((declaredReturnType == null && getRequiredPackage(returnVal.getType()) == null) || (declaredReturnType != null && !declaredReturnType.isAssignableFrom(getAccessibleSuperType(returnVal.getType(), execution.getRequiredPackage())))))
+            return false;
+        if (returnVal instanceof ArrVarDetails)
+            return ((ArrVarDetails) returnVal).getComponents().stream().map(this::getVarDetailByID).allMatch(c -> canProvideReturnVal(execution, c));
+        if (returnVal instanceof MapVarDetails)
+            return ((MapVarDetails) returnVal).getKeyValuePairs().stream().flatMap(c -> Stream.of(c.getKey(), c.getValue())).map(this::getVarDetailByID).allMatch(c -> canProvideReturnVal(execution, c));
         return true;
     }
+
     private boolean isUnmockableParam(MethodExecution execution, Class<?> paramDeclaredType, VarDetail p) {
-        if(p instanceof ObjVarDetails && !p.equals(this.getNullVar()) && ((paramDeclaredType == null && getRequiredPackage(p.getType()) == null) || (paramDeclaredType!=null && !paramDeclaredType.isAssignableFrom(getAccessibleSuperType(p.getType(), execution.getRequiredPackage()))))) return true;
-        if(p instanceof ObjVarDetails && p.getID()!=execution.getCalleeId() && !execution.getParams().contains(p.getID()) && !p.equals(nullVar)) return true;
-        if(p instanceof ObjVarDetails && !p.equals(this.getNullVar()) && Helper.isCannotMockType(p.getType()) && hasUsageAsCallee(execution, Collections.singleton(p.getID()))) {
+        if (p instanceof ObjVarDetails && !p.equals(this.getNullVar()) && ((paramDeclaredType == null && getRequiredPackage(p.getType()) == null) || (paramDeclaredType != null && !paramDeclaredType.isAssignableFrom(getAccessibleSuperType(p.getType(), execution.getRequiredPackage())))))
+            return true;
+        if (p instanceof ObjVarDetails && p.getID() != execution.getCalleeId() && !execution.getParams().contains(p.getID()) && !p.equals(nullVar))
+            return true;
+        if (p instanceof ObjVarDetails && !p.equals(this.getNullVar()) && Helper.isCannotMockType(p.getType()) && hasUsageAsCallee(execution, Collections.singleton(p.getID()))) {
             Stack<MethodExecution> parentStack = getParentExeStack(p, true);
-            if(parentStack == null || parentStack.stream().anyMatch(e -> e.getMethodInvoked().getDeclaringClass().getPackageName().startsWith(Properties.getSingleton().getPUT()))) {
+            if (parentStack == null || parentStack.stream().anyMatch(e -> e.getMethodInvoked().getDeclaringClass().getPackageName().startsWith(Properties.getSingleton().getPUT()))) {
                 return true;
             }
         }
-        if(p instanceof ArrVarDetails) return ((ArrVarDetails) p).getComponents().stream().map(this::getVarDetailByID).anyMatch(c -> isUnmockableParam(execution, paramDeclaredType == null ? null : paramDeclaredType.getComponentType(), c));
-        if(p instanceof MapVarDetails) return ((MapVarDetails) p).getKeyValuePairs().stream().flatMap(c-> Stream.of(c.getKey(), c.getValue())).map(this::getVarDetailByID).anyMatch(c-> isUnmockableParam(execution, null, c));
-        if(p instanceof EnumVarDetails && p.getType().equals(Class.class)) {
+        if (p instanceof ArrVarDetails)
+            return ((ArrVarDetails) p).getComponents().stream().map(this::getVarDetailByID).anyMatch(c -> isUnmockableParam(execution, paramDeclaredType == null ? null : paramDeclaredType.getComponentType(), c));
+        if (p instanceof MapVarDetails)
+            return ((MapVarDetails) p).getKeyValuePairs().stream().flatMap(c -> Stream.of(c.getKey(), c.getValue())).map(this::getVarDetailByID).anyMatch(c -> isUnmockableParam(execution, null, c));
+        if (p instanceof EnumVarDetails && p.getType().equals(Class.class)) {
             try {
                 String requiredPackage = getRequiredPackage(ClassUtils.getClass(((EnumVarDetails) p).getValue()));
-                if(requiredPackage == null || (!execution.getRequiredPackage().isEmpty() && !execution.getRequiredPackage().equals(requiredPackage)) ) return true;
+                if (requiredPackage == null || (!execution.getRequiredPackage().isEmpty() && !execution.getRequiredPackage().equals(requiredPackage)))
+                    return true;
                 else execution.setRequiredPackage(requiredPackage);
             } catch (ClassNotFoundException ignored) {
 
@@ -666,17 +669,18 @@ public class ExecutionTrace {
 //        return false;
 //    }
 //
+
     /**
      * Get stack of method executions needed to create the var specified
      *
-     * @param var Variable to create
+     * @param var   Variable to create
      * @param cache
      * @return stack of method executions for creation
      */
     public Stack<MethodExecution> getParentExeStack(VarDetail var, boolean cache) {
         Stack<MethodExecution> executionStack = new Stack<>();
         if (!(var instanceof ObjVarDetails)) return null;
-        if(varToParentStackCache.containsKey(var)) return varToParentStackCache.get(var);
+        if (varToParentStackCache.containsKey(var)) return varToParentStackCache.get(var);
         while (var != null) {
             if (var instanceof EnumVarDetails) break;
             Integer def = getDefExeList(var.getID());
@@ -691,7 +695,7 @@ public class ExecutionTrace {
             else
                 var = null;
         }
-        if(cache)
+        if (cache)
             varToParentStackCache.put(var, executionStack);
         return executionStack;
     }
@@ -699,7 +703,8 @@ public class ExecutionTrace {
     public boolean containsFaultyDef(MethodExecution execution, boolean useCache, HashSet<Integer> processed) {
         InstrumentResult instrumentResult = InstrumentResult.getSingleton();
         MethodDetails details = execution.getMethodInvoked();
-        if(useCache && exeToFaultyExeContainedCache.containsKey(execution)) return exeToFaultyExeContainedCache.get(execution);
+        if (useCache && exeToFaultyExeContainedCache.containsKey(execution))
+            return exeToFaultyExeContainedCache.get(execution);
         processed.add(execution.getID());
         exeToFaultyExeContainedCache.put(execution, Properties.getSingleton().getFaultyFuncIds().stream()
                 .map(instrumentResult::getMethodDetailByID)
@@ -707,6 +712,7 @@ public class ExecutionTrace {
                 || getChildren(execution.getID()).stream().filter(exeID -> !processed.contains(exeID)).anyMatch(exeID -> containsFaultyDef(exeID, useCache, processed)));
         return exeToFaultyExeContainedCache.get(execution);
     }
+
     /**
      * @param execution MethodExecution under check
      * @param useCache
@@ -717,7 +723,7 @@ public class ExecutionTrace {
     }
 
     /**
-     * @param exeID id of MethodExecution under check
+     * @param exeID    id of MethodExecution under check
      * @param useCache
      * @return if the execution provided is / runs faulty methods
      */
@@ -747,11 +753,10 @@ public class ExecutionTrace {
                 if (neededPackage == null) return false;
                 execution.setRequiredPackage(neededPackage);
         }
-        if(methodDetails.getAccess().equals(ACCESS.PROTECTED)) {
-            if(execution.getRequiredPackage().isEmpty())
+        if (methodDetails.getAccess().equals(ACCESS.PROTECTED)) {
+            if (execution.getRequiredPackage().isEmpty())
                 execution.setRequiredPackage(methodDetails.getDeclaringClass().getPackageName());
-            else if(!execution.getRequiredPackage().equals(methodDetails.getDeclaringClass().getPackageName()))
-                return false;
+            else return execution.getRequiredPackage().equals(methodDetails.getDeclaringClass().getPackageName());
         }
         return true;
     }
@@ -764,7 +769,7 @@ public class ExecutionTrace {
         if (execution.getCalleeId() == -1) return true;
         logger.debug("Checking can test callee " + execution.getCallee().getID() + "\t " + execution.getCallee().getType().getName());
         if (execution.getCallee() instanceof ObjVarDetails) {
-            if(execution.getCallee().getType().isAnonymousClass()) return false;
+            if (execution.getCallee().getType().isAnonymousClass()) return false;
             Stack<MethodExecution> parentStack = getParentExeStack(execution.getCallee(), true);
             if (parentStack == null || parentStack.contains(execution) || !parentStack.stream().allMatch(MethodExecution::isCanTest))
                 return false;
@@ -840,7 +845,7 @@ public class ExecutionTrace {
     }
 
     private Set<Integer> getUnmockableInputs(MethodExecution execution) {
-        return  execution.getParams().stream()
+        return execution.getParams().stream()
                 .map(this::getVarDetailByID)
                 .map(this::getRelatedObjVarIDs)
                 .flatMap(Collection::stream)
@@ -862,6 +867,7 @@ public class ExecutionTrace {
     private Set<Integer> getDes(MethodExecution execution, Set<Integer> inputsAndDes) {
         return getDes(execution, inputsAndDes, new HashSet<>());
     }
+
     /**
      * Get descendants of provided inputs in the provided execution
      * dfs approach
