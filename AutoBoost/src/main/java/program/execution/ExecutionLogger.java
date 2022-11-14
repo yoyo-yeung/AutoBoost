@@ -15,12 +15,14 @@ import soot.VoidType;
 import java.lang.reflect.Array;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class ExecutionLogger {
     private static final Logger logger = LogManager.getLogger(ExecutionLogger.class);
     private static final ConcurrentHashMap<Long, Stack<MethodExecution>> threadExecutingMap = new ConcurrentHashMap<Long, Stack<MethodExecution>>();
+    private static final AtomicInteger exeIDGenerator = new AtomicInteger(0);
     private static final InstrumentResult instrumentResult = InstrumentResult.getSingleton();
     private static final ExecutionTrace executionTrace = ExecutionTrace.getSingleton();
     private static final HashMap<Long, Boolean> threadSkippingMap = new HashMap<Long, Boolean>();
@@ -62,7 +64,7 @@ public class ExecutionLogger {
     public static void logFieldAccess(int methodId, Object instance, Object returnVal, long threadID) throws ClassNotFoundException {
         if(!isLogging() || returnNow(methodId, threadID)) return;
         MethodDetails details = instrumentResult.getMethodDetailByID(methodId);
-        MethodExecution newExecution = new MethodExecution(executionTrace.getNewExeID(), details);
+        MethodExecution newExecution = new MethodExecution(getNewExeID(), details);
         Stack<MethodExecution> currentlyExecuting = getCurrentExecuting(threadID);
         // set test as null if static initializer is running
         if(currentlyExecuting.size() > 0 && currentlyExecuting.peek().getTest() == null) newExecution.setTest(null);
@@ -80,7 +82,7 @@ public class ExecutionLogger {
     public static int logStart(int methodId, Object callee, Object params, long threadID) throws ClassNotFoundException {
          if(!isLogging() || returnNow(methodId, threadID)) return -1;
         MethodDetails details = instrumentResult.getMethodDetailByID(methodId);
-        MethodExecution newExecution = new MethodExecution(executionTrace.getNewExeID(), details);
+        MethodExecution newExecution = new MethodExecution(getNewExeID(), details);
         Stack<MethodExecution> currentExecuting = getCurrentExecuting(threadID);
 //        logger.debug(details.getSignature());
         if (details.getType().equals(METHOD_TYPE.STATIC_INITIALIZER) || (currentExecuting.size() > 0 && currentExecuting.peek().getTest() == null))
@@ -271,5 +273,12 @@ public class ExecutionLogger {
 
     public static void setLogging(boolean logging) {
         ExecutionLogger.logging = logging;
+    }
+
+    /**
+     * @return new ID for MethodExecution
+     */
+    public static int getNewExeID() {
+        return exeIDGenerator.incrementAndGet();
     }
 }

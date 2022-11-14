@@ -1,10 +1,14 @@
 package program.instrumentation;
 
+import org.apache.commons.lang3.ClassUtils;
 import program.analysis.ClassDetails;
 import program.analysis.MethodDetails;
+import soot.Modifier;
 import soot.SootClass;
 import soot.SootField;
 
+import java.io.Serializable;
+import java.lang.reflect.Field;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -96,6 +100,22 @@ public class InstrumentResult {
                         .map(SootField::getName)
                         .collect(Collectors.toSet())
                 );
+    }
+
+    public List<Field> getClassFields(Class<?> CUC) {
+
+        if(classDetailsMap.containsKey(CUC.getName()))return classDetailsMap.get(CUC.getName()).getClassFields();
+        List<Class> classesToGetFields = new ArrayList<>();
+        classesToGetFields.add(CUC);
+        classesToGetFields.addAll(ClassUtils.getAllSuperclasses(CUC));
+        classesToGetFields.removeIf(c -> c.equals(Object.class) || c.equals(Serializable.class) || c.equals(Field.class) || c.equals(Class.class));
+        addClassDetails(new ClassDetails(CUC.getName(), classesToGetFields.stream()
+                .flatMap(c -> Arrays.stream(c.getDeclaredFields()))
+                .filter(f -> !f.isSynthetic())
+                .filter(f -> !(f.getType().isPrimitive() && Modifier.isStatic(f.getModifiers()) && Modifier.isFinal(f.getModifiers())))
+                .distinct()
+                .collect(Collectors.toList())));
+        return classDetailsMap.get(CUC.getName()).getClassFields();
     }
 
     private String getFieldAccessMapKey(String declaringClass, String fieldName) {
