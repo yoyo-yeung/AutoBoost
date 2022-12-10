@@ -32,18 +32,14 @@ public class ExecutionTrace {
     private static final Logger logger = LogManager.getLogger(ExecutionTrace.class);
     private static final AtomicInteger varIDGenerator = new AtomicInteger(1);
     private static final ExecutionTrace singleton = new ExecutionTrace();
-    private static final VarDetail nullVar;
-
-    static {
-        nullVar = new ObjVarDetails(0, Object.class, "null");
-    }
-
+    private final InstrumentResult instrumentResult = InstrumentResult.getSingleton();
     private final Map<Integer, MethodExecution> allMethodExecs;
     private final Map<Integer, VarDetail> allVars; // store all vardetail used, needed for lookups
     private final Map<Integer, Integer> varToDefMap;
     private final DirectedMultigraph<Integer, CallOrderEdge> callGraph;
     private final Map<VarDetail, Stack<MethodExecution>> varToParentStackCache = new HashMap<>(); // cache last retrieval results to save time
     private final Map<MethodExecution, Boolean> exeToFaultyExeContainedCache = new HashMap<>(); // cache to save execution time
+    private final VarDetail nullVar = new ObjVarDetails(0, Object.class, null);
 
     /**
      * Constructor of ExecutionTrace, set up all vars.
@@ -129,20 +125,19 @@ public class ExecutionTrace {
             Object finalObjValue1 = objValue;
 
             Class<?> finalType = type;
-            Optional<String> match = Arrays.stream(type.getDeclaredFields()).filter(f -> f.getType().equals(finalType)).filter(f -> {
-                try {
-                    return (!InstrumentResult.getSingleton().getClassPublicFieldsMap().containsKey(finalType.getName()) && Modifier.isPublic(finalType.getField(f.getName()).getModifiers())) || InstrumentResult.getSingleton().getClassPublicFieldsMap().get(finalType.getName()).contains(f.getName());
-                } catch (NoSuchFieldException e) {
-                    return false;
-                }
-            }).filter(f -> {
-                try {
-                    Object val = f.get(finalObjValue1);
-                    return val != null && System.identityHashCode(val) == System.identityHashCode(finalObjValue1);
-                } catch (IllegalAccessException e) {
-                    return false;
-                }
-            }).map(Field::getName).findAny();
+
+            Optional<String> match = Arrays.stream(type.getDeclaredFields())
+                    .filter(f -> f.getType().equals(finalType))
+                    .filter(f -> (!instrumentResult.getClassPublicFieldsMap().containsKey(finalType.getName()) && Modifier.isPublic(f.getModifiers()) && Modifier.isStatic(f.getModifiers())) ||
+                            instrumentResult.getClassPublicFieldsMap().getOrDefault(finalType.getName(), new HashSet<>()).contains(f.getName()))
+                    .filter(f -> {
+                        try {
+                            Object val = f.get(finalObjValue1);
+                            return val != null && System.identityHashCode(val) == hashCode;
+                        } catch (IllegalAccessException e) {
+                            return false;
+                        }
+                    }).map(Field::getName).findAny();
 
             if (match.isPresent()) {
                 artificialEnum = true;
@@ -284,7 +279,7 @@ public class ExecutionTrace {
                         (e.getMethodInvoked().getType().equals(METHOD_TYPE.MEMBER) && e.getResultThisId() == varDetail.getID() ? -1000 : 0) +
                                 e.getMethodInvoked().getParameterCount() +
                                 e.getParams().stream().map(this::getVarDetailByID).filter(p -> p.getType().isAnonymousClass()).mapToInt(i -> 1000).sum() +
-                                (InstrumentResult.getSingleton().isLibMethod(e.getMethodInvoked().getId()) ? 999999 : 0) +
+                                (instrumentResult.isLibMethod(e.getMethodInvoked().getId()) ? 999999 : 0) +
                                 (e.getMethodInvoked().getType().equals(METHOD_TYPE.CONSTRUCTOR) || e.getMethodInvoked().getType().equals(METHOD_TYPE.STATIC) ? -2000 : 0)
 //                                +
 //                                (Properties.getSingleton().getFaultyFuncIds().contains(e.getMethodInvoked().getId()) ? 10000: 0)
@@ -560,7 +555,6 @@ public class ExecutionTrace {
     }
 
     public boolean containsFaultyDef(MethodExecution execution, boolean useCache, HashSet<Integer> processed) {
-        InstrumentResult instrumentResult = InstrumentResult.getSingleton();
         MethodDetails details = execution.getMethodInvoked();
         if (useCache && exeToFaultyExeContainedCache.containsKey(execution))
             return exeToFaultyExeContainedCache.get(execution);
