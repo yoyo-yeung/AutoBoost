@@ -33,7 +33,6 @@ public class TestGenerator {
     private static final TestGenerator singleton = new TestGenerator();
     private static final ExecutionTrace executionTrace = ExecutionTrace.getSingleton();
     private final ExecutionProcessor executionProcessor = new ExecutionProcessor();
-    private final InstrumentResult instrumentResult = InstrumentResult.getSingleton();
     private final TestSuite testSuite = new TestSuite();
     private final ArgumentMatcherStmt argumentMatcherStmt = new ArgumentMatcherStmt(-1);
 
@@ -44,50 +43,72 @@ public class TestGenerator {
         return singleton;
     }
 
-    public void generateResultCheckingTests(List<MethodExecution> snapshot) {
+    public void generateTestCases(List<MethodExecution> snapshot) {
         logger.info("Start generating test cases");
         snapshot.stream()
                 .distinct()
-                .filter(this::canUseAsTargetExecution)
-                .map(e ->
-                {
-                    logger.debug("Generating test case for execution " + e.toSimpleString());
-
-                    ValueTestCase testCase = new ValueTestCase(getPackageForTestCase(e));
-                    String callee = prepareAndGetCallee(e, testCase);
-                    List<Stmt> params = prepareAndGetRequiredParams(e, testCase);
-                    setUpMockedParamsAndCalls(e, testCase);
-                    Stmt expected = prepareAndGetAssertVal(executionTrace.getVarDetailByID(e.getReturnValId()), testCase);
-                    Stmt actual = new MethodInvStmt(callee, e.getMethodInvoked().getId(), params);
-                    Class<?> returnType = executionTrace.getVarDetailByID(e.getReturnValId()).getType();
-                    if(ClassUtils.isPrimitiveWrapper(returnType) && !ClassUtils.isPrimitiveWrapper(e.getMethodInvoked().getReturnType()))
-                        actual = new CastStmt(actual.getResultVarDetailID(), returnType, actual);
-                    if (ClassUtils.isPrimitiveWrapper(returnType)) {
-                        expected = new CastStmt(expected.getResultVarDetailID(), ClassUtils.wrapperToPrimitive(returnType), expected);
-                        actual = new CastStmt(actual.getResultVarDetailID(), ClassUtils.wrapperToPrimitive(returnType), actual);
+                .filter(executionProcessor::testSetUp)
+                .map(e -> {
+                    if (executionProcessor.normalTestSetUp(e)) {
+                        return generateResultCheckingTests(e);
+                    } else if (executionProcessor.exceptionalTestSetUp(e)) {
+                        return generateExceptionTests(e);
                     }
-                    testCase.setAssertion(new AssertStmt(expected, actual));
-                    return testCase;
+                    return null;
                 })
+                .filter(Objects::nonNull)
                 .forEach(testSuite::assignTestCase);
     }
 
-    public void generateExceptionTests(List<MethodExecution> snapshot) {
-        logger.info("Start generating test cases involving exceptions");
-        snapshot.stream()
-                .filter(e -> e.getReturnValId() == -1 && e.getExceptionClass() != null && !e.getExceptionClass().equals(UnrecognizableException.class) && e.isCanTest())
-                .map(e -> {
-                    logger.debug("Generating exception checking test case for execution " + e.toSimpleString());
+    public TestCase generateResultCheckingTests(MethodExecution e) {
 
-                    ExceptionTestCase testCase = new ExceptionTestCase(getPackageForTestCase(e));
-                    String callee = prepareAndGetCallee(e, testCase);
-                    List<Stmt> params = prepareAndGetRequiredParams(e, testCase);
-                    setUpMockedParamsAndCalls(e, testCase);
-                    testCase.addStmt(new MethodInvStmt(callee, e.getMethodInvoked().getId(), params));
-                    testCase.setExceptionClass(e.getExceptionClass());
-                    return testCase;
-                })
-                .forEach(testSuite::assignTestCase);
+        ValueTestCase testCase = new ValueTestCase();
+        testCase.setPackageName(getPackageForTestCase(e));
+        try {
+            logger.debug("Generating test case for execution " + e.toSimpleString());
+
+            String callee = prepareAndGetCallee(e, testCase);
+            testCase.keepOnlyTargetCalleeVar(e.getCalleeId());
+            List<Stmt> params = prepareAndGetRequiredParams(e, testCase);
+            setUpMockedParamsAndCalls(e, testCase);
+//                        if(()||(e.getReturnValId()!=executionTrace.getNullVar().getID() && !testCase.getObjForVar(e.getReturnValId()).equals(ExecutionChecker.getStandaloneObj(executionTrace.getVarDetailByID(e.getReturnValId())))))
+//                            logger.error("herer");
+            ExecutionChecker.constructObj(testCase, e, null, params.stream().map(Stmt::getResultVarDetailID).map(testCase::getObjForVar).toArray());
+            testCase.setRecreated(executionProcessor.checkRecreationResult(testCase, e));
+            if (!testCase.isRecreated()) {
+                logger.error("Cannot recreate " + e.toSimpleString());
+                return null;
+            }
+            Stmt expected = prepareAndGetAssertVal(executionTrace.getVarDetailByID(e.getReturnValId()), testCase);
+            Stmt actual = new MethodInvStmt(callee, e.getMethodInvoked().getId(), params);
+            Class<?> returnType = executionTrace.getVarDetailByID(e.getReturnValId()).getType();
+                    if(ClassUtils.isPrimitiveWrapper(returnType) && !ClassUtils.isPrimitiveWrapper(e.getMethodInvoked().getReturnType()))
+                actual = new CastStmt(actual.getResultVarDetailID(), returnType, actual);
+            if (ClassUtils.isPrimitiveWrapper(returnType)) {
+                expected = new CastStmt(expected.getResultVarDetailID(), ClassUtils.wrapperToPrimitive(returnType), expected);
+                actual = new CastStmt(actual.getResultVarDetailID(), ClassUtils.wrapperToPrimitive(returnType), actual);
+            }
+            testCase.setAssertion(new AssertStmt(expected, actual));
+            return testCase;
+        } catch (Exception exception) {
+            logger.error(exception.getMessage());
+            exception.printStackTrace();
+            return null;
+        }
+
+    }
+
+    public TestCase generateExceptionTests(MethodExecution e) {
+        ExceptionTestCase testCase = new ExceptionTestCase();
+        logger.debug("Generating exception checking test case for execution " + e.toSimpleString());
+        testCase.setPackageName(getPackageForTestCase(e));
+        String callee = prepareAndGetCallee(e, testCase);
+        testCase.keepOnlyTargetCalleeVar(e.getCalleeId());
+        List<Stmt> params = prepareAndGetRequiredParams(e, testCase);
+        setUpMockedParamsAndCalls(e, testCase);
+        testCase.addStmt(new MethodInvStmt(callee, e.getMethodInvoked().getId(), params));
+        testCase.setExceptionClass(e.getExceptionClass());
+        return testCase;
     }
 
 

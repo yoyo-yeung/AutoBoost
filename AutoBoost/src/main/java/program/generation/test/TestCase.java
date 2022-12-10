@@ -24,11 +24,10 @@ public abstract class TestCase {
     private String packageName = null;
     private boolean recreated = true;
 
-    public TestCase(String packageName) {
+    public TestCase() {
         this.ID = testIDGenerator.incrementAndGet();
         if (Properties.getSingleton().getJunitVer() != 3)
             this.allImports.add(org.junit.Test.class);
-        this.packageName = packageName;
     }
 
 
@@ -105,8 +104,8 @@ public abstract class TestCase {
     }
 
     public VarStmt getExistingCreatedOrMockedVar(VarDetail detail) {
-        if(this.varToVarStmtMap.containsKey(detail.getID())) return this.varToVarStmtMap.get(detail.getID());
-        else return this.varToMockedVarStmtMap.getOrDefault(detail, null);
+        if(this.varToMockedVarStmtMap.containsKey(detail)) return this.varToMockedVarStmtMap.get(detail);
+        else return this.varToVarStmtMap.getOrDefault(detail.getID(), null);
     }
 
     public Map<Integer, VarStmt> getVarToVarStmtMap() {

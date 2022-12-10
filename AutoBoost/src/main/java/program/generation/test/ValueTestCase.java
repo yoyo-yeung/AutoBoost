@@ -14,8 +14,7 @@ public class ValueTestCase extends TestCase{
 
     private AssertStmt assertion;
 
-    public ValueTestCase(String packageName) {
-        super(packageName);
+    public ValueTestCase() {
     }
 
     public AssertStmt getAssertion() {

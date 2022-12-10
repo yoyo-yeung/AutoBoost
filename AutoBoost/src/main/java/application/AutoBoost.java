@@ -123,8 +123,9 @@ public class AutoBoost {
         logger.info("Test generation starting");
         List<MethodExecution> snapshot = new ArrayList<>(ExecutionTrace.getSingleton().getAllMethodExecs().values());
         try {
-            testGenerator.generateResultCheckingTests(snapshot);
-            testGenerator.generateExceptionTests(snapshot);
+            testGenerator.generateTestCases(snapshot);
+//            testGenerator.generateResultCheckingTests(snapshot);
+//            testGenerator.generateExceptionTests(snapshot);
         }catch(Exception | Error e) {
             logger.error(e.getMessage());
             logger.error(Arrays.stream(e.getStackTrace()).map(StackTraceElement::toString).collect(Collectors.joining("\n")));
