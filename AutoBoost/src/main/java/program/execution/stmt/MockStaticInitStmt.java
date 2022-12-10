@@ -5,16 +5,16 @@ import org.mockito.Mockito;
 import java.util.Collections;
 import java.util.Set;
 
-public class MockInitStmt extends Stmt{
+public class MockStaticInitStmt extends Stmt {
     Class<?> mockType;
 
-    public MockInitStmt(Class<?> mockType) {
+    public MockStaticInitStmt(Class<?> mockType) {
         this.mockType = mockType;
     }
 
     @Override
     public String getStmt(Set<Class<?>> fullCNameNeeded) {
-        return "Mockito.mock("+ (fullCNameNeeded.contains(mockType)? mockType.getName().replace("$", ".") : mockType.getSimpleName()) + ".class)";
+        return "Mockito.mockStatic("+ (fullCNameNeeded.contains(mockType)? mockType.getName().replace("$", ".") : mockType.getSimpleName()) + ".class)";
     }
 
     @Override

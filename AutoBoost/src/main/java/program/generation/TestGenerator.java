@@ -173,7 +173,7 @@ public class TestGenerator {
          else {
              Class<?> valType = getAccessibleSuperType(v.getType(), testCase.getPackageName());
              res = new VarStmt(valType, testCase.getNewVarID(), v.getID());
-             testCase.addStmt(new AssignStmt(res, new MockInitStmt(valType)));
+            testCase.addStmt(new AssignStmt(res, new MockInstanceInitStmt(valType)));
              testCase.addOrUpdateMockedVar(v, (VarStmt) res);
          }
     }
