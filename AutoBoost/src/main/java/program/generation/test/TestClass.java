@@ -5,6 +5,7 @@ import org.apache.commons.lang3.ClassUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.lang.reflect.Field;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -23,6 +24,7 @@ public class TestClass {
         this.packageName = packageName;
         this.ID = classIDGenerator.incrementAndGet();
         this.className = Properties.getSingleton().getTestSuitePrefix() + "_"+ this.ID + "_Test";
+        this.addImports(Field.class);
 
     }
 
@@ -101,10 +103,24 @@ public class TestClass {
             return "import " + i.getName().replace("$", ".").replace("kwyyeung.autoboost.internal.", "") + ";" + Properties.getNewLine();
         }).forEach(result::append);
         result.append("public class ").append(this.className).append("{").append(Properties.getNewLine());
+        result.append(getFieldSetUpMethod());
         this.getEnclosedTestCases().stream().map(t-> t.output(fullCNameNeeded)+Properties.getNewLine()).forEach(result::append);
         result.append("}").append(Properties.getNewLine());
         return result.toString();
     }
 
+
+    private String getFieldSetUpMethod() {
+
+
+        return "    private void setField(Object obj, String fieldClass, String fieldName, Object fieldValue) throws ClassNotFoundException {\n" +
+                "        try {\n" +
+                "            Field field = Class.forName(fieldClass).getDeclaredField(fieldName);\n" +
+                "            field.setAccessible(true);\n" +
+                "            field.set(obj, fieldValue);\n" +
+                "        } catch (NoSuchFieldException | IllegalAccessException ignored) {\n" +
+                "        }\n" +
+                "    }\n\n";
+    }
 
 }
