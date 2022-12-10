@@ -38,7 +38,7 @@ public class ExecutionTrace {
     private final InstrumentResult instrumentResult = InstrumentResult.getSingleton();
     private final Map<Integer, MethodExecution> allMethodExecs;
     private final Map<Integer, VarDetail> allVars; // store all vardetail used, needed for lookups
-    private final Map<Integer, Integer> varToDefMap;
+    private final Map<Integer, Integer> unmockableVarToDefMap;
     private final DirectedMultigraph<Integer, CallOrderEdge> callGraph;
     private final Map<VarDetail, Stack<MethodExecution>> varToParentStackCache = new HashMap<>(); // cache last retrieval results to save time
     private final Map<MethodExecution, Boolean> exeToFaultyExeContainedCache = new HashMap<>(); // cache to save execution time
@@ -50,7 +50,7 @@ public class ExecutionTrace {
     public ExecutionTrace() {
         this.allMethodExecs = new ConcurrentHashMap<>();
         this.allVars = new ConcurrentHashMap<>();
-        this.varToDefMap = new HashMap<Integer, Integer>();
+        this.unmockableVarToDefMap = new HashMap<Integer, Integer>();
         callGraph = new DirectedMultigraph<>(CallOrderEdge.class);
         allVars.put(nullVar.getID(), nullVar);
 
@@ -89,8 +89,8 @@ public class ExecutionTrace {
      *
      * @return Map between a VarDetail ID and MethodExecution ID
      */
-    public Map<Integer, Integer> getVarToDefMap() {
-        return varToDefMap;
+    public Map<Integer, Integer> getUnmockableVarToDefMap() {
+        return unmockableVarToDefMap;
     }
 
     /**
@@ -100,7 +100,7 @@ public class ExecutionTrace {
      * @return ID of MethodExecution
      */
     public Integer getDefExeList(Integer varID) {
-        return this.varToDefMap.getOrDefault(varID, null);
+        return this.unmockableVarToDefMap.getOrDefault(varID, null);
     }
 
     public VarDetail getVarDetail(MethodExecution execution, Class<?> type, Object objValue, LOG_ITEM process, boolean canOnlyBeUse) {
@@ -234,12 +234,12 @@ public class ExecutionTrace {
             }
             assert varDetail != null; // if null, then fail to generate test
             addNewVarDetail(varDetail);
-            if (!canOnlyBeUse) {
+            if (varDetail instanceof ObjVarDetails && !varDetail.getType().getName().startsWith(Properties.getSingleton().getPUT()) && !canOnlyBeUse) {
                 if (setCurrentExeAsDef(varDetail, process, execution)) addNewVarDetailDef(varDetail, execution.getID());
                 else addVarDetailUsage(varDetail, execution.getID());
             }
         } else {
-            if (!canOnlyBeUse) {
+            if (varDetail instanceof ObjVarDetails && !varDetail.getType().getName().startsWith(Properties.getSingleton().getPUT()) && !canOnlyBeUse) {
                 if (setCurrentExeAsDef(varDetail, process, execution))
                     addNewVarDetailDef(varDetail, execution.getID());
                 else
@@ -369,8 +369,8 @@ public class ExecutionTrace {
      * @param varID key of VarDetail
      */
     private void setUpVarMap(int varID) {
-        if (!this.varToDefMap.containsKey(varID))
-            this.varToDefMap.put(varID, null);
+        if (!this.unmockableVarToDefMap.containsKey(varID))
+            this.unmockableVarToDefMap.put(varID, null);
     }
 
     public void addNewVarDetail(VarDetail detail) {
@@ -389,7 +389,7 @@ public class ExecutionTrace {
         this.setUpVarMap(detail.getID());
         // only store it as a def if it is an object (need construction)
         if (detail instanceof ObjVarDetails)
-            this.varToDefMap.put(detail.getID(), executionID);
+            this.unmockableVarToDefMap.put(detail.getID(), executionID);
     }
 
     /**
@@ -471,7 +471,7 @@ public class ExecutionTrace {
 
     public void clear() {
         allMethodExecs.clear();
-        varToDefMap.clear();
+        unmockableVarToDefMap.clear();
     }
 
     public void replacePossibleDefExe(MethodExecution original, MethodExecution repl) {
@@ -487,8 +487,8 @@ public class ExecutionTrace {
                 varInvolved.addAll(((MapVarDetails) returnVarDetail).getKeyValuePairs().stream().flatMap(e -> Stream.of(e.getKey(), e.getValue())).collect(Collectors.toList()));
         }
         varInvolved.remove(-1);
-        varInvolved.removeIf(v -> !varToDefMap.containsKey(v) || varToDefMap.get(v) == null || varToDefMap.get(v) != original.getID());
-        varInvolved.forEach(v -> varToDefMap.replace(v, original.getID(), repl.getID()));
+        varInvolved.removeIf(v -> !unmockableVarToDefMap.containsKey(v) || unmockableVarToDefMap.get(v) == null || unmockableVarToDefMap.get(v) != original.getID());
+        varInvolved.forEach(v -> unmockableVarToDefMap.replace(v, original.getID(), repl.getID()));
 
     }
 
