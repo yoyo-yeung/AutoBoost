@@ -102,15 +102,19 @@ public class Instrumenter extends BodyTransformer {
         Iterator<?> stmtIt = units.snapshotIterator();
 
         if (!body.getMethod().getDeclaringClass().getPackageName().startsWith(properties.getPUT())) return;
+
         // method info
         SootMethod currentSootMethod = body.getMethod();
         if (currentSootMethod.getName().contains("$") || currentSootMethod.isStaticInitializer())
             return; // if name contains $, not written manually
         SootClass currentDeclaringClass = currentSootMethod.getDeclaringClass();
         instrumentResult.addClassPublicFields(currentDeclaringClass.getName(), currentDeclaringClass); // store set of public static fields before modifying them for storing at run time
+        currentDeclaringClass.setModifiers(currentDeclaringClass.getModifiers() & ~Modifier.FINAL);
         currentDeclaringClass.getFields()
-                .forEach(f -> f.setModifiers(f.getModifiers() & ~Modifier.TRANSIENT & ~Modifier.PRIVATE & ~Modifier.PROTECTED | Modifier.PUBLIC)); // set all fields as non transient and public such that their value can be stored during runtime
+                .forEach(f -> f.setModifiers(f.getModifiers() & ~Modifier.TRANSIENT & ~Modifier.PRIVATE & ~Modifier.FINAL & ~Modifier.PROTECTED | Modifier.PUBLIC )); // set all fields as non transient and public such that their value can be stored during runtime
+        currentSootMethod.setModifiers(currentSootMethod.getModifiers() & ~Modifier.FINAL);
         MethodDetails methodDetails = new MethodDetails(currentSootMethod);
+//        currentSootMethod.setModifiers(currentSootMethod.getModifiers() & ~Modifier.FINAL & ~Modifier.PROTECTED &~Modifier.PRIVATE | Modifier.PUBLIC);
 
         // store ID of faulty methods
         if (properties.getFaultyFunc().contains(currentSootMethod.getSignature()))
@@ -189,7 +193,6 @@ public class Instrumenter extends BodyTransformer {
                 .distinct()
                 .filter(s -> !CUSTOM_TAGS.containsCustomTag(s))
                 .forEach(s -> {
-                    logger.debug(currentMethod + "\t" + expr);
                     if(s.hasTag(CUSTOM_TAGS.PARAM_TRACK_TO_LOG_TAG.name())) return;
                     if(s instanceof AssignStmt && ((AssignStmt) s).getRightOp() instanceof InstanceFieldRef && s.getFieldRef() instanceof InstanceFieldRef)
                         reverse(getLogFieldAccessStmts((InstanceFieldRef) s.getFieldRef(), ((AssignStmt) s).getLeftOp(), localGenerator, getFieldAccessingMethodDetails((InstanceFieldRef) s.getFieldRef()), threadIDLocal)).forEach(v -> units.insertAfter(v, s));
