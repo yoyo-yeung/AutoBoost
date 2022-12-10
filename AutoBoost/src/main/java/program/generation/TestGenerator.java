@@ -527,9 +527,10 @@ public class TestGenerator {
 
             ExecutionChecker.constructEnum((EnumVarDetails) v, testCase);
             return new ConstantStmt(v.getID());
+        } else if (v instanceof StringBVarDetails) {
+            ExecutionChecker.constructStringB((StringBVarDetails) v, testCase);
+            return new ConstructStmt(v.getID(), null, Collections.singletonList(new ConstantStmt(((StringBVarDetails) v).getStringValID())));
         }
-        else if (v instanceof StringBVarDetails)
-            return new ConstantStmt(((StringBVarDetails) v).getStringValID());
         return null;
     }
 
