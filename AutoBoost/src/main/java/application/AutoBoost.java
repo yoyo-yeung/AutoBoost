@@ -30,6 +30,7 @@ public class AutoBoost {
     private static final Logger logger = LogManager.getLogger(AutoBoost.class);
     private static final Properties properties = Properties.getSingleton();
     private static String executingTest = null;
+    private static PROGRAM_STATE currentProgramState = PROGRAM_STATE.PROCESSING;
     public static void main(String... args) throws ParseException, IOException{
         AutoBoost autoBoost = new AutoBoost();
         autoBoost.processCommand(args);
@@ -142,5 +143,13 @@ public class AutoBoost {
     public void clearRuntimeOnlyInfo() {
         InstrumentResult.getSingleton().clearClassDetails();
         ExecutionLogger.clearExecutingStack();
+    }
+
+    public static PROGRAM_STATE getCurrentProgramState() {
+        return currentProgramState;
+    }
+
+    public static void setCurrentProgramState(PROGRAM_STATE currentProgramState) {
+        AutoBoost.currentProgramState = currentProgramState;
     }
 }
