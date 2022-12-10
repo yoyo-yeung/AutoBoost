@@ -40,7 +40,7 @@ public class AutoBoost {
 //        autoBoost.clearRuntimeOnlyInfo();
 
         ExecutionTrace.getSingleton().checkTestabilityOfExecutions();
-
+        currentProgramState = PROGRAM_STATE.TEST_GENERATION;
         autoBoost.generateTestCases();
 
     }
@@ -90,7 +90,7 @@ public class AutoBoost {
                 executingTest = description.getDisplayName() ;
                 logger.info("Test " + description.getDisplayName() + " started ");
                 ExecutionLogger.clearExecutingStack();
-                ExecutionLogger.setLogging(true);
+                currentProgramState = PROGRAM_STATE.TEST_EXECUTION;
             }
             @Override
             public void testFailure(Failure failure) throws Exception {
@@ -101,7 +101,7 @@ public class AutoBoost {
             public void testFinished(Description description) throws Exception {
                 executingTest = null;
                 ExecutionLogger.clearExecutingStack();
-                ExecutionLogger.setLogging(false);
+                currentProgramState = PROGRAM_STATE.TEST_LOG;
 
             }
         });

@@ -26,7 +26,6 @@ public class ExecutionLogger {
     private static final InstrumentResult instrumentResult = InstrumentResult.getSingleton();
     private static final ExecutionTrace executionTrace = ExecutionTrace.getSingleton();
     private static final HashMap<Long, Boolean> threadSkippingMap = new HashMap<Long, Boolean>();
-    private static boolean logging = false;
 
 
 
@@ -62,7 +61,7 @@ public class ExecutionLogger {
 
     // both instance and returnVal must be Object or else they would not be logged in the first place
     public static void logFieldAccess(int methodId, Object instance, Object returnVal, long threadID) throws ClassNotFoundException {
-        if(!isLogging() || returnNow(methodId, threadID)) return;
+        if(AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.TEST_LOG) || AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.PROCESSING)   || returnNow(methodId, threadID)) return;
         MethodDetails details = instrumentResult.getMethodDetailByID(methodId);
         MethodExecution newExecution = new MethodExecution(getNewExeID(), details);
         Stack<MethodExecution> currentlyExecuting = getCurrentExecuting(threadID);
@@ -80,7 +79,7 @@ public class ExecutionLogger {
     }
 
     public static int logStart(int methodId, Object callee, Object params, long threadID) throws ClassNotFoundException {
-         if(!isLogging() || returnNow(methodId, threadID)) return -1;
+         if(AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.TEST_LOG) || AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.PROCESSING)  || returnNow(methodId, threadID)) return -1;
         MethodDetails details = instrumentResult.getMethodDetailByID(methodId);
         MethodExecution newExecution = new MethodExecution(getNewExeID(), details);
         Stack<MethodExecution> currentExecuting = getCurrentExecuting(threadID);
@@ -110,7 +109,7 @@ public class ExecutionLogger {
 
 
     public static void logEnd(int executionID, Object callee, Object returnVal, long threadID) throws ClassNotFoundException {
-        if(!isLogging())
+        if(AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.TEST_LOG) || AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.PROCESSING) )
             return;
         if(executionID == -1) return;
         setThreadSkippingState(threadID, false);
@@ -159,7 +158,7 @@ public class ExecutionLogger {
     }
 
     public static void logException(Object exception, long threadID) {
-        if(!isLogging()) return;
+        if(AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.TEST_LOG) || AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.PROCESSING) ) return;
         getLatestExecution(threadID).setExceptionClass(exception.getClass());
         if(instrumentResult.isLibMethod(getLatestExecution(threadID).getMethodInvoked().getId())) {
             getCurrentExecuting(threadID).get(getCurrentExecuting(threadID).size()-2).setExceptionClass(exception.getClass());
@@ -267,13 +266,7 @@ public class ExecutionLogger {
         return threadExecutingMap.values().stream().flatMap(v -> new ArrayList<>(v).stream()).collect(Collectors.toList());
     }
 
-    public static boolean isLogging() {
-        return logging;
-    }
 
-    public static void setLogging(boolean logging) {
-        ExecutionLogger.logging = logging;
-    }
 
     /**
      * @return new ID for MethodExecution
