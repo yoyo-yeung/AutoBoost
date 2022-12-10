@@ -2,9 +2,7 @@ package program.execution.variable;
 
 import entity.CREATION_TYPE;
 
-import java.util.Objects;
-
-public class EnumVarDetails extends VarDetail{
+public class EnumVarDetails extends VarDetail {
     private static final CREATION_TYPE createdBy = CREATION_TYPE.DIRECT_ASSIGN;
     private final Class<?> type;
     private final String value;
@@ -17,7 +15,7 @@ public class EnumVarDetails extends VarDetail{
 
     @Override
     public Object getGenValue() {
-        return type.equals(Class.class) ? value.replace("$", ".") + ".class"  : type.getName().replace("$", ".") + "." + value;
+        return type.equals(Class.class) ? value.replace("$", ".") + ".class" : type.getName().replace("$", ".") + "." + value;
     }
 
     public String getValue() {
@@ -33,10 +31,12 @@ public class EnumVarDetails extends VarDetail{
     public boolean sameTypeNValue(Class<?> type, Object v) {
         return this.type.equals(type) && this.value.equals(v);
     }
+
     @Override
     public boolean sameValue(Object v) {
         return this.value.equals(v);
     }
+
     @Override
     public String getTypeSimpleName() {
         return type.getSimpleName();

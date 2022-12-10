@@ -11,7 +11,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class CastStmt extends Stmt{
+public class CastStmt extends Stmt {
     private final Class<?> newType;
     private final Stmt enclosedStmt;
 
@@ -23,9 +23,9 @@ public class CastStmt extends Stmt{
     }
 
     @Override
-    public String getStmt(Set<Class<?>>fullCNameNeeded) {
+    public String getStmt(Set<Class<?>> fullCNameNeeded) {
         VarDetail result = ExecutionTrace.getSingleton().getVarDetailByID(enclosedStmt.getResultVarDetailID());
-        return "(" + (fullCNameNeeded.contains(newType) ? newType.getName().replace("$",".") : newType.getSimpleName())+")" + ( (result instanceof PrimitiveVarDetails ? "(" : "")+ enclosedStmt.getStmt(fullCNameNeeded) + (result instanceof PrimitiveVarDetails ? ")" : ""));
+        return "(" + (fullCNameNeeded.contains(newType) ? newType.getName().replace("$", ".") : newType.getSimpleName()) + ")" + ((result instanceof PrimitiveVarDetails ? "(" : "") + enclosedStmt.getStmt(fullCNameNeeded) + (result instanceof PrimitiveVarDetails ? ")" : ""));
     }
 
     @Override

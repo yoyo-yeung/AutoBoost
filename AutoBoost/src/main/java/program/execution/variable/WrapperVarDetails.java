@@ -5,7 +5,7 @@ import entity.CREATION_TYPE;
 import java.util.Objects;
 
 // store it separately from other object var as they can be directly assigned
-public class WrapperVarDetails extends VarDetail{
+public class WrapperVarDetails extends VarDetail {
     private static final CREATION_TYPE createdBy = CREATION_TYPE.DIRECT_ASSIGN;
     private final Class<?> type;
     private final Object value;
@@ -33,7 +33,7 @@ public class WrapperVarDetails extends VarDetail{
     @Override
     public Object getGenValue() {
         return
-                type.equals(Long.class)? value + "L" : (type.equals(Character.class )? "'"+value +"'" : value);
+                type.equals(Long.class) ? value + "L" : (type.equals(Character.class) ? "'" + value + "'" : value);
     }
 
     public Object getValue() {
@@ -44,10 +44,12 @@ public class WrapperVarDetails extends VarDetail{
     public boolean sameTypeNValue(Class<?> type, Object v) {
         return this.type.equals(type) && this.value.equals(v);
     }
+
     @Override
     public boolean sameValue(Object v) {
         return this.value.equals(v);
     }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -65,7 +67,7 @@ public class WrapperVarDetails extends VarDetail{
     public String toString() {
         return "WrapperVarDetails{" +
                 "ID=" + getID() +
-                ", type=" + (type == null ? "null" : type.getSimpleName() )+
+                ", type=" + (type == null ? "null" : type.getSimpleName()) +
                 ", value=" + (value == null ? "null" : value) +
                 '}';
     }

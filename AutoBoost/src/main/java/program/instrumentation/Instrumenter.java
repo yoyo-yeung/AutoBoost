@@ -111,7 +111,7 @@ public class Instrumenter extends BodyTransformer {
         instrumentResult.addClassPublicFields(currentDeclaringClass.getName(), currentDeclaringClass); // store set of public static fields before modifying them for storing at run time
         currentDeclaringClass.setModifiers(currentDeclaringClass.getModifiers() & ~Modifier.FINAL);
         currentDeclaringClass.getFields()
-                .forEach(f -> f.setModifiers(f.getModifiers() & ~Modifier.TRANSIENT & ~Modifier.PRIVATE & ~Modifier.FINAL & ~Modifier.PROTECTED | Modifier.PUBLIC )); // set all fields as non transient and public such that their value can be stored during runtime
+                .forEach(f -> f.setModifiers(f.getModifiers() & ~Modifier.TRANSIENT & ~Modifier.PRIVATE & ~Modifier.FINAL & ~Modifier.PROTECTED | Modifier.PUBLIC)); // set all fields as non transient and public such that their value can be stored during runtime
         currentSootMethod.setModifiers(currentSootMethod.getModifiers() & ~Modifier.FINAL);
         MethodDetails methodDetails = new MethodDetails(currentSootMethod);
 //        currentSootMethod.setModifiers(currentSootMethod.getModifiers() & ~Modifier.FINAL & ~Modifier.PROTECTED &~Modifier.PRIVATE | Modifier.PUBLIC);
@@ -193,13 +193,13 @@ public class Instrumenter extends BodyTransformer {
                 .distinct()
                 .filter(s -> !CUSTOM_TAGS.containsCustomTag(s))
                 .forEach(s -> {
-                    if(s.hasTag(CUSTOM_TAGS.PARAM_TRACK_TO_LOG_TAG.name())) return;
-                    if(s instanceof AssignStmt && ((AssignStmt) s).getRightOp() instanceof InstanceFieldRef && s.getFieldRef() instanceof InstanceFieldRef)
+                    if (s.hasTag(CUSTOM_TAGS.PARAM_TRACK_TO_LOG_TAG.name())) return;
+                    if (s instanceof AssignStmt && ((AssignStmt) s).getRightOp() instanceof InstanceFieldRef && s.getFieldRef() instanceof InstanceFieldRef)
                         reverse(getLogFieldAccessStmts((InstanceFieldRef) s.getFieldRef(), ((AssignStmt) s).getLeftOp(), localGenerator, getFieldAccessingMethodDetails((InstanceFieldRef) s.getFieldRef()), threadIDLocal)).forEach(v -> units.insertAfter(v, s));
                     else if (s.containsInvokeExpr()) {
                         InvokeExpr invokeExpr = s.getInvokeExpr();
                         MethodDetails invoked = instrumentResult.findExistingLibMethod(invokeExpr.getMethod().getSignature());
-                        if(invoked == null ) {
+                        if (invoked == null) {
                             invoked = new MethodDetails(invokeExpr.getMethod());
                             instrumentResult.addLibMethod(invoked);
                         }
@@ -213,41 +213,39 @@ public class Instrumenter extends BodyTransformer {
 
     }
 
-    private List<Stmt> getAllStmtsToLogRelatedToDef(Stmt currentStmt, SimpleLocalUses localUses, SimpleLocalDefs localDefs, Value local, HashSet<Value>checked) {
+    private List<Stmt> getAllStmtsToLogRelatedToDef(Stmt currentStmt, SimpleLocalUses localUses, SimpleLocalDefs localDefs, Value local, HashSet<Value> checked) {
         List<Stmt> toLog = new ArrayList<>();
-        if(checked.contains(local) || !(local instanceof Local)) return toLog;
+        if (checked.contains(local) || !(local instanceof Local)) return toLog;
         checked.add(local);
         localDefs.getDefsOf((Local) local).stream()
-                .map(s -> (Stmt)s)
+                .map(s -> (Stmt) s)
                 .distinct()
                 .filter(s -> !(s instanceof JIdentityStmt))
                 .filter(s -> s instanceof AssignStmt) // just in case
-                .map(s -> (AssignStmt)s)
+                .map(s -> (AssignStmt) s)
                 .filter(s -> !(s.getRightOp() instanceof InvokeExpr) || !s.getInvokeExpr().getMethodRef().getDeclaringClass().getPackageName().startsWith(properties.getPUT())) // either NOT invoking method / the invoked method is not one that would be instrumented in the first place
-                .filter(s-> !s.getRightOp().getType().toQuotedString().replace("'","").startsWith(properties.getPUT())) // the assigned value should NOT be of PUT type as they can then be mocked
+                .filter(s -> !s.getRightOp().getType().toQuotedString().replace("'", "").startsWith(properties.getPUT())) // the assigned value should NOT be of PUT type as they can then be mocked
                 .filter(s -> !(s.getRightOp() instanceof InstanceFieldRef && ((InstanceFieldRef) s.getFieldRef()).getBase().getType().toQuotedString().replace("'", "").startsWith(properties.getPUT()))) // avoid creation using PUT classes + methods
                 .filter(s -> !(s.getRightOp() instanceof NewArrayExpr || s.getRightOp() instanceof Constant || s.getRightOp() instanceof StaticFieldRef || s.getRightOp() instanceof NewExpr))
                 .forEach(s -> {
-                    if(s.getRightOp() instanceof CastExpr || s.getRightOp() instanceof ArrayRef || s.getRightOp() instanceof Immediate) {
-                        if(s.getRightOp() instanceof CastExpr)
+                    if (s.getRightOp() instanceof CastExpr || s.getRightOp() instanceof ArrayRef || s.getRightOp() instanceof Immediate) {
+                        if (s.getRightOp() instanceof CastExpr)
                             toLog.addAll(getAllStmtsToLogRelatedToDef(s, localUses, localDefs, ((CastExpr) s.getRightOp()).getOpBox().getValue(), checked));
-                        else if(s.getRightOp() instanceof ArrayRef)
+                        else if (s.getRightOp() instanceof ArrayRef)
                             toLog.addAll(getAllStmtsToLogRelatedToDef(s, localUses, localDefs, ((ArrayRef) s.getRightOp()).getBase(), checked));
-                        else if(s.getRightOp() instanceof Immediate)
+                        else if (s.getRightOp() instanceof Immediate)
                             toLog.addAll(getAllStmtsToLogRelatedToDef(s, localUses, localDefs, s.getRightOp(), checked));
-                    }
-                    else {
-                        if(s.getRightOp() instanceof InvokeExpr) {
+                    } else {
+                        if (s.getRightOp() instanceof InvokeExpr) {
                             if (s.getRightOp() instanceof InstanceInvokeExpr)
                                 toLog.addAll(getAllStmtsToLogRelatedToDef(s, localUses, localDefs, ((InstanceInvokeExpr) s.getRightOp()).getBase(), checked));
                             toLog.addAll(((InvokeExpr) s.getRightOp()).getArgs().stream().filter(a -> isCannotMockType(a.getType())).flatMap(a -> getAllStmtsToLogRelatedToDef(s, localUses, localDefs, a, checked).stream()).collect(Collectors.toList()));
-                        }
-                        else if(s.getRightOp() instanceof InstanceFieldRef)
+                        } else if (s.getRightOp() instanceof InstanceFieldRef)
                             toLog.addAll(getAllStmtsToLogRelatedToDef(s, localUses, localDefs, ((InstanceFieldRef) s.getRightOp()).getBase(), checked));
                         toLog.add(s);
                     }
 
-                    for (UnitValueBoxPair use : localUses.getUsesOf( s)) {
+                    for (UnitValueBoxPair use : localUses.getUsesOf(s)) {
                         if (use.getUnit().equals(currentStmt)) {
                             break;
                         }
@@ -318,7 +316,7 @@ public class Instrumenter extends BodyTransformer {
                     .collect(Collectors.toSet());
 //            if (methodInputStream.size() > 0)
 //                if (logOnly)
-                    methodInputStream.forEach(c -> c.addTag(CUSTOM_TAGS.DAN_LIB_CALL_TO_LOG_TAG.getTag()));
+            methodInputStream.forEach(c -> c.addTag(CUSTOM_TAGS.DAN_LIB_CALL_TO_LOG_TAG.getTag()));
 //                else return false;
 
             // not sure if this is needed, may change to also check the other opr is constant and non-null?

@@ -2,9 +2,8 @@ package program.execution.variable;
 
 import entity.CREATION_TYPE;
 import org.mockito.MockingDetails;
-import org.mockito.Mockito;
 
-public class MockVarDetails extends VarDetail{
+public class MockVarDetails extends VarDetail {
     private static final CREATION_TYPE createdBy = CREATION_TYPE.CONSTRUCTOR;
     Class<?> type;
     MockingDetails value;

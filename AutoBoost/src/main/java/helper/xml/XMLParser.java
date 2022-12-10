@@ -118,7 +118,7 @@ public class XMLParser {
     }
 
     private void writeObjToXML(MethodExecution execution, Object obj, LOG_ITEM process, XMLStreamWriter xmlStreamWriter, Map<Integer, String> hashCodeToFieldMap, String fieldName, int depth, AtomicInteger fieldIDGenerator, Map<Integer, Integer> processedHashToVarIDMap) throws XMLStreamException {
-        if(depth == 1 ) return ;
+        if (depth == 1) return;
         InstrumentResult.getSingleton().getClassFields(obj.getClass()).forEach(f -> {
             f.setAccessible(true);
             try {

@@ -7,7 +7,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class PairStmt extends Stmt{
+public class PairStmt extends Stmt {
     private final Stmt keyStmt;
     private final Stmt valueStmt;
 
@@ -17,7 +17,7 @@ public class PairStmt extends Stmt{
     }
 
     @Override
-    public String getStmt(Set<Class<?>>fullCNameNeeded) {
+    public String getStmt(Set<Class<?>> fullCNameNeeded) {
         return keyStmt.getStmt(fullCNameNeeded) + Properties.getDELIMITER() + valueStmt.getStmt(fullCNameNeeded);
     }
 

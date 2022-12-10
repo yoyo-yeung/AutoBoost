@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public abstract class TestCase {
-    private Logger logger = LogManager.getLogger(TestCase.class);
+    private final Logger logger = LogManager.getLogger(TestCase.class);
     private static final AtomicInteger testIDGenerator = new AtomicInteger(0);
     private final AtomicInteger varIDGenerator = new AtomicInteger(0);
     private final int ID;
@@ -84,8 +84,7 @@ public abstract class TestCase {
     }
 
     public void removeVar(Integer varDetailsID, VarStmt stmt) {
-        if (this.varToVarStmtMap.containsKey(varDetailsID))
-            this.varToVarStmtMap.remove(varDetailsID);
+        this.varToVarStmtMap.remove(varDetailsID);
     }
 
     public VarStmt getExistingVar(VarDetail detail) {
@@ -95,6 +94,7 @@ public abstract class TestCase {
     public VarStmt getExistingMockedVar(VarDetail detail) {
         return this.varToMockedVarStmtMap.getOrDefault(detail, null);
     }
+
     public VarStmt getExistingVar(Integer varDetailID) {
         return this.varToVarStmtMap.getOrDefault(varDetailID, null);
     }
@@ -104,7 +104,7 @@ public abstract class TestCase {
     }
 
     public VarStmt getExistingCreatedOrMockedVar(VarDetail detail) {
-        if(this.varToMockedVarStmtMap.containsKey(detail)) return this.varToMockedVarStmtMap.get(detail);
+        if (this.varToMockedVarStmtMap.containsKey(detail)) return this.varToMockedVarStmtMap.get(detail);
         else return this.varToVarStmtMap.getOrDefault(detail.getID(), null);
     }
 
@@ -116,11 +116,11 @@ public abstract class TestCase {
         return varToMockedVarStmtMap;
     }
 
-    public abstract String output(Set<Class<?>>fullCNameNeeded);
+    public abstract String output(Set<Class<?>> fullCNameNeeded);
 
-    protected String outputStmts(String indentation, Set<Class<?>>fullCNameNeeded) {
-        if(this.getStmtList().size() > 0 )
-            return indentation + this.getStmtList().stream().map(s ->  s.getStmt(fullCNameNeeded)).collect(Collectors.joining(";\n" + indentation)) + ";\n";
+    protected String outputStmts(String indentation, Set<Class<?>> fullCNameNeeded) {
+        if (this.getStmtList().size() > 0)
+            return indentation + this.getStmtList().stream().map(s -> s.getStmt(fullCNameNeeded)).collect(Collectors.joining(";\n" + indentation)) + ";\n";
         return "";
     }
 

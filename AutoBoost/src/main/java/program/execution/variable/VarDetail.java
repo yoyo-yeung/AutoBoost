@@ -4,7 +4,7 @@ import entity.CREATION_TYPE;
 
 import java.util.Objects;
 
-public abstract class VarDetail{
+public abstract class VarDetail {
     private final int ID;
 
     public VarDetail(int ID) {
@@ -21,15 +21,17 @@ public abstract class VarDetail{
 
     public abstract String getTypeSimpleName();
 
-    public Object getValue(){
+    public Object getValue() {
         return null;
     }
+
     @Override
     public String toString() {
         return "VarDetail{" +
                 "ID=" + ID +
                 '}';
     }
+
     public boolean sameTypeNValue(Class<?> type, Object v) {
         return this.getType().equals(type) && Objects.equals(this.getGenValue(), v);
     }
@@ -41,5 +43,6 @@ public abstract class VarDetail{
     public String toDetailedString() {
         return this.toString();
     }
+
     public abstract CREATION_TYPE getCreatedBy();
 }

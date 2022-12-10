@@ -6,7 +6,7 @@ import org.apache.commons.text.StringEscapeUtils;
 
 import java.util.Objects;
 
-public class StringVarDetails extends VarDetail{
+public class StringVarDetails extends VarDetail {
     private static final CREATION_TYPE createdBy = CREATION_TYPE.DIRECT_ASSIGN;
     private final String value;
 
@@ -24,11 +24,13 @@ public class StringVarDetails extends VarDetail{
         return String.class;
     }
 
-    public String getTypeSimpleName() {return String.class.getSimpleName();}
+    public String getTypeSimpleName() {
+        return String.class.getSimpleName();
+    }
 
     @Override
     public Object getGenValue() {
-        return "\""+ StringEscapeUtils.escapeJava(value) + "\""; // get escaped text WITH ""
+        return "\"" + StringEscapeUtils.escapeJava(value) + "\""; // get escaped text WITH ""
     }
 
     public String getValue() {

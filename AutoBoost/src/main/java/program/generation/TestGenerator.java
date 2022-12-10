@@ -82,7 +82,7 @@ public class TestGenerator {
             Stmt expected = prepareAndGetAssertVal(executionTrace.getVarDetailByID(e.getReturnValId()), testCase);
             Stmt actual = new MethodInvStmt(callee, e.getMethodInvoked().getId(), params);
             Class<?> returnType = executionTrace.getVarDetailByID(e.getReturnValId()).getType();
-                    if(ClassUtils.isPrimitiveWrapper(returnType) && !ClassUtils.isPrimitiveWrapper(e.getMethodInvoked().getReturnType()))
+            if (ClassUtils.isPrimitiveWrapper(returnType) && !ClassUtils.isPrimitiveWrapper(e.getMethodInvoked().getReturnType()))
                 actual = new CastStmt(actual.getResultVarDetailID(), returnType, actual);
             if (ClassUtils.isPrimitiveWrapper(returnType)) {
                 expected = new CastStmt(expected.getResultVarDetailID(), ClassUtils.wrapperToPrimitive(returnType), expected);
@@ -198,9 +198,9 @@ public class TestGenerator {
 
     private void createMockVars(VarDetail v, TestCase testCase) {
         Stmt res = prepareAndGetConstantVar(v, testCase.getPackageName(), testCase);
-         if(res != null) return;
-         res = testCase.getExistingCreatedOrMockedVar(v);
-         if(res !=null) return;
+        if (res != null) return;
+        res = testCase.getExistingCreatedOrMockedVar(v);
+        if (res != null) return;
 
         if (v instanceof ArrVarDetails) {
             ((ArrVarDetails) v).getComponents().stream().map(executionTrace::getVarDetailByID).forEach(p -> createMockVars(p, testCase));
@@ -392,15 +392,15 @@ public class TestGenerator {
                     testCase.addOrUpdateVar(returnVal.getID(), returnValStmt);
                     continue;
                 }
-                if(returnVal instanceof ArrVarDetails) {
+                if (returnVal instanceof ArrVarDetails) {
                     Map<Integer, VarDetail> matches = IntStream.range(0, ((ArrVarDetails) returnVal).getComponents().size())
                             .mapToObj(i -> new AbstractMap.SimpleEntry<Integer, VarDetail>(i, executionTrace.getVarDetailByID(((ArrVarDetails) returnVal).getComponents().get(i))))
                             .filter(e -> e.getValue() instanceof ObjVarDetails && varsToCreate.contains(e.getValue()))
                             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-                    if(matches.size() > 0 ) {
+                    if (matches.size() > 0) {
                         VarStmt baseReturnValStmt = new VarStmt(valType, testCase.getNewVarID(), returnVal.getID());
-                        if(!execution.getMethodInvoked().getReturnType().equals(valType))
+                        if (!execution.getMethodInvoked().getReturnType().equals(valType))
                             invStmt = new CastStmt(returnVal.getID(), valType, invStmt);
                         testCase.addStmt(new AssignStmt(baseReturnValStmt, invStmt));
                         testCase.addOrUpdateVar(returnVal.getID(), baseReturnValStmt);
@@ -408,7 +408,7 @@ public class TestGenerator {
                         matches.entrySet().stream()
                                 .forEach(e -> {
                                     Class<?> elementValType = getAccessibleSuperType(e.getValue().getType(), testCase.getPackageName());
-                                    VarStmt elementStmt =  new VarStmt(elementValType, testCase.getNewVarID(), e.getValue().getID());
+                                    VarStmt elementStmt = new VarStmt(elementValType, testCase.getNewVarID(), e.getValue().getID());
                                     testCase.addStmt(new AssignStmt(elementStmt, new CastStmt(e.getValue().getID(), elementValType, new ArrAcceessStmt(e.getValue().getID(), baseReturnValStmt, e.getKey(), returnVal.getType()))));
                                     testCase.addOrUpdateVar(e.getValue().getID(), elementStmt);
 
@@ -428,14 +428,14 @@ public class TestGenerator {
                     testCase.addOrUpdateVar(resultThisVal.getID(), returnValStmt);
                     continue;
                 }
-                if(resultThisVal instanceof ArrVarDetails) {
+                if (resultThisVal instanceof ArrVarDetails) {
                     Map<Integer, VarDetail> matches = IntStream.range(0, ((ArrVarDetails) resultThisVal).getComponents().size())
                             .mapToObj(i -> new AbstractMap.SimpleEntry<Integer, VarDetail>(i, executionTrace.getVarDetailByID(((ArrVarDetails) resultThisVal).getComponents().get(i))))
                             .filter(e -> e.getValue() instanceof ObjVarDetails && varsToCreate.contains(e.getValue()))
                             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
                     Class<?> valType = getAccessibleSuperType(resultThisVal.getType(), testCase.getPackageName());
 
-                    if(matches.size() > 0 ) {
+                    if (matches.size() > 0) {
                         VarStmt baseReturnValStmt = new VarStmt(valType, testCase.getNewVarID(), resultThisVal.getID());
                         testCase.addStmt(new AssignStmt(baseReturnValStmt, invStmt));
                         testCase.addOrUpdateVar(resultThisVal.getID(), baseReturnValStmt);
@@ -443,7 +443,7 @@ public class TestGenerator {
                         matches.entrySet().stream()
                                 .forEach(e -> {
                                     Class<?> elementValType = getAccessibleSuperType(e.getValue().getType(), testCase.getPackageName());
-                                    VarStmt elementStmt =  new VarStmt(elementValType, testCase.getNewVarID(), e.getValue().getID());
+                                    VarStmt elementStmt = new VarStmt(elementValType, testCase.getNewVarID(), e.getValue().getID());
                                     testCase.addStmt(new AssignStmt(elementStmt, new CastStmt(e.getValue().getID(), elementValType, new ArrAcceessStmt(e.getValue().getID(), baseReturnValStmt, e.getKey(), resultThisVal.getType()))));
                                     testCase.addOrUpdateVar(e.getValue().getID(), elementStmt);
 
@@ -590,7 +590,7 @@ public class TestGenerator {
     private String getPackageForTestCase(MethodExecution e) {
         if (!e.getRequiredPackage().isEmpty())
             return e.getRequiredPackage();
-        if(e.getCalleeId() == -1 || ! (e.getCallee() instanceof ObjVarDetails))
+        if (e.getCalleeId() == -1 || !(e.getCallee() instanceof ObjVarDetails))
             return e.getMethodInvoked().getDeclaringClass().getPackageName();
         return executionProcessor.getExeConstructingClass(e.getCallee().getType(), true).getMethodInvoked().getAccess().equals(ACCESS.PROTECTED) ? executionProcessor.getExeConstructingClass(e.getCallee().getType(), true).getMethodInvoked().getDeclaringClass().getPackageName() : e.getMethodInvoked().getDeclaringClass().getPackageName();
     }

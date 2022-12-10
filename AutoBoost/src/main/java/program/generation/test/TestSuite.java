@@ -9,9 +9,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public class TestSuite {
-//    private final List<TestClass> testClasses = new ArrayList<>();
-    private final Set<Class<?>> imports = new HashSet<Class<?>>(){{add(RunWith.class); add(Suite.class);}};
-    private final String testSuiteName = Properties.getSingleton().getTestSuitePrefix() +"Test";
+    //    private final List<TestClass> testClasses = new ArrayList<>();
+    private final Set<Class<?>> imports = new HashSet<Class<?>>() {{
+        add(RunWith.class);
+        add(Suite.class);
+    }};
+    private final String testSuiteName = Properties.getSingleton().getTestSuitePrefix() + "Test";
     private final Map<String, Stack<TestClass>> testClassMap = new ConcurrentHashMap<>();
 
     public TestSuite() {
@@ -23,9 +26,11 @@ public class TestSuite {
 
     public void assignTestCase(TestCase testCase) {
         String packageName = testCase.getPackageName();
-        if(!this.testClassMap.containsKey(packageName))
-            this.testClassMap.put(packageName, new Stack<TestClass>() {{push(new TestClass(packageName));}});
-        if(this.testClassMap.get(packageName).peek().getEnclosedTestCases().size() >= Properties.getSingleton().getCasePerClass())
+        if (!this.testClassMap.containsKey(packageName))
+            this.testClassMap.put(packageName, new Stack<TestClass>() {{
+                push(new TestClass(packageName));
+            }});
+        if (this.testClassMap.get(packageName).peek().getEnclosedTestCases().size() >= Properties.getSingleton().getCasePerClass())
             this.testClassMap.get(packageName).push(new TestClass(packageName));
         this.testClassMap.get(packageName).peek().addEnclosedTestCases(testCase);
 
@@ -47,7 +52,6 @@ public class TestSuite {
 //        result.append("public class ").append(this.testSuiteName).append(" {").append(Properties.getNewLine()).append("}");
 //        return result.toString();
 //    }
-
 
 
 }

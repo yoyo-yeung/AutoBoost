@@ -9,10 +9,13 @@ import program.execution.variable.ObjVarDetails;
 import program.execution.variable.VarDetail;
 import program.instrumentation.InstrumentResult;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
-public class ConstructStmt extends Stmt{
+public class ConstructStmt extends Stmt {
     private final Integer methodID;
     private final Integer methodExecutionID;
     private final List<Stmt> paramStmts;
@@ -21,17 +24,16 @@ public class ConstructStmt extends Stmt{
         super(resultVarDetailID);
         ExecutionTrace trace = ExecutionTrace.getSingleton();
         VarDetail varDetail = trace.getVarDetailByID(resultVarDetailID);
-        if(!varDetail.getCreatedBy().equals(CREATION_TYPE.CONSTRUCTOR))
+        if (!varDetail.getCreatedBy().equals(CREATION_TYPE.CONSTRUCTOR))
             throw new IllegalArgumentException("VarDetail provided should not be created by construction");
-        if(varDetail instanceof ObjVarDetails && methodExecutionID == null)
+        if (varDetail instanceof ObjVarDetails && methodExecutionID == null)
             throw new IllegalArgumentException("Missing execution details");
-        if(methodExecutionID !=null && methodExecutionID != -1 ) {
+        if (methodExecutionID != null && methodExecutionID != -1) {
             this.methodExecutionID = methodExecutionID;
             this.methodID = trace.getMethodExecutionByID(methodExecutionID).getMethodInvoked().getId();
-            if(InstrumentResult.getSingleton().getMethodDetailByID(this.methodID).getParameterTypes().size()<paramStmtIDs.size())
+            if (InstrumentResult.getSingleton().getMethodDetailByID(this.methodID).getParameterTypes().size() < paramStmtIDs.size())
                 throw new IllegalArgumentException("No. of params provided does not match provided constructor");
-        }
-        else {
+        } else {
             this.methodExecutionID = null;
             this.methodID = null;
         }
@@ -47,37 +49,37 @@ public class ConstructStmt extends Stmt{
     }
 
     @Override
-    public String getStmt(Set<Class<?>>fullCNameNeeded) {
+    public String getStmt(Set<Class<?>> fullCNameNeeded) {
         ExecutionTrace trace = ExecutionTrace.getSingleton();
         VarDetail resultVarDetail = trace.getVarDetailByID(resultVarDetailID);
         Class<?> varDetailClass = resultVarDetail.getClass();
 
         StringBuilder result = new StringBuilder();
         result.append("new ").append(trace.getVarDetailByID(resultVarDetailID).getTypeSimpleName());
-        if(varDetailClass.equals(ArrVarDetails.class)) {
-            if(resultVarDetail.getType().isArray())
+        if (varDetailClass.equals(ArrVarDetails.class)) {
+            if (resultVarDetail.getType().isArray())
                 result.append(getArrString(fullCNameNeeded));
-            else if(List.class.isAssignableFrom(resultVarDetail.getType()) || Set.class.isAssignableFrom(resultVarDetail.getType())){
+            else if (List.class.isAssignableFrom(resultVarDetail.getType()) || Set.class.isAssignableFrom(resultVarDetail.getType())) {
                 result.append(getListSetString(fullCNameNeeded));
             }
-        }
-        else if (varDetailClass.equals(MapVarDetails.class)) {
+        } else if (varDetailClass.equals(MapVarDetails.class)) {
             result.append(getMapStmtString(fullCNameNeeded));
-        }
-        else {
+        } else {
             result.append("(").append(paramStmts.stream().map(s -> s.getStmt(fullCNameNeeded)).collect(Collectors.joining(Properties.getDELIMITER()))).append(")");
         }
         return result.toString();
     }
 
-    private String getArrString(Set<Class<?>> fullCNameNeeded){
-        return "{" + paramStmts.stream().map(s-> s.getStmt(fullCNameNeeded)).collect(Collectors.joining(Properties.getDELIMITER())) + "}";
+    private String getArrString(Set<Class<?>> fullCNameNeeded) {
+        return "{" + paramStmts.stream().map(s -> s.getStmt(fullCNameNeeded)).collect(Collectors.joining(Properties.getDELIMITER())) + "}";
     }
+
     private String getListSetString(Set<Class<?>> fullCNameNeeded) {
-        return "()" + (paramStmts.size()>0 ? "{{" + paramStmts.stream().map(s -> "add("+s.getStmt(fullCNameNeeded)+")").collect(Collectors.joining(";"+Properties.getNewLine())) + ";}}" : "");
+        return "()" + (paramStmts.size() > 0 ? "{{" + paramStmts.stream().map(s -> "add(" + s.getStmt(fullCNameNeeded) + ")").collect(Collectors.joining(";" + Properties.getNewLine())) + ";}}" : "");
     }
-    private String getMapStmtString(Set<Class<?>> fullCNameNeeded){
-        return "()" + (paramStmts.size()> 0 ? "{{" + paramStmts.stream().map(s-> "put("+s.getStmt(fullCNameNeeded)+")").collect(Collectors.joining(";" + Properties.getNewLine())) + ";}}" :"");
+
+    private String getMapStmtString(Set<Class<?>> fullCNameNeeded) {
+        return "()" + (paramStmts.size() > 0 ? "{{" + paramStmts.stream().map(s -> "put(" + s.getStmt(fullCNameNeeded) + ")").collect(Collectors.joining(";" + Properties.getNewLine())) + ";}}" : "");
     }
 
     @Override

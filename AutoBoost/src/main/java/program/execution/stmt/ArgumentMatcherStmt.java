@@ -1,12 +1,11 @@
 package program.execution.stmt;
 
-import org.mockito.ArgumentMatcher;
 import org.mockito.ArgumentMatchers;
 
 import java.util.Collections;
 import java.util.Set;
 
-public class ArgumentMatcherStmt extends Stmt{
+public class ArgumentMatcherStmt extends Stmt {
 
     public ArgumentMatcherStmt(int resultVarDetailID) {
         super(resultVarDetailID);

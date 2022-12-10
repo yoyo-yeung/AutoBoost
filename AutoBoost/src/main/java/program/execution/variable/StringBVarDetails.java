@@ -5,7 +5,7 @@ import program.execution.ExecutionTrace;
 
 import java.util.Objects;
 
-public class StringBVarDetails extends VarDetail{
+public class StringBVarDetails extends VarDetail {
     private static final CREATION_TYPE createdBy = CREATION_TYPE.CONSTRUCTOR;
     private final Class<?> type;
     private final int stringValID;
@@ -54,6 +54,7 @@ public class StringBVarDetails extends VarDetail{
     public boolean sameValue(Object v) {
         return v instanceof Integer && v.equals(stringValID);
     }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

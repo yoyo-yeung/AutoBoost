@@ -1,7 +1,6 @@
 package program.execution.stmt;
 
 import helper.Helper;
-import program.generation.TestGenerator;
 
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -36,7 +35,7 @@ public abstract class Stmt {
 
     public abstract Set<Class<?>> getImports(String packageName);
 
-    protected static int getNewStmtID(){
+    protected static int getNewStmtID() {
         return stmtIDGenerator.incrementAndGet();
     }
 
@@ -45,7 +44,7 @@ public abstract class Stmt {
             while (type.isArray())
                 type = type.getComponentType();
         }
-        if(type.isPrimitive() || type.equals(Object.class))
+        if (type.isPrimitive() || type.equals(Object.class))
             return null;
         else return Helper.getAccessibleSuperType(type, packageName);
     }

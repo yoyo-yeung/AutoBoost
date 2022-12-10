@@ -29,8 +29,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import static helper.Helper.*;
-
 public class ExecutionTrace {
     private static final Logger logger = LogManager.getLogger(ExecutionTrace.class);
     private static final AtomicInteger varIDGenerator = new AtomicInteger(1);
@@ -204,8 +202,7 @@ public class ExecutionTrace {
         Object checkVal = objValue;
         if (objValue instanceof MockingDetails) {
             varDetailClass = MockVarDetails.class;
-        }
-        else if (type.isEnum() || artificialEnum) varDetailClass = EnumVarDetails.class;
+        } else if (type.isEnum() || artificialEnum) varDetailClass = EnumVarDetails.class;
         else if (type.isPrimitive()) varDetailClass = PrimitiveVarDetails.class;
         else if (type.equals(String.class)) varDetailClass = StringVarDetails.class;
         else if (StringBVarDetails.availableTypeCheck(type)) {
@@ -267,7 +264,7 @@ public class ExecutionTrace {
         }
         if (varDetail instanceof ObjVarDetails || varDetail instanceof ArrVarDetails || varDetail instanceof MapVarDetails)
             processedHashToVarIDMap.put(hashCode, varDetail.getID());
-        if(varDetail!=null) {
+        if (varDetail != null) {
             if (!processedHashcodeToVarMap.containsKey(hashCode))
                 processedHashcodeToVarMap.put(hashCode, new HashSet<>());
             processedHashcodeToVarMap.get(hashCode).add(varDetail);
@@ -582,8 +579,6 @@ public class ExecutionTrace {
     public boolean hasUsageAsCallee(MethodExecution execution, Set<Integer> vars) {
         return hasUsageAsCallee(execution, vars, new HashSet<>());
     }
-
-
 
 
     /**

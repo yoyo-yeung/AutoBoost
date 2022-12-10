@@ -3,7 +3,7 @@ package program.execution.stmt;
 import java.util.List;
 import java.util.Set;
 
-public class ArrAcceessStmt extends Stmt{
+public class ArrAcceessStmt extends Stmt {
     private final Stmt baseStmt;
     private final int accessKey;
     private final ACCESS_TYPE accessType;
@@ -12,7 +12,7 @@ public class ArrAcceessStmt extends Stmt{
         super(resultVarDetailID);
         this.baseStmt = baseStmt;
         this.accessKey = accessKey;
-        if(baseClass.isArray()) accessType = ACCESS_TYPE.ARRAY_ACCESS;
+        if (baseClass.isArray()) accessType = ACCESS_TYPE.ARRAY_ACCESS;
         else if (List.class.isAssignableFrom(baseClass)) accessType = ACCESS_TYPE.LIST_ACCESS;
         else throw new IllegalArgumentException("The variable involved cannot be accessed by using .get or []");
     }

@@ -4,22 +4,23 @@ import entity.CREATION_TYPE;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.text.StringEscapeUtils;
 
-public class PrimitiveVarDetails extends VarDetail{
+public class PrimitiveVarDetails extends VarDetail {
     private static final CREATION_TYPE createdBy = CREATION_TYPE.DIRECT_ASSIGN;
     private final Class<?> type;
     private final Object value;
 
     // must provide all details when constructed, no updating allowed
-    public PrimitiveVarDetails(int ID, Object wrapperValue)  {
+    public PrimitiveVarDetails(int ID, Object wrapperValue) {
         this(ID, wrapperValue.getClass(), wrapperValue);
     }
-    public PrimitiveVarDetails(int ID, Class<?>type, Object wrappedValue) {
+
+    public PrimitiveVarDetails(int ID, Class<?> type, Object wrappedValue) {
         super(ID);
-        if(!type.isPrimitive())
+        if (!type.isPrimitive())
             throw new IllegalArgumentException("Non primitive type value are being stored as primitive var");
-        if(!ClassUtils.isPrimitiveWrapper(wrappedValue.getClass()))
+        if (!ClassUtils.isPrimitiveWrapper(wrappedValue.getClass()))
             throw new IllegalArgumentException("Non wrapper type value provided. Cannot be cast to primitive value");
-        if(!wrappedValue.getClass().isPrimitive() && !wrappedValue.getClass().equals(type) && !ClassUtils.wrapperToPrimitive(wrappedValue.getClass()).equals(type))
+        if (!wrappedValue.getClass().isPrimitive() && !wrappedValue.getClass().equals(type) && !ClassUtils.wrapperToPrimitive(wrappedValue.getClass()).equals(type))
             throw new IllegalArgumentException("Type specified and value provided do not match");
         this.type = type;
         this.value = wrappedValue;
@@ -32,15 +33,17 @@ public class PrimitiveVarDetails extends VarDetail{
     }
 
     @Override
-    public String getTypeSimpleName() {return type.getSimpleName();}
+    public String getTypeSimpleName() {
+        return type.getSimpleName();
+    }
 
     @Override
-    public Object getGenValue()  {
-        switch(type.getName()) {
+    public Object getGenValue() {
+        switch (type.getName()) {
             case "long":
-                return this.value+"L";
+                return this.value + "L";
             case "char":
-                return "'" + StringEscapeUtils.escapeJava(this.value.toString())  + "'";
+                return "'" + StringEscapeUtils.escapeJava(this.value.toString()) + "'";
             case "float":
                 return this.value + "f";
             default:
@@ -61,6 +64,7 @@ public class PrimitiveVarDetails extends VarDetail{
     public boolean sameValue(Object v) {
         return this.value.equals(v);
     }
+
     public CREATION_TYPE getCreatedBy() {
         return createdBy;
     }

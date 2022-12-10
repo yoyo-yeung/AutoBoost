@@ -3,18 +3,19 @@ package helper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Properties {
     private static final Logger logger = LogManager.getLogger(Properties.class);
     private static final Properties singleton = new Properties();
-    private String insBinPath =  null;
+    private String insBinPath = null;
     private String[] testCases = null;
     private List<String> faultyFunc = new ArrayList<>();
     private List<Integer> faultyFuncIds = new ArrayList<>();
     private String testSourceDir = null;
     private String testSuitePrefix = "AB";
-    private int casePerClass =200;
+    private int casePerClass = 200;
     private int junitVer = 4;
     private String PUT;
     private static final String classMethSep = "::";
@@ -45,7 +46,7 @@ public class Properties {
         return classSep;
     }
 
-    private void logProperty(String name, Object value){
+    private void logProperty(String name, Object value) {
         logger.info(String.format("Argument set for %-15s:", name) + (value == null ? "null" : String.format(" %s", value)));
     }
 
@@ -74,9 +75,11 @@ public class Properties {
     public void setFaultyFunc(List<String> faultyFunc) {
         this.faultyFunc = faultyFunc;
     }
+
     public void addFaultyFunc(String faultyFunc) {
         this.faultyFunc.add(faultyFunc);
     }
+
     public String getTestSourceDir() {
         return testSourceDir;
     }
@@ -108,6 +111,7 @@ public class Properties {
         logProperty("testSourceDir", this.testSourceDir);
         logProperty("testClassPrefix", this.testSuitePrefix);
     }
+
     public void logFaultyFunc() {
         logProperty("faultyFunc", String.join(",", this.faultyFunc));
     }

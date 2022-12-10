@@ -14,7 +14,7 @@ public class MockStaticInitStmt extends Stmt {
 
     @Override
     public String getStmt(Set<Class<?>> fullCNameNeeded) {
-        return "Mockito.mockStatic("+ (fullCNameNeeded.contains(mockType)? mockType.getName().replace("$", ".") : mockType.getSimpleName()) + ".class)";
+        return "Mockito.mockStatic(" + (fullCNameNeeded.contains(mockType) ? mockType.getName().replace("$", ".") : mockType.getSimpleName()) + ".class)";
     }
 
     @Override

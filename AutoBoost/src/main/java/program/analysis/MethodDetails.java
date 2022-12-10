@@ -49,15 +49,15 @@ public class MethodDetails {
         this.parameterCount = method.getParameterCount();
         this.name = method.getName();
         this.signature = method.getSignature();
-        if(method.isStaticInitializer())
+        if (method.isStaticInitializer())
             this.type = METHOD_TYPE.STATIC_INITIALIZER;
-        else if(method.isStatic())
+        else if (method.isStatic())
             this.type = METHOD_TYPE.STATIC;
-        else if(method.isConstructor())
+        else if (method.isConstructor())
             this.type = METHOD_TYPE.CONSTRUCTOR;
         else this.type = METHOD_TYPE.MEMBER;
         this.returnSootType = method.getReturnType();
-        this.access = method.isPrivate()? ACCESS.PRIVATE: (method.isPublic()? ACCESS.PUBLIC: ACCESS.PROTECTED);
+        this.access = method.isPrivate() ? ACCESS.PRIVATE : (method.isPublic() ? ACCESS.PUBLIC : ACCESS.PROTECTED);
         this.declaringClass = method.getDeclaringClass();
         this.subSignature = method.getSubSignature();
         this.isFieldAccess = false;
@@ -105,7 +105,7 @@ public class MethodDetails {
     }
 
     public Class<?> getdClass() {
-        if(dClass == null) {
+        if (dClass == null) {
             try {
                 dClass = ClassUtils.getClass(declaringClass.getName());
             } catch (ClassNotFoundException e) {
@@ -129,7 +129,7 @@ public class MethodDetails {
     }
 
     public Class<?> getReturnType() {
-        if(returnType == null) {
+        if (returnType == null) {
             try {
                 this.returnType = ClassUtils.getClass(returnSootType.toString());
             } catch (ClassNotFoundException e) {
@@ -153,7 +153,7 @@ public class MethodDetails {
                 '}';
     }
 
-    public static MethodDetails getFieldAccessingMethodDetails(SootClass declaringClass, String fieldName, Type fieldType){
+    public static MethodDetails getFieldAccessingMethodDetails(SootClass declaringClass, String fieldName, Type fieldType) {
         return new MethodDetails(new ArrayList<>(), 0, fieldName, fieldType, ACCESS.PRIVATE, METHOD_TYPE.MEMBER, declaringClass, String.format(FIELD_ACCESS_SIGNATURE, declaringClass.getName(), fieldName), String.format(FIELD_ACCESS_SIGNATURE, declaringClass.getName(), fieldName), true);
     }
 }

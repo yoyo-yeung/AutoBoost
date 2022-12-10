@@ -3,12 +3,12 @@ package program.execution.stmt;
 import java.util.HashSet;
 import java.util.Set;
 
-public class VarStmt extends Stmt{
+public class VarStmt extends Stmt {
     String varName;
     Class<?> varType;
 
     public VarStmt(Class<?> actualType, int varID, int resultVarDetailID) {
-        this.varName = "var"+ varID;
+        this.varName = "var" + varID;
         this.varType = actualType;
         this.resultVarDetailID = resultVarDetailID;
     }
@@ -27,7 +27,7 @@ public class VarStmt extends Stmt{
     }
 
     public String getDeclarationStmt(Set<Class<?>> fullCNameNeeded) {
-        return "final "+ (fullCNameNeeded.contains(varType)? varType.getName().replace("$", ".") : varType.getSimpleName()) + " " + varName;
+        return "final " + (fullCNameNeeded.contains(varType) ? varType.getName().replace("$", ".") : varType.getSimpleName()) + " " + varName;
     }
 
     @Override

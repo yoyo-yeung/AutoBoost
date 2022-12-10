@@ -5,15 +5,13 @@ import org.apache.commons.lang3.ClassUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.lang.reflect.Field;
-import java.util.Map;
 import java.util.Objects;
 
-public class ObjVarDetails extends VarDetail{
+public class ObjVarDetails extends VarDetail {
     private static final CREATION_TYPE createdBy = CREATION_TYPE.CONSTRUCTOR;
     private final Class<?> type;
     private final Object value;
-    private static Logger logger = LogManager.getLogger(VarDetail.class);
+    private static final Logger logger = LogManager.getLogger(VarDetail.class);
 
     public ObjVarDetails(int ID, Class<?> type, Object value) {
         super(ID);
@@ -27,7 +25,7 @@ public class ObjVarDetails extends VarDetail{
 
     @Override
     public Object getGenValue() {
-        return value == null ? "null": value;
+        return value == null ? "null" : value;
     }
 
     @Override
@@ -61,7 +59,7 @@ public class ObjVarDetails extends VarDetail{
     public String toString() {
         return "ObjVarDetails{" +
                 "ID=" + getID() +
-                ", type=" + (type == null ? "null" : type ) +
+                ", type=" + (type == null ? "null" : type) +
                 ", value=" + (value == null ? "null" : value) +
                 '}';
     }

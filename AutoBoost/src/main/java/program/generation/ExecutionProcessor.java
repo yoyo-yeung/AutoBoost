@@ -36,7 +36,7 @@ public class ExecutionProcessor {
     private final InstrumentResult instrumentResult = InstrumentResult.getSingleton();
 
     protected boolean testSetUp(MethodExecution target) {
-        return isPossibleTarget(target) && targetIsBestMatch(target) && canConstructCallee(target) && checkAndSetRequiredPackage(target)  && canRecreateParams(target) && (target.getRequiredPackage().isEmpty() || target.getRequiredPackage().startsWith(Properties.getSingleton().getPUT()));
+        return isPossibleTarget(target) && targetIsBestMatch(target) && canConstructCallee(target) && checkAndSetRequiredPackage(target) && canRecreateParams(target) && (target.getRequiredPackage().isEmpty() || target.getRequiredPackage().startsWith(Properties.getSingleton().getPUT()));
     }
 
     /**
@@ -44,7 +44,7 @@ public class ExecutionProcessor {
      * @return if the setup is successful
      */
     protected boolean normalTestSetUp(MethodExecution target) {
-        return targetIsAssertable(target) ;
+        return targetIsAssertable(target);
     }
 
     protected boolean exceptionalTestSetUp(MethodExecution target) {
@@ -55,7 +55,7 @@ public class ExecutionProcessor {
     private boolean canRecreateParams(MethodExecution target) {
         Set<Integer> toMock = new HashSet<>();
         Set<Integer> cannotMock = new HashSet<>();
-        if(target.getCalleeId()!=-1 && target.getCallee() instanceof ObjVarDetails) {
+        if (target.getCalleeId() != -1 && target.getCallee() instanceof ObjVarDetails) {
             MethodExecution defExe = getExeConstructingClass(target.getCallee().getType(), true);
             toMock.addAll(getInputAndDes(defExe));
             cannotMock.addAll(getUnmockableInputs(defExe));
@@ -67,8 +67,8 @@ public class ExecutionProcessor {
                     VarDetail p = executionTrace.getVarDetailByID(target.getParams().get(pID));
                     Class<?> paramType = sootTypeToClass(target.getMethodInvoked().getParameterTypes().get(pID));
                     return canRecreateParam(target, paramType, p);
-                })&&
-                !hasUnmockableUsages(target, toMock, cannotMock, new HashSet<>()) ;
+                }) &&
+                !hasUnmockableUsages(target, toMock, cannotMock, new HashSet<>());
     }
 
     private boolean hasUnmockableUsages(MethodExecution target, Set<Integer> mockables, Set<Integer> unmockables, Set<MethodExecution> processed) {
@@ -227,7 +227,7 @@ public class ExecutionProcessor {
                         inputsAndDes.addAll(executionTrace.getRelatedObjVarIDs(c.getResultThisId()));
                         inputsAndDes.addAll(executionTrace.getRelatedObjVarIDs(c.getReturnValId()));
                     }
-                    if(c.getCalleeId() == -1 ) {
+                    if (c.getCalleeId() == -1) {
                         inputsAndDes.addAll(executionTrace.getRelatedObjVarIDs(c.getReturnValId()));
                     }
                     inputsAndDes.addAll(getDes(c, inputsAndDes, covered));
@@ -240,7 +240,7 @@ public class ExecutionProcessor {
         VarDetail callee = target.getCallee();
         if (callee instanceof ObjVarDetails) {
             if (callee.getType().isAnonymousClass()) return false;
-            if(callee.getType().getName().startsWith("com.sun.proxy.$")) return false;
+            if (callee.getType().getName().startsWith("com.sun.proxy.$")) return false;
             if (getExeConstructingClass(callee.getType(), true) == null) return false;
         }
         if (callee instanceof EnumVarDetails) {
@@ -374,7 +374,7 @@ public class ExecutionProcessor {
 
     protected MethodExecution getExeConstructingClass(Class<?> creatingClass, Set<Class> processing, boolean cache) {
         MethodExecution defExe;
-        PROGRAM_STATE oldProgramState  = AutoBoost.getCurrentProgramState();
+        PROGRAM_STATE oldProgramState = AutoBoost.getCurrentProgramState();
         AutoBoost.setCurrentProgramState(PROGRAM_STATE.CONSTRUCTOR_SEARCH);
         if (!this.classToDefExeMap.containsKey(creatingClass)) {
             Comparator constructionPriority = Comparator.comparingDouble(o -> {
@@ -385,50 +385,50 @@ public class ExecutionProcessor {
             processing.add(creatingClass);
             Set<Constructor> tried = new HashSet<>();
 //            if (creatingClass.getName().startsWith(Properties.getSingleton().getPUT()))
-                executionTrace.getAllMethodExecs().values().stream().filter(ex -> canUseForConstructing(creatingClass, ex)).forEach(e -> {
-                    MethodDetails md = e.getMethodInvoked();
-                    if (md.getType().equals(METHOD_TYPE.CONSTRUCTOR)) {
-                        try {
-                            Constructor toCall = md.getdClass().getDeclaredConstructor(md.getParameterTypes().stream().map(Helper::sootTypeToClass).toArray(Class[]::new));
-                            tried.add(toCall);
-                            if (soot.Modifier.isPrivate(toCall.getModifiers())) return;
-                            toCall.setAccessible(true);
-                            toCall.newInstance(e.getParams().stream().map(executionTrace::getVarDetailByID).map(this::getRecreatedParam).toArray(Object[]::new)).getClass();
-                        } catch (NoSuchMethodException | InstantiationException | IllegalAccessException |
-                                 InvocationTargetException | SecurityException ignored) {
-                        }
+            executionTrace.getAllMethodExecs().values().stream().filter(ex -> canUseForConstructing(creatingClass, ex)).forEach(e -> {
+                MethodDetails md = e.getMethodInvoked();
+                if (md.getType().equals(METHOD_TYPE.CONSTRUCTOR)) {
+                    try {
+                        Constructor toCall = md.getdClass().getDeclaredConstructor(md.getParameterTypes().stream().map(Helper::sootTypeToClass).toArray(Class[]::new));
+                        tried.add(toCall);
+                        if (soot.Modifier.isPrivate(toCall.getModifiers())) return;
+                        toCall.setAccessible(true);
+                        toCall.newInstance(e.getParams().stream().map(executionTrace::getVarDetailByID).map(this::getRecreatedParam).toArray(Object[]::new)).getClass();
+                    } catch (NoSuchMethodException | InstantiationException | IllegalAccessException |
+                             InvocationTargetException | SecurityException ignored) {
                     }
-                    if (md.getType().equals(METHOD_TYPE.STATIC) && md.getParameterCount() == 0) {
-                        try {
-                            Method method = md.getdClass().getDeclaredMethod(md.getName());
-                            if (soot.Modifier.isPrivate(method.getModifiers())) return;
-                            method.setAccessible(true);
-                            method.invoke(null);
-                        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException ignored) {
+                }
+                if (md.getType().equals(METHOD_TYPE.STATIC) && md.getParameterCount() == 0) {
+                    try {
+                        Method method = md.getdClass().getDeclaredMethod(md.getName());
+                        if (soot.Modifier.isPrivate(method.getModifiers())) return;
+                        method.setAccessible(true);
+                        method.invoke(null);
+                    } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException ignored) {
 
-                        }
                     }
-                });
+                }
+            });
 
             defExe = (MethodExecution) executionTrace.getConstructingMethodExes().getOrDefault(creatingClass, new HashSet<>()).stream().filter(c -> c.getMethodInvoked().getType().equals(METHOD_TYPE.CONSTRUCTOR) ? c.getResultThisId() != -1 : c.getReturnValId() != -1).filter(c -> !executionTrace.containsFaultyDef(c, true)).sorted(constructionPriority).findFirst().orElse(null);
             if (defExe == null) {
                 Arrays.stream(creatingClass.getConstructors()).forEach(c -> {
-                            try {
-                                c.setAccessible(true);
-                                c.newInstance(Arrays.stream(c.getParameterTypes()).map(ty -> this.getDefaultParams(ty, processing)).toArray());
+                    try {
+                        c.setAccessible(true);
+                        c.newInstance(Arrays.stream(c.getParameterTypes()).map(ty -> this.getDefaultParams(ty, processing)).toArray());
                     } catch (InstantiationException | IllegalAccessException | InvocationTargetException ignored) {
-                            }
-                        });
+                    }
+                });
                 defExe = (MethodExecution) executionTrace.getConstructingMethodExes().getOrDefault(creatingClass, new HashSet<>()).stream().filter(c -> c.getResultThisId() != -1).filter(c -> !executionTrace.containsFaultyDef(c, true)).sorted(constructionPriority).findFirst().orElse(null);
             }
-            if(defExe == null) {
+            if (defExe == null) {
                 Arrays.stream(creatingClass.getDeclaredMethods()).filter(m -> Modifier.isStatic(m.getModifiers()) && m.getParameterCount() == 0 && m.getReturnType().equals(creatingClass) && Modifier.isPublic(m.getModifiers())).forEach(m -> {
-                            try {
-                                m.invoke(null);
+                    try {
+                        m.invoke(null);
                     } catch (IllegalAccessException | InvocationTargetException ignored) {
-                            }
-                        });
-                defExe = (MethodExecution) executionTrace.getConstructingMethodExes().getOrDefault(creatingClass, new HashSet<>()).stream().filter(c -> c.getReturnValId()!=-1).filter(m -> ! executionTrace.containsFaultyDef(m, true)).sorted(constructionPriority).findFirst().orElse(null);
+                    }
+                });
+                defExe = (MethodExecution) executionTrace.getConstructingMethodExes().getOrDefault(creatingClass, new HashSet<>()).stream().filter(c -> c.getReturnValId() != -1).filter(m -> !executionTrace.containsFaultyDef(m, true)).sorted(constructionPriority).findFirst().orElse(null);
 
             }
 
@@ -447,15 +447,15 @@ public class ExecutionProcessor {
 
     private Object getRecreatedParam(VarDetail varDetail) {
         if (varDetail.equals(executionTrace.getNullVar())) return null;
-        if (varDetail instanceof PrimitiveVarDetails) return ((PrimitiveVarDetails) varDetail).getValue();
+        if (varDetail instanceof PrimitiveVarDetails) return varDetail.getValue();
         if (varDetail instanceof StringVarDetails) return ((StringVarDetails) varDetail).getValue();
         if (varDetail instanceof StringBVarDetails)
             return ((StringVarDetails) executionTrace.getVarDetailByID(((StringBVarDetails) varDetail).getStringValID())).getValue();
-        if (varDetail instanceof WrapperVarDetails) return ((WrapperVarDetails) varDetail).getValue();
+        if (varDetail instanceof WrapperVarDetails) return varDetail.getValue();
         if (varDetail instanceof ArrVarDetails) {
             Stream values = ((ArrVarDetails) varDetail).getComponents().stream().map(executionTrace::getVarDetailByID).map(this::getRecreatedParam);
             if (varDetail.getType().isArray())
-                return values.toArray(i-> Array.newInstance(varDetail.getType().getComponentType(), i));
+                return values.toArray(i -> Array.newInstance(varDetail.getType().getComponentType(), i));
             if (Set.class.isAssignableFrom(varDetail.getType()))
                 return values.collect(Collectors.toSet());
             if (List.class.isAssignableFrom(varDetail.getType()))
@@ -532,16 +532,16 @@ public class ExecutionProcessor {
     }
 
     public boolean checkRecreationResult(TestCase testCase, MethodExecution target) {
-        if(!testCase.isRecreated() || target.getReturnValId() == -1) return false;
+        if (!testCase.isRecreated() || target.getReturnValId() == -1) return false;
         Object actual = testCase.getObjForVar(target.getReturnValId());
         Object expected = ExecutionChecker.getStandaloneObj(executionTrace.getVarDetailByID(target.getReturnValId()));
-        if(expected == null && actual!=null) return false;
-        if(expected == actual) return true;
+        if (expected == null && actual != null) return false;
+        if (expected == actual) return true;
         return expected.equals(actual);
     }
 
     public boolean checkRecreationException(TestCase testCase, Throwable thrown, MethodExecution target) {
-        if(!testCase.isRecreated() || target.getExceptionClass() == null) return false;
+        if (!testCase.isRecreated() || target.getExceptionClass() == null) return false;
         return thrown.getClass().equals(target.getExceptionClass());
     }
 

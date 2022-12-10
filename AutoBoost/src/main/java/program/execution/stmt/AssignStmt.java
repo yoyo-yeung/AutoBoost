@@ -5,7 +5,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class AssignStmt extends Stmt{
+public class AssignStmt extends Stmt {
     private final Stmt leftStmt;
     private final Stmt rightStmt;
 
@@ -15,7 +15,7 @@ public class AssignStmt extends Stmt{
     }
 
     @Override
-    public String getStmt(Set<Class<?>>fullCNameNeeded) {
+    public String getStmt(Set<Class<?>> fullCNameNeeded) {
         return (leftStmt instanceof VarStmt ? ((VarStmt) leftStmt).getDeclarationStmt(fullCNameNeeded) : leftStmt.getStmt(fullCNameNeeded)) + " = " + rightStmt.getStmt(fullCNameNeeded);
     }
 

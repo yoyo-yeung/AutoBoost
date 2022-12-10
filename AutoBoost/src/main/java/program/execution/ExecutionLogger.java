@@ -30,7 +30,6 @@ public class ExecutionLogger {
     private static final HashMap<Long, Boolean> threadSkippingMap = new HashMap<Long, Boolean>();
 
 
-
     /**
      * Method checking if the current operation and their corresponding values for the method should be stored.
      * Operation and values of sub-functions called under methods like "equals", "toString" and "hashCode" should not be processed and stored as these methods are also used during processing, hence processing of such methods would call itself and result in infinite loop.
@@ -40,12 +39,12 @@ public class ExecutionLogger {
      * @return true if the current operation and value should not be logged, false if they should
      */
     private static boolean returnNow(int methodId, long threadID) throws ClassNotFoundException {
-        if (getCurrentExecuting(threadID).size() == 0 ) {
+        if (getCurrentExecuting(threadID).size() == 0) {
             setThreadSkippingState(threadID, false);
             return false;
         }
-        if(AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.TEST_GENERATION)) return true;
-        if(Properties.getSingleton().getFaultyFuncIds().contains(methodId)) return false;
+        if (AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.TEST_GENERATION)) return true;
+        if (Properties.getSingleton().getFaultyFuncIds().contains(methodId)) return false;
         MethodExecution latestExecution = getLatestExecution(threadID);
         if (latestExecution == null) {
             setThreadSkippingState(threadID, false);
@@ -53,31 +52,33 @@ public class ExecutionLogger {
         }
         MethodDetails latestDetails = latestExecution.getMethodInvoked();
 
-        if(!getThreadSkippingState(threadID) && latestDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR)) {
+        if (!getThreadSkippingState(threadID) && latestDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR)) {
             MethodDetails current = instrumentResult.getMethodDetailByID(methodId);
             if (current.getType().equals(METHOD_TYPE.CONSTRUCTOR) && current.getDeclaringClass() != latestDetails.getDeclaringClass() && !ClassUtils.getAllSuperclasses(Class.forName(latestDetails.getDeclaringClass().getName())).contains(Class.forName(current.getDeclaringClass().getName()))) {
                 return false;
             } else return current.getType().equals(METHOD_TYPE.CONSTRUCTOR);
-        }
-        else return getThreadSkippingState(threadID);
+        } else return getThreadSkippingState(threadID);
     }
+
     private static Class<?> getInstanceClass(Object instance) {
-        if(instance == null) return Object.class;
-        return  instance.getClass();
+        if (instance == null) return Object.class;
+        return instance.getClass();
     }
+
     // both instance and returnVal must be Object or else they would not be logged in the first place
     public static void logFieldAccess(int methodId, Object instance, Object returnVal, long threadID) throws ClassNotFoundException {
-        if(AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.TEST_LOG) || AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.PROCESSING)   || returnNow(methodId, threadID)) return;
+        if (AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.TEST_LOG) || AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.PROCESSING) || returnNow(methodId, threadID))
+            return;
         MethodDetails details = instrumentResult.getMethodDetailByID(methodId);
         MethodExecution newExecution = new MethodExecution(getNewExeID(), details);
         Stack<MethodExecution> currentlyExecuting = getCurrentExecuting(threadID);
         // set test as null if static initializer is running
-        if(currentlyExecuting.size() > 0 && currentlyExecuting.peek().getTest() == null) newExecution.setTest(null);
+        if (currentlyExecuting.size() > 0 && currentlyExecuting.peek().getTest() == null) newExecution.setTest(null);
         updateExecutionRelationships(threadID, newExecution);
         // not putting in thread stack as it is instant access
 
         setVarForExecution(newExecution, LOG_ITEM.CALL_THIS, executionTrace.getVarDetail(newExecution, getInstanceClass(instance), instance, LOG_ITEM.CALL_THIS, false));
-        if(details.getReturnSootType() instanceof soot.PrimType)
+        if (details.getReturnSootType() instanceof soot.PrimType)
             setVarIDForExecution(newExecution, LOG_ITEM.RETURN_ITEM, executionTrace.getVarDetail(newExecution, ClassUtils.wrapperToPrimitive(getInstanceClass(returnVal)), returnVal, LOG_ITEM.RETURN_ITEM, false).getID());
         else {
             setVarIDForExecution(newExecution, LOG_ITEM.RETURN_ITEM, executionTrace.getVarDetail(newExecution, getInstanceClass(returnVal), returnVal, LOG_ITEM.RETURN_ITEM, false).getID());
@@ -86,7 +87,8 @@ public class ExecutionLogger {
     }
 
     public static int logStart(int methodId, Object callee, Object params, long threadID) throws ClassNotFoundException {
-         if(AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.TEST_LOG) || AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.PROCESSING)  || returnNow(methodId, threadID)) return -1;
+        if (AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.TEST_LOG) || AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.PROCESSING) || returnNow(methodId, threadID))
+            return -1;
         MethodDetails details = instrumentResult.getMethodDetailByID(methodId);
         MethodExecution newExecution = new MethodExecution(getNewExeID(), details);
         Stack<MethodExecution> currentExecuting = getCurrentExecuting(threadID);
@@ -95,9 +97,9 @@ public class ExecutionLogger {
             newExecution.setTest(null);
         updateExecutionRelationships(threadID, newExecution);
         addExecutionToThreadStack(threadID, newExecution);
-        if(details.getType().equals(METHOD_TYPE.MEMBER)) // i.e. have callee
+        if (details.getType().equals(METHOD_TYPE.MEMBER)) // i.e. have callee
             setVarForExecution(newExecution, LOG_ITEM.CALL_THIS, executionTrace.getVarDetail(newExecution, getInstanceClass(callee), callee, LOG_ITEM.CALL_THIS, false));
-        if(details.getParameterCount() > 0 ) {
+        if (details.getParameterCount() > 0) {
             if (Array.getLength(params) < details.getParameterCount())
                 throw new RuntimeException("Illegal parameter provided for logging");
             IntStream.range(0, details.getParameterCount()).forEach(i -> {
@@ -112,33 +114,32 @@ public class ExecutionLogger {
         }
         updateSkipping(newExecution, threadID);
 //        logger.debug("started " + newExecution.toDetailedString() + "\t" + threadID);
-        if(!AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.TEST_EXECUTION)) newExecution.setCanTest(false);
+        if (!AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.TEST_EXECUTION)) newExecution.setCanTest(false);
         return newExecution.getID();
     }
 
 
     public static void logEnd(int executionID, Object callee, Object returnVal, long threadID) throws ClassNotFoundException {
-        if(AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.TEST_LOG) || AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.PROCESSING) )
+        if (AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.TEST_LOG) || AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.PROCESSING))
             return;
-        if(executionID == -1) return;
+        if (executionID == -1) return;
         setThreadSkippingState(threadID, false);
         MethodExecution execution = getLatestExecution(threadID);
-        if(execution == null) return;
+        if (execution == null) return;
         if (executionID != execution.getID()) {
             if (instrumentResult.isLibMethod(execution.getMethodInvoked().getId())) {
-                while(instrumentResult.isLibMethod(execution.getMethodInvoked().getId()) && execution.getID() != executionID) {
+                while (instrumentResult.isLibMethod(execution.getMethodInvoked().getId()) && execution.getID() != executionID) {
                     getCurrentExecuting(threadID).pop();
                     executionTrace.changeVertex(execution.getID(), getLatestExecution(threadID).getID());
                     execution = getLatestExecution(threadID);
                 }
-            }
-            else {
+            } else {
                 Class<?> exceptionClass = execution.getExceptionClass() != null ? execution.getExceptionClass() : UnrecognizableException.class;
                 while (execution.getID() != executionID) {
                     execution.setExceptionClass(exceptionClass);
                     endLogMethod(threadID, execution);
-                    if(exceptionClass.equals(UnrecognizableException.class)) {
-                        logger.error("ending " +"\t" + execution.toDetailedString());
+                    if (exceptionClass.equals(UnrecognizableException.class)) {
+                        logger.error("ending " + "\t" + execution.toDetailedString());
 //                        logger.error(getCurrentExecuting(threadID).stream().map(MethodExecution::toDetailedString).collect(Collectors.joining(",")));
 //                        logger.error(getCurrentExecuting(threadID).stream().filter(e -> e.getID()==executionID).findFirst().map(MethodExecution::toDetailedString).orElse("null"));
                     }
@@ -147,18 +148,16 @@ public class ExecutionLogger {
                 }
             }
             logEnd(executionID, callee, returnVal, threadID);
-        }
-        else {
+        } else {
             MethodDetails details = execution.getMethodInvoked();
             if (!details.getReturnSootType().equals(VoidType.v()) && !(instrumentResult.isLibMethod(details.getId()) && returnVal == null)) {
-                if(details.getReturnSootType() instanceof soot.PrimType) {
+                if (details.getReturnSootType() instanceof soot.PrimType) {
                     setVarIDForExecution(execution, LOG_ITEM.RETURN_ITEM, executionTrace.getVarDetail(execution, details.getReturnType(), returnVal, LOG_ITEM.RETURN_ITEM, false).getID());
-                }
-                else {
+                } else {
                     setVarIDForExecution(execution, LOG_ITEM.RETURN_ITEM, executionTrace.getVarDetail(execution, getInstanceClass(returnVal), returnVal, LOG_ITEM.RETURN_ITEM, false).getID());
                 }
             }
-            if(details.getType().equals(METHOD_TYPE.CONSTRUCTOR) || details.getType().equals(METHOD_TYPE.MEMBER))
+            if (details.getType().equals(METHOD_TYPE.CONSTRUCTOR) || details.getType().equals(METHOD_TYPE.MEMBER))
                 setVarIDForExecution(execution, LOG_ITEM.RETURN_THIS, executionTrace.getVarDetail(execution, getInstanceClass(callee), callee, LOG_ITEM.RETURN_THIS, false).getID());
             endLogMethod(threadID, execution);
 
@@ -167,15 +166,17 @@ public class ExecutionLogger {
     }
 
     public static void logException(Object exception, long threadID) {
-        if(AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.TEST_LOG) || AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.PROCESSING) ) return;
+        if (AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.TEST_LOG) || AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.PROCESSING))
+            return;
         getLatestExecution(threadID).setExceptionClass(exception.getClass());
-        if(instrumentResult.isLibMethod(getLatestExecution(threadID).getMethodInvoked().getId())) {
-            getCurrentExecuting(threadID).get(getCurrentExecuting(threadID).size()-2).setExceptionClass(exception.getClass());
+        if (instrumentResult.isLibMethod(getLatestExecution(threadID).getMethodInvoked().getId())) {
+            getCurrentExecuting(threadID).get(getCurrentExecuting(threadID).size() - 2).setExceptionClass(exception.getClass());
         }
     }
 
     public static MethodExecution getLatestExecution(long threadID) {
-        if(!threadExecutingMap.containsKey(threadID) || threadExecutingMap.get(threadID).empty()) throw new RuntimeException("Fail to get latest execution on thread");
+        if (!threadExecutingMap.containsKey(threadID) || threadExecutingMap.get(threadID).empty())
+            throw new RuntimeException("Fail to get latest execution on thread");
         return threadExecutingMap.get(threadID).peek();
     }
 
@@ -185,11 +186,10 @@ public class ExecutionLogger {
     private static void endLogMethod(long threadID, MethodExecution execution) {
 //        logger.debug("ended method " + execution.toDetailedString());
         Optional<MethodExecution> duplicate = executionTrace.getAllMethodExecs().values().stream().filter(execution::sameContent).findFirst();
-        if(!AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.CONSTRUCTOR_SEARCH) && duplicate.isPresent()) {
+        if (!AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.CONSTRUCTOR_SEARCH) && duplicate.isPresent()) {
             executionTrace.replacePossibleDefExe(execution, duplicate.get());
             executionTrace.changeVertex(execution.getID(), duplicate.get().getID());
-        }
-        else {
+        } else {
             executionTrace.updateFinishedMethodExecution(execution);
         }
         removeExecutionFromStack(threadID, execution);
@@ -215,12 +215,10 @@ public class ExecutionLogger {
     }
 
     private static void setVarForExecution(MethodExecution execution, LOG_ITEM process, VarDetail varDetail) {
-        switch (process) {
-            case CALL_THIS:
-                execution.setCallee(varDetail);
-                break;
-            default:
-                throw new RuntimeException("Invalid value provided for process " + process);
+        if (process == LOG_ITEM.CALL_THIS) {
+            execution.setCallee(varDetail);
+        } else {
+            throw new RuntimeException("Invalid value provided for process " + process);
         }
     }
 
@@ -229,9 +227,9 @@ public class ExecutionLogger {
     }
 
     private static void updateSkipping(MethodExecution execution, long threadID) {
-        if(getThreadSkippingState(threadID)) return;
+        if (getThreadSkippingState(threadID)) return;
         Stack<MethodExecution> executionStack = getCurrentExecuting(threadID);
-        if(( executionStack.size() >  1 && executionStack.stream().limit(executionStack.size() - 1).filter(e -> e.getMethodInvoked().equals(execution.getMethodInvoked())).anyMatch(e -> e.getTest() != null && e.sameCalleeParamNMethod(execution)) )|| executionTrace.getAllMethodExecs().values().stream()
+        if ((executionStack.size() > 1 && executionStack.stream().limit(executionStack.size() - 1).filter(e -> e.getMethodInvoked().equals(execution.getMethodInvoked())).anyMatch(e -> e.getTest() != null && e.sameCalleeParamNMethod(execution))) || executionTrace.getAllMethodExecs().values().stream()
                 .filter(e -> e.getMethodInvoked().equals(execution.getMethodInvoked()))
                 .anyMatch(e -> e.getTest() != null && e.sameCalleeParamNMethod(execution))) {
             setThreadSkippingState(threadID, true);
@@ -252,8 +250,8 @@ public class ExecutionLogger {
     }
 
     private static void removeExecutionFromStack(long threadID, MethodExecution execution) {
-        threadExecutingMap.get(threadID).removeIf(e -> e.getID()==execution.getID());
-        if(threadExecutingMap.get(threadID).size() == 0 ) threadExecutingMap.remove(threadID);
+        threadExecutingMap.get(threadID).removeIf(e -> e.getID() == execution.getID());
+        if (threadExecutingMap.get(threadID).size() == 0) threadExecutingMap.remove(threadID);
     }
 
     private static Stack<MethodExecution> getCurrentExecuting(long threadID) {
@@ -273,7 +271,6 @@ public class ExecutionLogger {
     static List<MethodExecution> getAllExecuting() {
         return threadExecutingMap.values().stream().flatMap(v -> new ArrayList<>(v).stream()).collect(Collectors.toList());
     }
-
 
 
     /**

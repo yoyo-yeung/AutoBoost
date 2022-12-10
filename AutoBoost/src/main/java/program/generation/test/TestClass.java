@@ -6,24 +6,27 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.lang.reflect.Field;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public class TestClass {
-    private static Logger logger = LogManager.getLogger(TestClass.class);
+    private static final Logger logger = LogManager.getLogger(TestClass.class);
     private static AtomicInteger classIDGenerator = new AtomicInteger(0);
     private int ID;
-    private ArrayList<TestCase> enclosedTestCases = new ArrayList<>();
+    private final ArrayList<TestCase> enclosedTestCases = new ArrayList<>();
     private Set<Class<?>> imports = new HashSet<>();
     private String className = null;
     private String packageName = null;
-    private Set<Class<?>> mockedTypes = new HashSet<>();
+    private final Set<Class<?>> mockedTypes = new HashSet<>();
 
     public TestClass(String packageName) {
         this.packageName = packageName;
         this.ID = classIDGenerator.incrementAndGet();
-        this.className = Properties.getSingleton().getTestSuitePrefix() + "_"+ this.ID + "_Test";
+        this.className = Properties.getSingleton().getTestSuitePrefix() + "_" + this.ID + "_Test";
         this.addImports(Field.class);
 
     }
@@ -50,7 +53,7 @@ public class TestClass {
 
 
     public void addEnclosedTestCases(TestCase testCase) {
-        if(this.enclosedTestCases.stream().anyMatch(ex -> ex.equals(testCase))) return;
+        if (this.enclosedTestCases.stream().anyMatch(ex -> ex.equals(testCase))) return;
         this.enclosedTestCases.add(testCase);
         this.imports.addAll(testCase.getAllImports());
         this.mockedTypes.addAll(testCase.getMockedTypes());
@@ -94,9 +97,9 @@ public class TestClass {
     }
 
     public String output() {
-        Set<Class<?>> fullCNameNeeded= this.imports.stream().collect(Collectors.groupingBy(Class::getSimpleName, Collectors.toSet())).entrySet().stream().filter(e -> e.getValue().size() > 1 )
+        Set<Class<?>> fullCNameNeeded = this.imports.stream().collect(Collectors.groupingBy(Class::getSimpleName, Collectors.toSet())).entrySet().stream().filter(e -> e.getValue().size() > 1)
                 .flatMap(e -> e.getValue().stream()).collect(Collectors.toSet());
-        fullCNameNeeded.addAll(this.imports.stream().filter(c-> ClassUtils.isInnerClass(c) || c.getPackage() == null).collect(Collectors.toSet()));
+        fullCNameNeeded.addAll(this.imports.stream().filter(c -> ClassUtils.isInnerClass(c) || c.getPackage() == null).collect(Collectors.toSet()));
         StringBuilder result = new StringBuilder();
         result.append("package " + packageName).append(";").append(Properties.getNewLine());
         this.imports.stream().filter(i -> !fullCNameNeeded.contains(i)).filter(i -> i.getPackage() != null && !i.getPackage().getName().equals(packageName)).map(i -> {
@@ -104,7 +107,7 @@ public class TestClass {
         }).forEach(result::append);
         result.append("public class ").append(this.className).append("{").append(Properties.getNewLine());
         result.append(getFieldSetUpMethod());
-        this.getEnclosedTestCases().stream().map(t-> t.output(fullCNameNeeded)+Properties.getNewLine()).forEach(result::append);
+        this.getEnclosedTestCases().stream().map(t -> t.output(fullCNameNeeded) + Properties.getNewLine()).forEach(result::append);
         result.append("}").append(Properties.getNewLine());
         return result.toString();
     }

@@ -1,18 +1,16 @@
 package program.execution.stmt;
 
 import org.apache.commons.text.StringEscapeUtils;
-import program.execution.variable.ObjVarDetails;
 
-import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class FieldSetStmt extends Stmt{
+public class FieldSetStmt extends Stmt {
     private final Stmt toSet;
     private final String fieldClass;
-    private String fieldName;
+    private final String fieldName;
     private final Stmt value;
 
     public FieldSetStmt(Stmt toSet, String fieldClass, String fieldName, Stmt value) {
