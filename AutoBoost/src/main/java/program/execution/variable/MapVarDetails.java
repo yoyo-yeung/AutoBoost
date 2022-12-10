@@ -11,12 +11,12 @@ import java.util.stream.Collectors;
 
 public class MapVarDetails extends VarDetail{
     private static final CREATION_TYPE createdBy = CREATION_TYPE.CONSTRUCTOR;
-    private final Class<?> type;
+    private final Class<? extends Map> type;
     private final Set<Map.Entry<Integer, Integer>> keyValuePairs;
     private final String keyValuePairValue;
     private final Object value;
 
-    public MapVarDetails(int ID, Class<?> type,  Set<Map.Entry<Integer, Integer>> keyValuePairs, Object value) {
+    public MapVarDetails(int ID, Class<? extends Map> type,  Set<Map.Entry<Integer, Integer>> keyValuePairs, Object value) {
         super(ID);
         this.type = type;
         this.keyValuePairs = keyValuePairs;

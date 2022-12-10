@@ -219,7 +219,7 @@ public class ExecutionTrace {
             else if (varDetailClass.equals(ArrVarDetails.class)) {
                 varDetail = new ArrVarDetails(getNewVarID(), (List<Integer>) checkVal, objValue);
             } else if (varDetailClass.equals(MapVarDetails.class)) {
-                varDetail = new MapVarDetails(getNewVarID(), type, (Set<Map.Entry<Integer, Integer>>) checkVal, objValue);
+                varDetail = new MapVarDetails(getNewVarID(), (Class<? extends Map>) type, (Set<Map.Entry<Integer, Integer>>) checkVal, objValue);
             } else if (varDetailClass.equals(WrapperVarDetails.class)) {
                 varDetail = new WrapperVarDetails(getNewVarID(), type, objValue);
             } else {
