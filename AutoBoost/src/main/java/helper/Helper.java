@@ -93,7 +93,7 @@ public class Helper {
     }
 
     public static Object getArrayElement(Object arr, int ind) {
-        if(arr.getClass().isArray()) return arr;
+        if(!arr.getClass().isArray()) return arr;
         Class<?> c = arr.getClass();
         if (int[].class == c) {
             return ((int[])arr)[ind];
