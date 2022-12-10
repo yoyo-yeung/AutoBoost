@@ -157,23 +157,26 @@ public class TestGenerator {
     }
 
     private void createMockVars(VarDetail v, TestCase testCase) {
-         Stmt res = prepareAndGetConstantVar(v, testCase.getPackageName());
+        Stmt res = prepareAndGetConstantVar(v, testCase.getPackageName(), testCase);
          if(res != null) return;
          res = testCase.getExistingCreatedOrMockedVar(v);
          if(res !=null) return;
 
-         if(v instanceof ArrVarDetails)
-             ((ArrVarDetails) v).getComponents().stream().map(executionTrace::getVarDetailByID).forEach(p -> createMockVars(p, testCase));
+        if (v instanceof ArrVarDetails) {
+            ((ArrVarDetails) v).getComponents().stream().map(executionTrace::getVarDetailByID).forEach(p -> createMockVars(p, testCase));
 
-         else if(v instanceof MapVarDetails)
-             ((MapVarDetails) v).getKeyValuePairs().stream().flatMap(e -> Stream.of(e.getKey(), e.getValue())).map(executionTrace::getVarDetailByID).forEach(p -> createMockVars(p, testCase));
+            ExecutionChecker.constructArr((ArrVarDetails) v, testCase);
+        } else if (v instanceof MapVarDetails) {
+            ((MapVarDetails) v).getKeyValuePairs().stream().flatMap(e -> Stream.of(e.getKey(), e.getValue())).map(executionTrace::getVarDetailByID).forEach(p -> createMockVars(p, testCase));
 
-         else {
-             Class<?> valType = getAccessibleSuperType(v.getType(), testCase.getPackageName());
-             res = new VarStmt(valType, testCase.getNewVarID(), v.getID());
+            ExecutionChecker.constructMap((MapVarDetails) v, testCase);
+        } else {
+            Class<?> valType = getAccessibleMockableSuperType(v.getType(), testCase.getPackageName());
+            res = new VarStmt(valType, testCase.getNewVarID(), v.getID());
             testCase.addStmt(new AssignStmt(res, new MockInstanceInitStmt(valType)));
-             testCase.addOrUpdateMockedVar(v, (VarStmt) res);
-         }
+            testCase.addOrUpdateMockedVar(v, (VarStmt) res);
+            ExecutionChecker.constructMock(v, testCase);
+        }
     }
     private void createMockedParamCalls(TestCase testCase, Set<MockOccurrence> mockOccurrences) {
         mockOccurrences.forEach(m -> {
@@ -214,11 +217,97 @@ public class TestGenerator {
 
     private String prepareAndGetCallee(MethodExecution target, TestCase testCase) {
         if (target.getCalleeId() != -1 && target.getCallee() instanceof ObjVarDetails)
-            prepareCallee((ObjVarDetails) target.getCallee(), testCase);
+            preparePUTObj((ObjVarDetails) target.getCallee(), testCase);
+        else if (target.getCalleeId() != -1)
+            prepareAndGetConstantVar(target.getCallee(), testCase.getPackageName(), testCase);
         return getCalleeVarString(target, testCase);
     }
 
-    private void prepareCallee(ObjVarDetails target, TestCase testCase) {
+    private void preparePUTObj(ObjVarDetails target, TestCase testCase) {
+        try {
+            MethodExecution defExe = executionProcessor.getExeConstructingClass(target.getType(), true);
+            if (defExe == null)
+                throw new RuntimeException("Cannot create callee as def does not exist " + target.getID());
+            MethodDetails details = defExe.getMethodInvoked();
+            String callee = getCalleeVarString(defExe, testCase);
+            List<Stmt> params = prepareAndGetRequiredParams(defExe, testCase);
+            setUpMockedParamsAndCalls(defExe, testCase);
+            Stmt invStmt = new MethodInvStmt(callee, details.getId(), params);
+            VarStmt calleeVarStmt = new VarStmt(target.getType(), testCase.getNewVarID(), target.getID());
+            testCase.addStmt(new AssignStmt(calleeVarStmt, invStmt));
+            testCase.addOrUpdateVar(target.getID(), calleeVarStmt);
+            ExecutionChecker.constructObj(testCase, defExe, target, params.stream().map(Stmt::getResultVarDetailID).map(testCase::getObjForVar).toArray());
+            XMLParser.fromXMLtoContentMap(target, (String) target.getValue()).entrySet().stream().forEach(e -> {
+                if (!canCreateField(e.getValue())) return;
+                Stmt fieldVal = prepareConcreteValue(e.getValue(), testCase);
+                FieldSetStmt setStmt = new FieldSetStmt(calleeVarStmt, e.getKey().getKey(), e.getKey().getValue(), fieldVal);
+                testCase.addStmt(setStmt);
+                if (testCase.getObjForVar(target.getID()) == null)
+                    logger.error("callee is null ");
+                if (fieldVal.getResultVarDetailID() != executionTrace.getNullVar().getID() && testCase.getObjForVar(fieldVal.getResultVarDetailID()) == null)
+                    logger.error("field val is null ");
+                ExecutionChecker.setField(testCase.getObjForVar(target.getID()), e.getKey().getKey(), e.getKey().getValue(), testCase.getObjForVar(fieldVal.getResultVarDetailID()));
+            });
+
+        } catch (Exception e) {
+            Arrays.stream(e.getStackTrace()).map(s -> s.toString()).forEach(logger::error);
+        }
+
+    }
+
+    private boolean canCreateField(VarDetail p) {
+        if (p instanceof StringVarDetails || p instanceof StringBVarDetails || p instanceof WrapperVarDetails || p instanceof PrimitiveVarDetails || p.equals(ExecutionTrace.getSingleton().getNullVar()) || p instanceof MockVarDetails || p instanceof EnumVarDetails)
+            return true;
+        boolean res = false;
+        if (p instanceof ArrVarDetails)
+            res = ((ArrVarDetails) p).getComponents().stream().map(executionTrace::getVarDetailByID).allMatch(this::canCreateField);
+        if (p instanceof MapVarDetails)
+            res = ((MapVarDetails) p).getKeyValuePairs().stream().flatMap(e -> Stream.of(e.getKey(), e.getValue())).map(executionTrace::getVarDetailByID).allMatch(this::canCreateField);
+        if (p instanceof ObjVarDetails)
+            res = executionTrace.getParentExeStack(p, true) != null || executionProcessor.getExeConstructingClass(p.getType(), true) != null;
+        return res;
+    }
+
+    private Stmt prepareConcreteValue(VarDetail p, TestCase testCase) {
+        Stmt varStmt = prepareAndGetConstantVar(p, testCase.getPackageName(), testCase);
+        if (varStmt != null) return varStmt;
+        varStmt = testCase.getExistingVar(p);
+        if (varStmt != null) return varStmt;
+        if (p instanceof MockVarDetails) {
+            createMockVars(p, testCase);
+            varStmt = getCreatedOrConstantVar(p, testCase);
+        }
+        if (varStmt != null) return varStmt;
+        if (p instanceof ObjVarDetails) {
+            prepareObjVar((ObjVarDetails) p, testCase);
+            varStmt = testCase.getExistingVar(p);
+        } else if (p instanceof MapVarDetails) {
+            varStmt = new VarStmt(p.getType(), testCase.getNewVarID(), p.getID());
+
+            testCase.addStmt(new AssignStmt(varStmt, new ConstructStmt(p.getID(), null, ((MapVarDetails) p).getKeyValuePairs().stream().map(e -> new PairStmt(prepareConcreteValue(executionTrace.getVarDetailByID(e.getKey()), testCase), prepareConcreteValue(executionTrace.getVarDetailByID(e.getValue()), testCase))).collect(Collectors.toList()))));
+            testCase.addOrUpdateVar(p.getID(), (VarStmt) varStmt);
+            ExecutionChecker.constructMap((MapVarDetails) p, testCase);
+        } else if (p instanceof ArrVarDetails) {
+            varStmt = new VarStmt(p.getType(), testCase.getNewVarID(), p.getID());
+            testCase.addStmt(new AssignStmt(varStmt, new ConstructStmt(p.getID(), null, ((ArrVarDetails) p).getComponents().stream().map(e -> prepareConcreteValue(executionTrace.getVarDetailByID(e), testCase)).collect(Collectors.toList()))));
+            testCase.addOrUpdateVar(p.getID(), (VarStmt) varStmt);
+            ExecutionChecker.constructArr((ArrVarDetails) p, testCase);
+        } else if (p instanceof MockVarDetails) {
+            varStmt = new VarStmt(p.getType(), testCase.getNewVarID(), p.getID());
+            testCase.addStmt(new AssignStmt(varStmt, new MockInstanceInitStmt(p.getType())));
+            testCase.addOrUpdateMockedVar(p, (VarStmt) varStmt);
+            ExecutionChecker.constructMock(p, testCase);
+        } else logger.debug(p);
+        return varStmt;
+    }
+
+    private void prepareObjVar(ObjVarDetails target, TestCase testCase) {
+//        if(Helper.isCannotMockType(target.getType())) throw new RuntimeException("Callee is not from PUT, generation stopped");
+        if (executionTrace.getParentExeStack(target, true) != null) prepareNonPUTObj(target, testCase);
+        else preparePUTObj(target, testCase);
+    }
+
+    private void prepareNonPUTObj(ObjVarDetails target, TestCase testCase) {
 
         Stack<MethodExecution> parentStack = executionTrace.getParentExeStack(target, true);
         if (parentStack == null) throw new IllegalArgumentException("Provided target's callee cannot be created");
@@ -312,7 +401,7 @@ public class TestGenerator {
                 }
             }
             testCase.addStmt(invStmt);
-
+            ExecutionChecker.constructObj(testCase, execution, executionTrace.getVarDetailByID(execution.getResultThisId()), params.stream().map(Stmt::getResultVarDetailID).map(testCase::getObjForVar).toArray());
         }
 
 
@@ -352,7 +441,7 @@ public class TestGenerator {
     private Stmt prepareAndGetRequiredParam(VarDetail p, TestCase testCase) {
         List<Stmt> components;
         if (testCase.getExistingMockedVar(p) != null) return testCase.getExistingMockedVar(p);
-        Stmt varStmt = prepareAndGetConstantVar(p, testCase.getPackageName());
+        Stmt varStmt = prepareAndGetConstantVar(p, testCase.getPackageName(), testCase);
         if (varStmt != null) return varStmt;
         if (p instanceof MapVarDetails) {
             components = ((MapVarDetails) p).getKeyValuePairs().stream().map(e -> new PairStmt(prepareAndGetRequiredParam(executionTrace.getVarDetailByID(e.getKey()), testCase), prepareAndGetRequiredParam(executionTrace.getVarDetailByID(e.getValue()), testCase))).collect(Collectors.toList());
@@ -361,9 +450,11 @@ public class TestGenerator {
             if (components.stream().allMatch(c -> c instanceof ConstantStmt))
                 testCase.addOrUpdateVar(p.getID(), (VarStmt) varStmt);
             else testCase.addOrUpdateMockedVar(p, (VarStmt) varStmt);
+            ExecutionChecker.constructMap((MapVarDetails) p, testCase);
             return varStmt;
         } else if (p instanceof ArrVarDetails) {
             components = ((ArrVarDetails) p).getComponents().stream().map(e -> prepareAndGetRequiredParam(executionTrace.getVarDetailByID(e), testCase)).collect(Collectors.toList());
+            ExecutionChecker.constructArr((ArrVarDetails) p, testCase);
             if (((ArrVarDetails) p).getComponents().stream().map(executionTrace::getVarDetailByID).noneMatch(c -> c.getType().isArray()) && ((ArrVarDetails) p).getComponents().size() < 25)
                 return new ConstructStmt(p.getID(), null, components);
             else {
@@ -375,11 +466,10 @@ public class TestGenerator {
 
                 return varStmt;
             }
-        } else if(p instanceof ObjVarDetails && Helper.isCannotMockType(p.getType()) && executionTrace.getParentExeStack(p, true)!=null) {
-            prepareCallee((ObjVarDetails) p, testCase);
+        } else if (p instanceof ObjVarDetails && !p.getType().getName().startsWith(Properties.getSingleton().getPUT()) && executionTrace.getParentExeStack(p, true) != null) {
+            prepareConcreteValue(p, testCase);
             return getCreatedOrConstantVar(p, testCase);
-        }
-        else {
+        } else {
             createMockVars(p, testCase);
             return getCreatedOrConstantVar(p, testCase);
         }
@@ -389,7 +479,7 @@ public class TestGenerator {
         List<Stmt> components;
         if (p instanceof ObjVarDetails && !executionTrace.getNullVar().equals(p))
             throw new IllegalArgumentException("VarDetail " + p.toDetailedString() + " provided cannot be asserted. ");
-        Stmt varStmt = prepareAndGetConstantVar(p, testCase.getPackageName());
+        Stmt varStmt = prepareAndGetConstantVar(p, testCase.getPackageName(), testCase);
         if (varStmt != null) return varStmt;
         varStmt = testCase.getExistingVar(p);
         if (varStmt != null) return varStmt;
@@ -414,23 +504,28 @@ public class TestGenerator {
         throw new IllegalArgumentException("VarDetail " + p.toDetailedString() + " provided cannot be asserted. ");
     }
 
-    private Stmt prepareAndGetConstantVar(VarDetail v, String testPackage) {
-        if (v.equals(executionTrace.getNullVar()))
+    private Stmt prepareAndGetConstantVar(VarDetail v, String testPackage, TestCase testCase) {
+        if (v.equals(executionTrace.getNullVar())) {
+            testCase.addObjForVar(v.getID(), null);
             return new ConstantStmt(v.getID());
-        else if (v instanceof PrimitiveVarDetails || v instanceof StringVarDetails || v instanceof WrapperVarDetails)
+        } else if (v instanceof PrimitiveVarDetails || v instanceof StringVarDetails || v instanceof WrapperVarDetails) {
+            ExecutionChecker.constructPrimWrapOrString(v, testCase);
             return new ConstantStmt(v.getID());
-        else if (v instanceof EnumVarDetails) {
-            if(v.getType().equals(Class.class)){
+        } else if (v instanceof EnumVarDetails) {
+            if (v.getType().equals(Class.class)) {
                 try {
                     Class<?> representingClass = ClassUtils.getClass(((EnumVarDetails) v).getValue());
                     Class<?> closestClass = getAccessibleSuperType(representingClass, testPackage);
                     if (!representingClass.equals(closestClass)) {
-                        v = new EnumVarDetails(executionTrace.getNewVarID(), Class.class, closestClass.getName());
+                        v = new EnumVarDetails(ExecutionTrace.getNewVarID(), Class.class, closestClass.getName());
                         executionTrace.addNewVarDetail(v);
                     }
                 } catch (ClassNotFoundException ignored) {
+                    logger.error(ignored.getMessage());
                 }
             }
+
+            ExecutionChecker.constructEnum((EnumVarDetails) v, testCase);
             return new ConstantStmt(v.getID());
         }
         else if (v instanceof StringBVarDetails)
