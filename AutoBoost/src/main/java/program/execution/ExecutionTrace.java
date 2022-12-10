@@ -1,5 +1,7 @@
 package program.execution;
 
+import application.AutoBoost;
+import application.PROGRAM_STATE;
 import entity.ACCESS;
 import entity.LOG_ITEM;
 import entity.METHOD_TYPE;
@@ -11,6 +13,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.DirectedMultigraph;
+import org.mockito.MockingDetails;
+import org.mockito.Mockito;
 import program.analysis.MethodDetails;
 import program.execution.variable.*;
 import program.instrumentation.InstrumentResult;
@@ -18,7 +22,6 @@ import soot.Modifier;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -146,6 +149,9 @@ public class ExecutionTrace {
                 artificialEnum = true;
                 if (((Class) objValue).isArray()) objValue = Array.class;
                 objValue = ((Class) objValue).getName();
+            } else if (Mockito.mockingDetails(objValue).isMock()) {
+                objValue = Mockito.mockingDetails(objValue);
+                type = ((MockingDetails) objValue).getMockCreationSettings().getTypeToMock();
             } else {
                 processedHash.add(System.identityHashCode(objValue));
                 objValue = toStringWithAttr(objValue);
@@ -181,7 +187,10 @@ public class ExecutionTrace {
         } else if (!type.equals(String.class)) processedHash.add(System.identityHashCode(objValue));
         Class<?> varDetailClass;
         Object checkVal = objValue;
-        if (type.isEnum() || artificialEnum) varDetailClass = EnumVarDetails.class;
+        if (objValue instanceof MockingDetails) {
+            varDetailClass = MockVarDetails.class;
+        }
+        else if (type.isEnum() || artificialEnum) varDetailClass = EnumVarDetails.class;
         else if (type.isPrimitive()) varDetailClass = PrimitiveVarDetails.class;
         else if (type.equals(String.class)) varDetailClass = StringVarDetails.class;
         else if (StringBVarDetails.availableTypeCheck(type)) {
@@ -217,7 +226,9 @@ public class ExecutionTrace {
                 varDetail = new MapVarDetails(getNewVarID(), (Class<? extends Map>) type, (Set<Map.Entry<Integer, Integer>>) checkVal, objValue);
             } else if (varDetailClass.equals(WrapperVarDetails.class)) {
                 varDetail = new WrapperVarDetails(getNewVarID(), type, objValue);
-            } else {
+            } else if (varDetailClass.equals(MockVarDetails.class))
+                varDetail = new MockVarDetails(getNewVarID(), type, (MockingDetails) objValue);
+            else {
                 // other cases
                 varDetail = new ObjVarDetails(getNewVarID(), type, objValue);
             }
