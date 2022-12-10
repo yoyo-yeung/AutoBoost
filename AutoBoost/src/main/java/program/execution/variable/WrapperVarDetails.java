@@ -36,11 +36,18 @@ public class WrapperVarDetails extends VarDetail{
                 type.equals(Long.class)? value + "L" : (type.equals(Character.class )? "'"+value +"'" : value);
     }
 
-    @Override
-    public boolean sameValue(Class<?> type, Object v) {
-        return this.type.equals(type) && this.value.equals(v);
+    public Object getValue() {
+        return value;
     }
 
+    @Override
+    public boolean sameTypeNValue(Class<?> type, Object v) {
+        return this.type.equals(type) && this.value.equals(v);
+    }
+    @Override
+    public boolean sameValue(Object v) {
+        return this.value.equals(v);
+    }
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

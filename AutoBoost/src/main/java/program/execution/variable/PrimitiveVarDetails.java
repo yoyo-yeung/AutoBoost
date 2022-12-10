@@ -47,11 +47,20 @@ public class PrimitiveVarDetails extends VarDetail{
                 return this.value;
         }
     }
+
+    public Object getValue() {
+        return value;
+    }
+
     @Override
-    public boolean sameValue(Class<?> type, Object v) {
+    public boolean sameTypeNValue(Class<?> type, Object v) {
         return this.type.equals(type) && this.value.equals(v);
     }
 
+    @Override
+    public boolean sameValue(Object v) {
+        return this.value.equals(v);
+    }
     public CREATION_TYPE getCreatedBy() {
         return createdBy;
     }

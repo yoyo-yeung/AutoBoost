@@ -31,10 +31,20 @@ public class StringVarDetails extends VarDetail{
         return "\""+ StringEscapeUtils.escapeJava(value) + "\""; // get escaped text WITH ""
     }
 
+    public String getValue() {
+        return value;
+    }
+
     @Override
-    public boolean sameValue(Class<?> type, Object v) {
+    public boolean sameTypeNValue(Class<?> type, Object v) {
+        return sameValue(v);
+    }
+
+    @Override
+    public boolean sameValue(Object v) {
         return this.value.equals(v);
     }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

@@ -361,7 +361,7 @@ public class ExecutionTrace {
         result = this.allVars.values().stream()
                 .filter(Objects::nonNull)
                 .filter(v -> v.getClass().equals(varDetailClass))
-                .filter(v -> v.sameValue(type, finalObjValue1))
+                .filter(v -> v.sameTypeNValue(type, finalObjValue1))
                 .findAny();
         return result.orElse(null);
     }

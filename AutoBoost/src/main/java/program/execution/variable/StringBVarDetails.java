@@ -16,6 +16,11 @@ public class StringBVarDetails extends VarDetail{
         this.stringValID = stringValID;
     }
 
+    @Override
+    public Object getValue() {
+        return ExecutionTrace.getSingleton().getVarDetailByID(stringValID).getValue();
+    }
+
     public int getStringValID() {
         return stringValID;
     }
@@ -41,10 +46,14 @@ public class StringBVarDetails extends VarDetail{
     }
 
     @Override
-    public boolean sameValue(Class<?> type, Object v) {
-        return this.type.equals(type) && v instanceof Integer && ((Integer)v).equals(stringValID);
+    public boolean sameTypeNValue(Class<?> type, Object v) {
+        return this.type.equals(type) && v instanceof Integer && v.equals(stringValID);
     }
 
+    @Override
+    public boolean sameValue(Object v) {
+        return v instanceof Integer && v.equals(stringValID);
+    }
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

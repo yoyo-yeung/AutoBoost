@@ -5,6 +5,8 @@ import org.apache.commons.lang3.ClassUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.lang.reflect.Field;
+import java.util.Map;
 import java.util.Objects;
 
 public class ObjVarDetails extends VarDetail{
@@ -19,9 +21,13 @@ public class ObjVarDetails extends VarDetail{
         this.value = value;
     }
 
+    public Object getValue() {
+        return value;
+    }
+
     @Override
     public Object getGenValue() {
-        return value;
+        return value == null ? "null": value;
     }
 
     @Override

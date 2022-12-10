@@ -2,6 +2,8 @@ package program.execution.variable;
 
 import entity.CREATION_TYPE;
 
+import java.util.Objects;
+
 public abstract class VarDetail{
     private final int ID;
 
@@ -19,15 +21,23 @@ public abstract class VarDetail{
 
     public abstract String getTypeSimpleName();
 
+    public Object getValue(){
+        return null;
+    }
     @Override
     public String toString() {
         return "VarDetail{" +
                 "ID=" + ID +
                 '}';
     }
-    public boolean sameValue(Class<?> type, Object v) {
-        return this.getType().equals(type) && this.getGenValue().equals(v);
+    public boolean sameTypeNValue(Class<?> type, Object v) {
+        return this.getType().equals(type) && Objects.equals(this.getGenValue(), v);
     }
+
+    public boolean sameValue(Object v) {
+        return Objects.equals(this.getGenValue(), v);
+    }
+
     public String toDetailedString() {
         return this.toString();
     }
