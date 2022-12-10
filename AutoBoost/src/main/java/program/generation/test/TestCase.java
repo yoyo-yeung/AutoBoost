@@ -20,7 +20,9 @@ public abstract class TestCase {
     private final Map<VarDetail, VarStmt> varToMockedVarStmtMap = new HashMap<>();
     private final List<Stmt> stmtList = new ArrayList<>();
     private final Set<Class<?>> allImports = new HashSet<>();
+    private final Map<Integer, Object> varToObjMap = new HashMap<>();
     private String packageName = null;
+    private boolean recreated = true;
 
     public TestCase(String packageName) {
         this.ID = testIDGenerator.incrementAndGet();
@@ -126,6 +128,31 @@ public abstract class TestCase {
     public Set<Class<?>> getMockedTypes() {
         return this.getVarToMockedVarStmtMap().values().stream().map(VarStmt::getVarType)
                 .collect(Collectors.toSet());
+    }
+
+    public Object getObjForVar(int varID) {
+        return this.varToObjMap.getOrDefault(varID, null);
+    }
+
+    public void addObjForVar(int varID, Object obj) {
+        this.varToObjMap.put(varID, obj);
+    }
+
+    public boolean createdObjForVar(int varID) {
+        return this.varToObjMap.containsKey(varID);
+    }
+
+    public void keepOnlyTargetCalleeVar(int varID) {
+        this.varToObjMap.keySet().retainAll(Collections.singleton(varID));
+        this.varToMockedVarStmtMap.clear();
+    }
+
+    public boolean isRecreated() {
+        return recreated;
+    }
+
+    public void setRecreated(boolean recreated) {
+        this.recreated = recreated;
     }
 
     @Override
