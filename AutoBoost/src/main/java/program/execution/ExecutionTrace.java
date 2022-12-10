@@ -45,6 +45,8 @@ public class ExecutionTrace {
     private final Map<MethodExecution, Boolean> exeToFaultyExeContainedCache = new HashMap<>(); // cache to save execution time
     private final VarDetail nullVar = new ObjVarDetails(0, Object.class, null);
     private final XMLParser parser = new XMLParser();
+    private final Map<Integer, Set<VarDetail>> processedHashcodeToVarMap = new HashMap<>();
+    private final Map<String, Set<VarDetail>> classNameToVarMap = new HashMap<>();
 
     /**
      * Constructor of ExecutionTrace, set up all vars.
@@ -134,6 +136,7 @@ public class ExecutionTrace {
         }
         boolean artificialEnum = false;
         if (objValue == null) return nullVar;
+        String className = objValue.getClass().getName();
         if (type.isEnum()) {
             objValue = ((Enum) objValue).name();
         } else if (!type.isArray() && !type.equals(String.class) && !StringBVarDetails.availableTypeCheck(type) && !ClassUtils.isPrimitiveOrWrapper(type) && !((ArrVarDetails.availableTypeCheck(type) && ArrVarDetails.availableTypeCheck(objValue.getClass())) || (MapVarDetails.availableTypeCheck(type) && MapVarDetails.availableTypeCheck(objValue.getClass())))) {
@@ -262,6 +265,16 @@ public class ExecutionTrace {
                     addVarDetailUsage(varDetail, execution.getID());
             }
         }
+        if (varDetail instanceof ObjVarDetails || varDetail instanceof ArrVarDetails || varDetail instanceof MapVarDetails)
+            processedHashToVarIDMap.put(hashCode, varDetail.getID());
+        if(varDetail!=null) {
+            if (!processedHashcodeToVarMap.containsKey(hashCode))
+                processedHashcodeToVarMap.put(hashCode, new HashSet<>());
+            processedHashcodeToVarMap.get(hashCode).add(varDetail);
+            if (!classNameToVarMap.containsKey(className))
+                classNameToVarMap.put(className, new HashSet<>());
+            classNameToVarMap.get(className).add(varDetail);
+        }
         return varDetail;
     }
 
@@ -368,19 +381,17 @@ public class ExecutionTrace {
         } else if (varDetailClass.equals(MapVarDetails.class)) {
             objValue = ((Set<Map.Entry>) objValue).stream().map(e -> e.getKey() + "=" + e.getValue()).sorted().collect(Collectors.joining(Properties.getDELIMITER()));
         }
-        // high chance of having the same value
-//        if (process.equals(LOG_ITEM.RETURN_THIS) && ExecutionLogger.getLatestExecution().getCalleeId() != -1) {
-//            VarDetail calleeDetails = getVarDetailByID(ExecutionLogger.getLatestExecution().getCalleeId());
-//            if (calleeDetails.sameValue(type, objValue))
-//                return calleeDetails.getID();
-//        }
         Object finalObjValue1 = objValue;
         Optional<VarDetail> result;
-        result = this.allVars.values().stream()
-                .filter(Objects::nonNull)
+        result = processedHashcodeToVarMap.getOrDefault(hashCode, new HashSet<>()).stream()
                 .filter(v -> v.getClass().equals(varDetailClass))
                 .filter(v -> v.sameTypeNValue(type, finalObjValue1))
                 .findAny();
+        if (!result.isPresent())
+            result = this.classNameToVarMap.getOrDefault(className, new HashSet<>()).stream()
+                    .filter(v -> v.getClass().equals(varDetailClass))
+                    .filter(v -> v.sameValue(finalObjValue1))
+                    .findAny();
         return result.orElse(null);
     }
 
