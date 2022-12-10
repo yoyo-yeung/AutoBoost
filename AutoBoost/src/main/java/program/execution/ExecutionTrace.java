@@ -109,19 +109,28 @@ public class ExecutionTrace {
         return getVarDetail(execution, type, objValue, process, canOnlyBeUse, new HashSet<Integer>());
     }
 
+    public VarDetail getVarDetail(MethodExecution execution, Class<?> type, Object objValue, LOG_ITEM process, boolean canOnlyBeUse, Set<Integer> processedHash) {
+        return getVarDetail(execution, type, objValue, process, canOnlyBeUse, processedHash, 7, new HashMap<>());
+    }
+
     /**
      * If object already stored, return existing VarDetail ID stored
      * If not, create a new VarDetail and return the corresponding ID
      *
      * @param execution
-     * @param type          type of the object to be stored
-     * @param objValue      object to be stored
-     * @param process       the current process, e.g. logging callee? param? or return value?
+     * @param type                    type of the object to be stored
+     * @param objValue                object to be stored
+     * @param process                 the current process, e.g. logging callee? param? or return value?
      * @param canOnlyBeUse
-     * @param processedHash
+     * @param hashProcessing
+     * @param processedHashToVarIDMap
      * @return VarDetail storing the provided object
      */
-    public VarDetail getVarDetail(MethodExecution execution, Class<?> type, Object objValue, LOG_ITEM process, boolean canOnlyBeUse, Set<Integer> processedHash) {
+    public VarDetail getVarDetail(MethodExecution execution, Class<?> type, Object objValue, LOG_ITEM process, boolean canOnlyBeUse, Set<Integer> hashProcessing, int depth, Map<Integer, Integer> processedHashToVarIDMap) {
+        int hashCode = System.identityHashCode(objValue);
+        if (processedHashToVarIDMap.containsKey(hashCode)) {
+            return getVarDetailByID(processedHashToVarIDMap.get(hashCode));
+        }
         boolean artificialEnum = false;
         if (objValue == null) return nullVar;
         if (type.isEnum()) {
@@ -155,9 +164,9 @@ public class ExecutionTrace {
                 objValue = Mockito.mockingDetails(objValue);
                 type = ((MockingDetails) objValue).getMockCreationSettings().getTypeToMock();
             } else {
-                processedHash.add(System.identityHashCode(objValue));
+                hashProcessing.add(hashCode);
                 objValue = toStringWithAttr(objValue);
-//                logger.debug(objValue);
+                hashProcessing.remove(hashCode);
             }
         } else if (ClassUtils.isPrimitiveOrWrapper(type)) {
             if ((type.equals(double.class) || type.equals(Double.class))) {
@@ -186,7 +195,7 @@ public class ExecutionTrace {
                     objValue = "MIN_VALUE";
                 }
             }
-        } else if (!type.equals(String.class)) processedHash.add(System.identityHashCode(objValue));
+        }
         Class<?> varDetailClass;
         Object checkVal = objValue;
         if (objValue instanceof MockingDetails) {
@@ -197,22 +206,26 @@ public class ExecutionTrace {
         else if (type.equals(String.class)) varDetailClass = StringVarDetails.class;
         else if (StringBVarDetails.availableTypeCheck(type)) {
             varDetailClass = StringBVarDetails.class;
-            checkVal = getVarDetail(execution, String.class, objValue.toString(), process, true, processedHash).getID();
+            checkVal = getVarDetail(execution, String.class, objValue.toString(), process, true, hashProcessing, depth, processedHashToVarIDMap).getID();
         } else if (ArrVarDetails.availableTypeCheck(type) && ArrVarDetails.availableTypeCheck(objValue.getClass())) {
             varDetailClass = ArrVarDetails.class;
-            checkVal = getComponentStream(execution, type, objValue, process, canOnlyBeUse, processedHash).collect(Collectors.toList());
+            checkVal = getComponentStream(execution, type, objValue, process, canOnlyBeUse, hashProcessing, depth - 1, processedHashToVarIDMap).collect(Collectors.toList());
         } else if (MapVarDetails.availableTypeCheck(type) && MapVarDetails.availableTypeCheck(objValue.getClass())) {
             varDetailClass = MapVarDetails.class;
+            hashProcessing.add(hashCode);
             checkVal = ((Map<?, ?>) objValue).entrySet().stream()
-                    .filter(e -> !processedHash.contains(System.identityHashCode(e.getKey())) && !processedHash.contains(System.identityHashCode(e.getValue())))
-                    .map(e -> new AbstractMap.SimpleEntry<Integer, Integer>(getVarDetail(execution, getClassOfObj(e.getKey()), e.getKey(), process, true, processedHash).getID(), getVarDetail(execution, getClassOfObj(e.getValue()), e.getValue(), process, true, processedHash).getID()))
+                    .filter(e -> (Helper.isSimpleType(e.getKey()) || !hashProcessing.contains(System.identityHashCode(e.getKey()))) && (Helper.isSimpleType(e.getValue()) || !hashProcessing.contains(System.identityHashCode(e.getValue()))))
+                    .map(e -> new AbstractMap.SimpleEntry<Integer, Integer>(getVarDetail(execution, getClassOfObj(e.getKey()), e.getKey(), process, true, hashProcessing, depth - 1, processedHashToVarIDMap).getID(), getVarDetail(execution, getClassOfObj(e.getValue()), e.getValue(), process, true, hashProcessing, depth - 1, processedHashToVarIDMap).getID()))
                     .collect(Collectors.<Map.Entry<Integer, Integer>>toSet());
+            hashProcessing.remove(hashCode);
         } else if (ClassUtils.isPrimitiveWrapper(type)) {
             varDetailClass = WrapperVarDetails.class;
         } else {
             varDetailClass = ObjVarDetails.class;
         }
-        VarDetail varDetail = findExistingVarDetail(type, varDetailClass, checkVal);
+//        if((varDetailClass.equals(WrapperVarDetails.class) || varDetailClass.equals(PrimitiveVarDetails.class) || varDetailClass.equals(StringVarDetails.class) || varDetailClass.equals(EnumVarDetails.class) ) && depth < 7)
+//            logger.debug("yes");
+        VarDetail varDetail = findExistingVarDetail(hashCode, type, varDetailClass, checkVal, className);
         if (varDetail == null) {
             if (varDetailClass.equals(EnumVarDetails.class))
                 varDetail = new EnumVarDetails(getNewVarID(), type, (String) objValue);
@@ -307,24 +320,33 @@ public class ExecutionTrace {
      * Retrieve Stream of VarDetail IDs of components in the array/Collection
      *
      * @param execution
-     * @param type          the type of variable (Array/subclasses of Collection/etc)
-     * @param obj           the variable
-     * @param process       the current logging step
+     * @param type                    the type of variable (Array/subclasses of Collection/etc)
+     * @param obj                     the variable
+     * @param process                 the current logging step
      * @param canOnlyBeUse
      * @param processedHash
+     * @param depth
+     * @param processedHashToVarIDMap
      * @return Stream of VarDetail IDs
      */
-    private Stream<Integer> getComponentStream(MethodExecution execution, Class<?> type, Object obj, LOG_ITEM process, boolean canOnlyBeUse, Set processedHash) {
+    private Stream<Integer> getComponentStream(MethodExecution execution, Class<?> type, Object obj, LOG_ITEM process, boolean canOnlyBeUse, Set processedHash, int depth, Map<Integer, Integer> processedHashToVarIDMap) {
         if (!ArrVarDetails.availableTypeCheck(type))
             throw new IllegalArgumentException("Provided Obj cannot be handled.");
         Stream<Integer> componentStream;
+        int hashCode = System.identityHashCode(obj);
+        processedHash.add(hashCode);
         if (type.isArray()) {
-            int trimmedLength = Array.getLength(obj);
-            componentStream = IntStream.range(0, trimmedLength).filter(i -> !processedHash.contains(System.identityHashCode(Helper.getArrayElement(obj, i)))).mapToObj(i -> getVarDetail(execution, type.getComponentType(), Helper.getArrayElement(obj, i), process, canOnlyBeUse, processedHash).getID());
-        } else if (Set.class.isAssignableFrom(type) && obj instanceof Set)
-            componentStream = ((Set) obj).stream().filter(v -> !processedHash.contains(System.identityHashCode(v))).map(v -> getVarDetail(execution, getClassOfObj(v), v, process, true, processedHash).getID()).sorted(Comparator.comparingInt(x -> (int) x));
-        else
-            componentStream = ((Collection) obj).stream().filter(v -> !processedHash.contains(System.identityHashCode(v))).map(v -> getVarDetail(execution, getClassOfObj(v), v, process, canOnlyBeUse, processedHash).getID());
+            componentStream = IntStream.range(0, Array.getLength(obj))
+                    .mapToObj(i -> Helper.getArrayElement(obj, i))
+                    .filter(o -> Helper.isSimpleType(o) || !processedHash.contains(System.identityHashCode(o)))
+                    .map(o -> getVarDetail(execution, type.getComponentType(), o, process, canOnlyBeUse, processedHash, depth, processedHashToVarIDMap).getID());
+        } else if (Set.class.isAssignableFrom(type) && obj instanceof Set) {
+            componentStream = ((Set) obj).stream().filter(v -> Helper.isSimpleType(v) || !processedHash.contains(System.identityHashCode(v)))
+                    .map(v -> getVarDetail(execution, getClassOfObj(v), v, process, true, processedHash, depth, processedHashToVarIDMap).getID()).sorted(Comparator.comparingInt(x -> (int) x));
+        } else {
+            componentStream = ((Collection) obj).stream().filter(v -> Helper.isSimpleType(v) || !processedHash.contains(System.identityHashCode(v))).map(v -> getVarDetail(execution, getClassOfObj(v), v, process, canOnlyBeUse, processedHash, depth, processedHashToVarIDMap).getID());
+        }
+        processedHash.remove(hashCode);
         return componentStream;
     }
 
@@ -333,9 +355,10 @@ public class ExecutionTrace {
      *
      * @param varDetailClass
      * @param objValue
+     * @param className
      * @return ObjVarDetails if the obj was defined and stored before, null if not
      */
-    private VarDetail findExistingVarDetail(Class<?> type, Class<?> varDetailClass, Object objValue) {
+    private VarDetail findExistingVarDetail(int hashCode, Class<?> type, Class<?> varDetailClass, Object objValue, String className) {
         if (varDetailClass.equals(EnumVarDetails.class)) {
             if (type.equals(Class.class))
                 objValue = objValue.toString().replace("$", ".") + ".class";
