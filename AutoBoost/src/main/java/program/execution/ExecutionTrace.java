@@ -37,6 +37,7 @@ public class ExecutionTrace {
     private static final ExecutionTrace singleton = new ExecutionTrace();
     private final InstrumentResult instrumentResult = InstrumentResult.getSingleton();
     private final Map<Integer, MethodExecution> allMethodExecs;
+    private final Map<Class, Set<MethodExecution>> constructingMethodExes;
     private final Map<Integer, VarDetail> allVars; // store all vardetail used, needed for lookups
     private final Map<Integer, Integer> unmockableVarToDefMap;
     private final DirectedMultigraph<Integer, CallOrderEdge> callGraph;
@@ -51,6 +52,7 @@ public class ExecutionTrace {
         this.allMethodExecs = new ConcurrentHashMap<>();
         this.allVars = new ConcurrentHashMap<>();
         this.unmockableVarToDefMap = new HashMap<Integer, Integer>();
+        this.constructingMethodExes = new HashMap<>();
         callGraph = new DirectedMultigraph<>(CallOrderEdge.class);
         allVars.put(nullVar.getID(), nullVar);
 
@@ -409,7 +411,21 @@ public class ExecutionTrace {
 
     public void updateFinishedMethodExecution(MethodExecution execution) {
         int executionID = execution.getID();
-        this.allMethodExecs.put(executionID, execution);
+        if (AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.CONSTRUCTOR_SEARCH)) {
+            if (execution.getResultThisId() == -1 && execution.getReturnValId() == -1) {
+                this.allMethodExecs.put(executionID, execution);
+                return;
+            }
+            Class<?> createdClass = execution.getMethodInvoked().getdClass();
+            if (!(execution.getMethodInvoked().getType().equals(METHOD_TYPE.CONSTRUCTOR) && getVarDetailByID(execution.getResultThisId()).getType().equals(createdClass)) && !(execution.getMethodInvoked().getType().equals(METHOD_TYPE.STATIC) && getVarDetailByID(execution.getReturnValId()).getType().equals(createdClass))) {
+                this.allMethodExecs.put(executionID, execution);
+                return;
+            }
+            if (!this.constructingMethodExes.containsKey(createdClass))
+                this.constructingMethodExes.put(createdClass, new HashSet<>());
+            this.constructingMethodExes.get(createdClass).add(execution);
+        } else
+            this.allMethodExecs.put(executionID, execution);
     }
 
     public void addMethodRelationship(int father, int son, int exeOrder) {
@@ -451,6 +467,9 @@ public class ExecutionTrace {
     public MethodExecution getMethodExecutionByID(int exeID) {
         if (this.allMethodExecs.containsKey(exeID)) return this.allMethodExecs.get(exeID);
         Optional<MethodExecution> result = ExecutionLogger.getAllExecuting().stream().filter(e -> e.getID() == exeID).findAny();
+        if (result.isPresent()) return result.get();
+        else
+            result = constructingMethodExes.values().stream().flatMap(v -> v.stream()).filter(e -> e.getID() == exeID).findAny();
         if (result.isPresent()) return result.get();
         else throw new IllegalArgumentException("MethodExecution with ID " + exeID + " does not exist");
     }
@@ -627,6 +646,11 @@ public class ExecutionTrace {
                     .flatMap(Collection::stream)
                     .collect(Collectors.toSet()));
         return relatedVarIDs;
+    }
+
+
+    public Map<Class, Set<MethodExecution>> getConstructingMethodExes() {
+        return constructingMethodExes;
     }
 
     public static class CallOrderEdge extends DefaultEdge {
