@@ -2,42 +2,40 @@ package program.generation;
 
 import entity.ACCESS;
 import entity.METHOD_TYPE;
-import entity.UnrecognizableException;
-import helper.Helper;
 import helper.Properties;
+import helper.xml.XMLParser;
 import org.apache.commons.lang3.ClassUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.mockito.ArgumentMatchers;
+import org.mockito.MockedStatic;
 import program.analysis.MethodDetails;
 import program.execution.ExecutionTrace;
 import program.execution.MethodExecution;
 import program.execution.stmt.*;
 import program.execution.variable.*;
 import program.generation.test.*;
-import program.instrumentation.InstrumentResult;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import static helper.Helper.*;
+import static helper.Helper.getAccessibleMockableSuperType;
+import static helper.Helper.getAccessibleSuperType;
 
 public class TestGenerator {
     private static final Logger logger = LogManager.getLogger(TestGenerator.class);
     private static final TestGenerator singleton = new TestGenerator();
-    private static final String[] SKIP_MEMBER_METHODS = {"equals", "toString", "hashCode"};
-    private static final String[] SKIP_STATIC_METHODS = {"hashCode"};
-    private final ExecutionTrace executionTrace = ExecutionTrace.getSingleton();
+    private static final ExecutionTrace executionTrace = ExecutionTrace.getSingleton();
+    private final ExecutionProcessor executionProcessor = new ExecutionProcessor();
     private final InstrumentResult instrumentResult = InstrumentResult.getSingleton();
     private final TestSuite testSuite = new TestSuite();
+    private final ArgumentMatcherStmt argumentMatcherStmt = new ArgumentMatcherStmt(-1);
 
     public TestGenerator() {
     }
