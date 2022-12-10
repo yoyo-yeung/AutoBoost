@@ -611,7 +611,7 @@ public class ExecutionTrace {
      * @param varDetailID varDetail to investigate
      * @return Set of ids matching criteria
      */
-    private Set<Integer> getRelatedObjVarIDs(int varDetailID) {
+    public Set<Integer> getRelatedObjVarIDs(int varDetailID) {
         if (varDetailID == -1) return new HashSet<>();
         return getRelatedObjVarIDs(getVarDetailByID(varDetailID));
     }
@@ -622,7 +622,7 @@ public class ExecutionTrace {
      * @param varDetail varDetail to investigate
      * @return Set of ids matching criteria
      */
-    private Set<Integer> getRelatedObjVarIDs(VarDetail varDetail) {
+    public Set<Integer> getRelatedObjVarIDs(VarDetail varDetail) {
         Set<Integer> relatedVarIDs = new HashSet<>();
         if (varDetail instanceof StringVarDetails || varDetail instanceof StringBVarDetails || varDetail instanceof PrimitiveVarDetails || varDetail instanceof EnumVarDetails)
             return relatedVarIDs;
