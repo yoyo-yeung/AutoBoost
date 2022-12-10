@@ -39,7 +39,7 @@ public class AutoBoost {
         autoBoost.executeTests();
 //        autoBoost.clearRuntimeOnlyInfo();
 
-        ExecutionTrace.getSingleton().checkTestabilityOfExecutions();
+//        ExecutionTrace.getSingleton().checkTestabilityOfExecutions();
         currentProgramState = PROGRAM_STATE.TEST_GENERATION;
         autoBoost.generateTestCases();
 
