@@ -44,6 +44,7 @@ public class ExecutionLogger {
             setThreadSkippingState(threadID, false);
             return false;
         }
+        if(AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.TEST_GENERATION)) return true;
         if(Properties.getSingleton().getFaultyFuncIds().contains(methodId)) return false;
         MethodExecution latestExecution = getLatestExecution(threadID);
         if (latestExecution == null) {
@@ -111,6 +112,7 @@ public class ExecutionLogger {
         }
         updateSkipping(newExecution, threadID);
 //        logger.debug("started " + newExecution.toDetailedString() + "\t" + threadID);
+        if(!AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.TEST_EXECUTION)) newExecution.setCanTest(false);
         return newExecution.getID();
     }
 
@@ -183,8 +185,7 @@ public class ExecutionLogger {
     private static void endLogMethod(long threadID, MethodExecution execution) {
 //        logger.debug("ended method " + execution.toDetailedString());
         Optional<MethodExecution> duplicate = executionTrace.getAllMethodExecs().values().stream().filter(execution::sameContent).findFirst();
-        if(duplicate.isPresent()) {
-//            logger.debug(execution.toDetailedString() +"\t" + duplicate.get().toDetailedString());
+        if(!AutoBoost.getCurrentProgramState().equals(PROGRAM_STATE.CONSTRUCTOR_SEARCH) && duplicate.isPresent()) {
             executionTrace.replacePossibleDefExe(execution, duplicate.get());
             executionTrace.changeVertex(execution.getID(), duplicate.get().getID());
         }
