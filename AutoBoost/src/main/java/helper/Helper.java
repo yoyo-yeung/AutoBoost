@@ -55,7 +55,13 @@ public class Helper {
         List<Class<?>> interfaceList = classList.stream().flatMap(s -> Arrays.stream(s.getInterfaces())).filter(c1-> accessibilityCheck(c1, packageName)).collect(Collectors.toList());
         classList = classList.stream().filter(c1-> accessibilityCheck(c1, packageName)).collect(Collectors.toList());
         return classList.stream().findFirst().orElse(interfaceList.stream().findFirst().orElse(Object.class));
+    }
 
+    public static Class<?> getAccessibleMockableSuperType(Class<?>c, String packageName) {
+        Class<?> res = getAccessibleSuperType(c, packageName);
+        if(res.equals(Object.class) || !Modifier.isFinal(res.getModifiers()))
+            return res;
+        else return getAccessibleMockableSuperType(res.getSuperclass(), packageName);
     }
 
     public static Class<?> sootTypeToClass(Type sootType) {
@@ -115,6 +121,11 @@ public class Helper {
         }
         return ((Object[])arr)[ind];
 
+    }
+
+    public static boolean isSimpleType(Object obj) {
+        Class c = obj == null ? Object.class: obj.getClass();
+        return ClassUtils.isPrimitiveOrWrapper(c) || c.equals(String.class);
     }
 
 }
