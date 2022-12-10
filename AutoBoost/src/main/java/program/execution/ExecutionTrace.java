@@ -35,7 +35,7 @@ public class ExecutionTrace {
     private static final ExecutionTrace singleton = new ExecutionTrace();
     private final InstrumentResult instrumentResult = InstrumentResult.getSingleton();
     private final Map<Integer, MethodExecution> allMethodExecs;
-    private final Map<Class, Set<MethodExecution>> constructingMethodExes;
+    private final Map<Class<?>, Set<MethodExecution>> constructingMethodExes;
     private final Map<Integer, VarDetail> allVars; // store all vardetail used, needed for lookups
     private final Map<Integer, Integer> unmockableVarToDefMap;
     private final DirectedMultigraph<Integer, CallOrderEdge> callGraph;
@@ -52,7 +52,7 @@ public class ExecutionTrace {
     public ExecutionTrace() {
         this.allMethodExecs = new ConcurrentHashMap<>();
         this.allVars = new ConcurrentHashMap<>();
-        this.unmockableVarToDefMap = new HashMap<Integer, Integer>();
+        this.unmockableVarToDefMap = new HashMap<>();
         this.constructingMethodExes = new HashMap<>();
         callGraph = new DirectedMultigraph<>(CallOrderEdge.class);
         allVars.put(nullVar.getID(), nullVar);
@@ -107,7 +107,7 @@ public class ExecutionTrace {
     }
 
     public VarDetail getVarDetail(MethodExecution execution, Class<?> type, Object objValue, LOG_ITEM process, boolean canOnlyBeUse) {
-        return getVarDetail(execution, type, objValue, process, canOnlyBeUse, new HashSet<Integer>());
+        return getVarDetail(execution, type, objValue, process, canOnlyBeUse, new HashSet<>());
     }
 
     public VarDetail getVarDetail(MethodExecution execution, Class<?> type, Object objValue, LOG_ITEM process, boolean canOnlyBeUse, Set<Integer> processedHash) {
@@ -136,7 +136,7 @@ public class ExecutionTrace {
         if (objValue == null) return nullVar;
         String className = objValue.getClass().getName();
         if (type.isEnum()) {
-            objValue = ((Enum) objValue).name();
+            objValue = ((Enum<?>) objValue).name();
         } else if (!type.isArray() && !type.equals(String.class) && !StringBVarDetails.availableTypeCheck(type) && !ClassUtils.isPrimitiveOrWrapper(type) && !((ArrVarDetails.availableTypeCheck(type) && ArrVarDetails.availableTypeCheck(objValue.getClass())) || (MapVarDetails.availableTypeCheck(type) && MapVarDetails.availableTypeCheck(objValue.getClass())))) {
             Object finalObjValue1 = objValue;
 
@@ -160,14 +160,14 @@ public class ExecutionTrace {
                 objValue = match.get();
             } else if (type.equals(Class.class)) {
                 artificialEnum = true;
-                if (((Class) objValue).isArray()) objValue = Array.class;
-                objValue = ((Class) objValue).getName();
+                if (((Class<?>) objValue).isArray()) objValue = Array.class;
+                objValue = ((Class<?>) objValue).getName();
             } else if (Mockito.mockingDetails(objValue).isMock()) {
                 objValue = Mockito.mockingDetails(objValue);
                 type = ((MockingDetails) objValue).getMockCreationSettings().getTypeToMock();
             } else {
                 hashProcessing.add(hashCode);
-                objValue = toStringWithAttr(execution, objValue, process, depth, hashProcessing, processedHashToVarIDMap);
+                objValue = toStringWithAttr(execution, objValue, process, depth, processedHashToVarIDMap);
                 hashProcessing.remove(hashCode);
             }
         } else if (ClassUtils.isPrimitiveOrWrapper(type)) {
@@ -216,7 +216,7 @@ public class ExecutionTrace {
             hashProcessing.add(hashCode);
             checkVal = ((Map<?, ?>) objValue).entrySet().stream()
                     .filter(e -> (Helper.isSimpleType(e.getKey()) || !hashProcessing.contains(System.identityHashCode(e.getKey()))) && (Helper.isSimpleType(e.getValue()) || !hashProcessing.contains(System.identityHashCode(e.getValue()))))
-                    .map(e -> new AbstractMap.SimpleEntry<Integer, Integer>(getVarDetail(execution, getClassOfObj(e.getKey()), e.getKey(), process, true, hashProcessing, depth - 1, processedHashToVarIDMap).getID(), getVarDetail(execution, getClassOfObj(e.getValue()), e.getValue(), process, true, hashProcessing, depth - 1, processedHashToVarIDMap).getID()))
+                    .map(e -> new AbstractMap.SimpleEntry<>(getVarDetail(execution, getClassOfObj(e.getKey()), e.getKey(), process, true, hashProcessing, depth - 1, processedHashToVarIDMap).getID(), getVarDetail(execution, getClassOfObj(e.getValue()), e.getValue(), process, true, hashProcessing, depth - 1, processedHashToVarIDMap).getID()))
                     .collect(Collectors.<Map.Entry<Integer, Integer>>toSet());
             hashProcessing.remove(hashCode);
         } else if (ClassUtils.isPrimitiveWrapper(type)) {
@@ -224,8 +224,8 @@ public class ExecutionTrace {
         } else {
             varDetailClass = ObjVarDetails.class;
         }
-//        if((varDetailClass.equals(WrapperVarDetails.class) || varDetailClass.equals(PrimitiveVarDetails.class) || varDetailClass.equals(StringVarDetails.class) || varDetailClass.equals(EnumVarDetails.class) ) && depth < 7)
-//            logger.debug("yes");
+        if ((varDetailClass.equals(WrapperVarDetails.class) || varDetailClass.equals(PrimitiveVarDetails.class) || varDetailClass.equals(StringVarDetails.class) || varDetailClass.equals(EnumVarDetails.class)) && depth < 7)
+            logger.debug("yes");
         VarDetail varDetail = findExistingVarDetail(hashCode, type, varDetailClass, checkVal, className);
         if (varDetail == null) {
             if (varDetailClass.equals(EnumVarDetails.class))
@@ -249,17 +249,10 @@ public class ExecutionTrace {
                 varDetail = new ObjVarDetails(getNewVarID(), type, objValue);
             }
             addNewVarDetail(varDetail);
-            if (varDetail instanceof ObjVarDetails && !varDetail.getType().getName().startsWith(Properties.getSingleton().getPUT()) && !canOnlyBeUse) {
-                if (setCurrentExeAsDef(varDetail, process, execution)) addNewVarDetailDef(varDetail, execution.getID());
-                else addVarDetailUsage(varDetail, execution.getID());
-            }
-        } else {
-            if (varDetail instanceof ObjVarDetails && !varDetail.getType().getName().startsWith(Properties.getSingleton().getPUT()) && !canOnlyBeUse) {
-                if (setCurrentExeAsDef(varDetail, process, execution))
-                    addNewVarDetailDef(varDetail, execution.getID());
-                else
-                    addVarDetailUsage(varDetail, execution.getID());
-            }
+        }
+        if (varDetail instanceof ObjVarDetails && !varDetail.getType().getName().startsWith(Properties.getSingleton().getPUT()) && !canOnlyBeUse) {
+            if (setCurrentExeAsDef(varDetail, process, execution)) addNewVarDetailDef(varDetail, execution.getID());
+            else addVarDetailUsage(varDetail);
         }
         if (varDetail instanceof ObjVarDetails || varDetail instanceof ArrVarDetails || varDetail instanceof MapVarDetails)
             processedHashToVarIDMap.put(hashCode, varDetail.getID());
@@ -426,10 +419,9 @@ public class ExecutionTrace {
     /**
      * Add record of a MethodExecution (with ID executionID) using a particular VarDetail (with ID detailID)
      *
-     * @param detail      ID of existing VarDetail
-     * @param executionID ID of a method execution
+     * @param detail ID of existing VarDetail
      */
-    public void addVarDetailUsage(VarDetail detail, int executionID) {
+    public void addVarDetailUsage(VarDetail detail) {
         this.setUpVarMap(detail.getID());
     }
 
@@ -474,16 +466,9 @@ public class ExecutionTrace {
         this.callGraph.removeVertex(original);
     }
 
-    public void removeVertex(int vertex) {
-        if (!this.callGraph.containsVertex(vertex)) return;
-        this.callGraph.removeVertex(vertex);
-    }
-
     public List<Integer> getChildren(int father) {
         List<Integer> results = new ArrayList<>();
-        this.callGraph.outgoingEdgesOf(father).stream().filter(e -> this.callGraph.getEdgeTarget(e) != father).sorted(Comparator.comparingInt(CallOrderEdge::getLabel)).forEach(e -> {
-            results.add(this.callGraph.getEdgeTarget(e));
-        });
+        this.callGraph.outgoingEdgesOf(father).stream().filter(e -> this.callGraph.getEdgeTarget(e) != father).sorted(Comparator.comparingInt(CallOrderEdge::getLabel)).forEach(e -> results.add(this.callGraph.getEdgeTarget(e)));
         return results;
     }
 
@@ -498,7 +483,7 @@ public class ExecutionTrace {
         Optional<MethodExecution> result = ExecutionLogger.getAllExecuting().stream().filter(e -> e.getID() == exeID).findAny();
         if (result.isPresent()) return result.get();
         else
-            result = constructingMethodExes.values().stream().flatMap(v -> v.stream()).filter(e -> e.getID() == exeID).findAny();
+            result = constructingMethodExes.values().stream().flatMap(Collection::stream).filter(e -> e.getID() == exeID).findAny();
         if (result.isPresent()) return result.get();
         else throw new IllegalArgumentException("MethodExecution with ID " + exeID + " does not exist");
     }
@@ -507,7 +492,7 @@ public class ExecutionTrace {
         return nullVar;
     }
 
-    private Object toStringWithAttr(MethodExecution execution, Object obj, LOG_ITEM process, int depth, Set<Integer> processedHash, Map<Integer, Integer> processedHashToVarIDMap) {
+    private Object toStringWithAttr(MethodExecution execution, Object obj, LOG_ITEM process, int depth, Map<Integer, Integer> processedHashToVarIDMap) {
         if (obj == null) return null;
         return
                 parser.getXML(execution, obj, process, depth, processedHashToVarIDMap);
@@ -537,9 +522,7 @@ public class ExecutionTrace {
 
     }
 
-    public DirectedMultigraph<Integer, CallOrderEdge> getCallGraph() {
-        return callGraph;
-    }
+
 
     public Set<ObjVarDetails> getAllObjVarInvolved(VarDetail varDetail) {
         Set<ObjVarDetails> res = new HashSet<>();
@@ -673,7 +656,7 @@ public class ExecutionTrace {
     }
 
 
-    public Map<Class, Set<MethodExecution>> getConstructingMethodExes() {
+    public Map<Class<?>, Set<MethodExecution>> getConstructingMethodExes() {
         return constructingMethodExes;
     }
 
