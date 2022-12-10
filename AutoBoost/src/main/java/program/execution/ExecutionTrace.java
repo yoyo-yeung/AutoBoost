@@ -248,7 +248,6 @@ public class ExecutionTrace {
                 // other cases
                 varDetail = new ObjVarDetails(getNewVarID(), type, objValue);
             }
-            assert varDetail != null; // if null, then fail to generate test
             addNewVarDetail(varDetail);
             if (varDetail instanceof ObjVarDetails && !varDetail.getType().getName().startsWith(Properties.getSingleton().getPUT()) && !canOnlyBeUse) {
                 if (setCurrentExeAsDef(varDetail, process, execution)) addNewVarDetailDef(varDetail, execution.getID());
@@ -264,14 +263,12 @@ public class ExecutionTrace {
         }
         if (varDetail instanceof ObjVarDetails || varDetail instanceof ArrVarDetails || varDetail instanceof MapVarDetails)
             processedHashToVarIDMap.put(hashCode, varDetail.getID());
-        if (varDetail != null) {
-            if (!processedHashcodeToVarMap.containsKey(hashCode))
-                processedHashcodeToVarMap.put(hashCode, new HashSet<>());
-            processedHashcodeToVarMap.get(hashCode).add(varDetail);
-            if (!classNameToVarMap.containsKey(className))
-                classNameToVarMap.put(className, new HashSet<>());
-            classNameToVarMap.get(className).add(varDetail);
-        }
+        if (!processedHashcodeToVarMap.containsKey(hashCode))
+            processedHashcodeToVarMap.put(hashCode, new HashSet<>());
+        processedHashcodeToVarMap.get(hashCode).add(varDetail);
+        if (!classNameToVarMap.containsKey(className))
+            classNameToVarMap.put(className, new HashSet<>());
+        classNameToVarMap.get(className).add(varDetail);
         return varDetail;
     }
 
@@ -312,7 +309,7 @@ public class ExecutionTrace {
         if (existingDefDetails.getType().getRank() < methodDetails.getType().getRank()) return false;
 
         return Stream.of(execution, existingDef)
-                .map(e -> new AbstractMap.SimpleEntry<MethodExecution, Integer>(e,
+                .map(e -> new AbstractMap.SimpleEntry<>(e,
                         (e.getMethodInvoked().getType().equals(METHOD_TYPE.MEMBER) && e.getResultThisId() == varDetail.getID() ? -1000 : 0) +
                                 e.getMethodInvoked().getParameterCount() +
                                 e.getParams().stream().map(this::getVarDetailByID).filter(p -> p.getType().isAnonymousClass()).mapToInt(i -> 1000).sum() +
