@@ -20,11 +20,7 @@ public class ArrVarDetails extends VarDetail{
     String componentValue;
     Object value;
 
-    Integer defaultComponent;
-
-    private int size;
-
-    public ArrVarDetails(int ID, List<Integer> components, Object value, int size, int defaultComponent) {
+    public ArrVarDetails(int ID, List<Integer> components, Object value) {
         super(ID);
         if(value == null || components == null) throw new IllegalArgumentException("Value details not provided");
         if (!availableTypeCheck(value.getClass())) throw new IllegalArgumentException("Non array type value provided");
@@ -33,8 +29,6 @@ public class ArrVarDetails extends VarDetail{
         this.components = components;
         this.componentValue = components.stream().map(String::valueOf).collect(Collectors.joining(Properties.getDELIMITER()));
         this.value = value;
-        this.size = size;
-        this.defaultComponent = defaultComponent;
     }
 
     public Class<?> getComponentType() {
@@ -42,9 +36,7 @@ public class ArrVarDetails extends VarDetail{
     }
 
     public List<Integer> getComponents() {
-        List<Integer> res = new ArrayList<>(components);
-        while(res.size()< size) res.add(defaultComponent);
-        return res;
+        return components;
     }
 
     public Set<Class<?>> getLeaveType() {

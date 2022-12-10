@@ -33,12 +33,9 @@ public class ExecutionTrace {
     private static final AtomicInteger varIDGenerator = new AtomicInteger(1);
     private static final ExecutionTrace singleton = new ExecutionTrace();
     private static final VarDetail nullVar;
-    private static final Map<Class<?>, VarDetail> defaultValVar;
 
     static {
         nullVar = new ObjVarDetails(0, Object.class, "null");
-        defaultValVar = Arrays.stream(new Class<?>[]{char.class, boolean.class, byte.class, int.class, short.class, long.class, float.class, double.class}).flatMap(c -> Stream.of(new AbstractMap.SimpleEntry<Class<?>, VarDetail>(c, new PrimitiveVarDetails(getNewVarID(), c, Helper.getDefaultValue(c))), new AbstractMap.SimpleEntry<Class<?>, VarDetail>(ClassUtils.primitiveToWrapper(c), new WrapperVarDetails(getNewVarID(), ClassUtils.primitiveToWrapper(c), getDefaultValue(c))))).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-        defaultValVar.put(String.class, nullVar);
     }
 
     private final Map<Integer, MethodExecution> allMethodExecs;
@@ -57,7 +54,7 @@ public class ExecutionTrace {
         this.varToDefMap = new HashMap<Integer, Integer>();
         callGraph = new DirectedMultigraph<>(CallOrderEdge.class);
         allVars.put(nullVar.getID(), nullVar);
-        defaultValVar.values().stream().forEach(v -> allVars.put(v.getID(), v));
+
     }
 
     /**
@@ -220,18 +217,7 @@ public class ExecutionTrace {
             else if (varDetailClass.equals(StringBVarDetails.class))
                 varDetail = new StringBVarDetails(getNewVarID(), type, (Integer) checkVal);
             else if (varDetailClass.equals(ArrVarDetails.class)) {
-                int defaultComponentID = 0;
-                int arrSize = 0;
-                if (objValue.getClass().isArray()) {
-                    arrSize = Array.getLength(objValue);
-                    if (ClassUtils.isPrimitiveOrWrapper(objValue.getClass().getComponentType()) || objValue.getClass().getComponentType().equals(String.class)) {
-                        Class<?> componentType = objValue.getClass().getComponentType();
-                        defaultComponentID = defaultValVar.get(componentType).getID();
-                    }
-                } else if (objValue instanceof Collection) arrSize = ((Collection<?>) objValue).size();
-
-
-                varDetail = new ArrVarDetails(getNewVarID(), (List<Integer>) checkVal, objValue, arrSize, defaultComponentID);
+                varDetail = new ArrVarDetails(getNewVarID(), (List<Integer>) checkVal, objValue);
             } else if (varDetailClass.equals(MapVarDetails.class)) {
                 varDetail = new MapVarDetails(getNewVarID(), type, (Set<Map.Entry<Integer, Integer>>) checkVal, objValue);
             } else if (varDetailClass.equals(WrapperVarDetails.class)) {
