@@ -7,7 +7,7 @@ import entity.LOG_ITEM;
 import entity.METHOD_TYPE;
 import helper.Helper;
 import helper.Properties;
-import helper.xml.XMLWriter;
+import helper.xml.XMLParser;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -44,6 +44,7 @@ public class ExecutionTrace {
     private final Map<VarDetail, Stack<MethodExecution>> varToParentStackCache = new HashMap<>(); // cache last retrieval results to save time
     private final Map<MethodExecution, Boolean> exeToFaultyExeContainedCache = new HashMap<>(); // cache to save execution time
     private final VarDetail nullVar = new ObjVarDetails(0, Object.class, null);
+    private final XMLParser parser = new XMLParser();
 
     /**
      * Constructor of ExecutionTrace, set up all vars.
@@ -165,7 +166,7 @@ public class ExecutionTrace {
                 type = ((MockingDetails) objValue).getMockCreationSettings().getTypeToMock();
             } else {
                 hashProcessing.add(hashCode);
-                objValue = toStringWithAttr(objValue);
+                objValue = toStringWithAttr(execution, objValue, process, depth, hashProcessing, processedHashToVarIDMap);
                 hashProcessing.remove(hashCode);
             }
         } else if (ClassUtils.isPrimitiveOrWrapper(type)) {
@@ -501,15 +502,12 @@ public class ExecutionTrace {
         return nullVar;
     }
 
-    private String toStringWithAttr(Object obj) {
-        if (obj == null) return "null";
-        StringBuilder result = new StringBuilder(1000);
-//        toCustomString("this", obj, 7, result, new HashMap<>());
-//        result.trimToSize();
-//        logger.debug();
-//        logger.debug(result.toString());
-        return new XMLWriter().getXML(obj);
+    private Object toStringWithAttr(MethodExecution execution, Object obj, LOG_ITEM process, int depth, Set<Integer> processedHash, Map<Integer, Integer> processedHashToVarIDMap) {
+        if (obj == null) return null;
+        return
+                parser.getXML(execution, obj, process, depth, processedHashToVarIDMap);
     }
+
 
     public void clear() {
         allMethodExecs.clear();
