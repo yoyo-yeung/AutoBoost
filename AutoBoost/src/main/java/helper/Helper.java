@@ -76,7 +76,8 @@ public class Helper {
 
     private static boolean isCannotMockType(String typeName) {
 //        logger.debug(typeName);
-        return typeName.replace("'", "").startsWith("java.lang.reflect.Method") || typeName.equals("java.io.StringReader");
+        return typeName.replace("'", "").startsWith("java.lang.reflect") || typeName.equals("java.io.StringReader");
+
     }
 
     public static Object getDefaultValue(Class<?> type) {
