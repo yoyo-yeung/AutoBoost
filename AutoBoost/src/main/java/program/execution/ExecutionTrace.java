@@ -132,9 +132,12 @@ public class ExecutionTrace {
         if (processedHashToVarIDMap.containsKey(hashCode)) {
             return getVarDetailByID(processedHashToVarIDMap.get(hashCode));
         }
-        boolean artificialEnum = false;
         if (objValue == null) return nullVar;
-        String className = objValue.getClass().getName();
+       return getVarDetail(execution, processVar(execution, type, objValue, hashCode, process, canOnlyBeUse, hashProcessing, depth, processedHashToVarIDMap), hashCode, process, canOnlyBeUse, processedHashToVarIDMap);
+    }
+
+    public IntermediateVarContent processVar(MethodExecution execution, Class<?> type, Object objValue, int hashCode, LOG_ITEM process, boolean canOnlyBeUse, Set<Integer> hashProcessing, int depth, Map<Integer, Integer> processedHashToVarIDMap) {
+        boolean artificialEnum = false;
         if (type.isEnum()) {
             objValue = ((Enum<?>) objValue).name();
         } else if (!type.isArray() && !type.equals(String.class) && !StringBVarDetails.availableTypeCheck(type) && !ClassUtils.isPrimitiveOrWrapper(type) && !((ArrVarDetails.availableTypeCheck(type) && ArrVarDetails.availableTypeCheck(objValue.getClass())) || (MapVarDetails.availableTypeCheck(type) && MapVarDetails.availableTypeCheck(objValue.getClass())))) {
@@ -198,7 +201,7 @@ public class ExecutionTrace {
                 }
             }
         }
-        Class<?> varDetailClass;
+        Class<? extends VarDetail> varDetailClass;
         Object checkVal = objValue;
         if (objValue instanceof MockingDetails) {
             varDetailClass = MockVarDetails.class;
@@ -224,8 +227,15 @@ public class ExecutionTrace {
         } else {
             varDetailClass = ObjVarDetails.class;
         }
-        if ((varDetailClass.equals(WrapperVarDetails.class) || varDetailClass.equals(PrimitiveVarDetails.class) || varDetailClass.equals(StringVarDetails.class) || varDetailClass.equals(EnumVarDetails.class)) && depth < 7)
-            logger.debug("yes");
+        return new IntermediateVarContent(varDetailClass, type, objValue, checkVal, objValue.getClass());
+    }
+
+    public VarDetail getVarDetail(MethodExecution execution, IntermediateVarContent varContent, int hashCode, LOG_ITEM process, boolean canOnlyBeUse, Map<Integer, Integer> processedHashToVarIDMap) {
+        Class<?> varDetailClass = varContent.getVarDetailClass();
+        Class<?> type = varContent.getVarType();
+        Object checkVal = varContent.getVarCheckVal();
+        String className = varContent.getVarType().getName();
+        Object  objValue = varContent.getVarValue();
         VarDetail varDetail = findExistingVarDetail(hashCode, type, varDetailClass, checkVal, className);
         if (varDetail == null) {
             if (varDetailClass.equals(EnumVarDetails.class))
@@ -264,7 +274,6 @@ public class ExecutionTrace {
         classNameToVarMap.get(className).add(varDetail);
         return varDetail;
     }
-
     /**
      * Find if the current execution should be recognized as def of a var
      * e.g. If the variable is a callee, then it is a USE.
@@ -684,6 +693,42 @@ public class ExecutionTrace {
         @Override
         public String toString() {
             return "(" + getSource() + " : " + getTarget() + " : " + label + ")";
+        }
+    }
+
+    public static class IntermediateVarContent {
+        private final Class<? extends VarDetail> varDetailClass;
+        private final Class<?> varType;
+        private final Object varValue;
+        private final Object varCheckVal;
+        private final Class<?> valueStoredType;
+
+        public IntermediateVarContent(Class<? extends VarDetail> varDetailClass, Class<?> varType, Object varValue, Object varCheckVal, Class<?> valueStoredType) {
+            this.varDetailClass = varDetailClass;
+            this.varType = varType;
+            this.varValue = varValue;
+            this.varCheckVal = varCheckVal;
+            this.valueStoredType = valueStoredType;
+        }
+
+        public Class<? extends VarDetail> getVarDetailClass() {
+            return varDetailClass;
+        }
+
+        public Class<?> getVarType() {
+            return varType;
+        }
+
+        public Object getVarValue() {
+            return varValue;
+        }
+
+        public Object getVarCheckVal() {
+            return varCheckVal;
+        }
+
+        public Class<?> getValueStoredType() {
+            return valueStoredType;
         }
     }
 }
