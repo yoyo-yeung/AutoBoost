@@ -107,13 +107,9 @@ public class ExecutionTrace {
     }
 
     public VarDetail getVarDetail(MethodExecution execution, Class<?> type, Object objValue, LOG_ITEM process, boolean canOnlyBeUse) {
-        return getVarDetail(execution, type, objValue, process, canOnlyBeUse, new HashSet<>());
+        return getVarDetail(execution, type, objValue, process, canOnlyBeUse, new HashSet<>(), 7, new HashMap<>());
     }
-
-    public VarDetail getVarDetail(MethodExecution execution, Class<?> type, Object objValue, LOG_ITEM process, boolean canOnlyBeUse, Set<Integer> processedHash) {
-        return getVarDetail(execution, type, objValue, process, canOnlyBeUse, processedHash, 7, new HashMap<>());
-    }
-
+    
     /**
      * If object already stored, return existing VarDetail ID stored
      * If not, create a new VarDetail and return the corresponding ID
