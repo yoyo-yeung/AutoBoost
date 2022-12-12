@@ -184,9 +184,9 @@ public class ExecutionProcessor {
                 .flatMap(Collection::stream)
                 .map(executionTrace::getVarDetailByID)
                 .filter(p -> !Helper.isCannotMockType(p.getType())) // do not track the var if they are NOT to be mocked
-                .filter(p -> {
-                    return p.getType().getName().startsWith(Properties.getSingleton().getPUT()) || (executionTrace.getParentExeStack(p, true) == null || executionTrace.getParentExeStack(p, true).stream().anyMatch(e -> e.getMethodInvoked().getDeclaringClass().getPackageName().startsWith(Properties.getSingleton().getPUT())));
-                })
+//                .filter(p -> {
+//                    return p.getType().getName().startsWith(Properties.getSingleton().getPUT()) || (executionTrace.getParentExeStack(p, true) == null || executionTrace.getParentExeStack(p, true).stream().anyMatch(e -> e.getMethodInvoked().getDeclaringClass().getPackageName().startsWith(Properties.getSingleton().getPUT())));
+//                })
                 .map(VarDetail::getID)
                 .collect(Collectors.toSet());
 

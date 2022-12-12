@@ -2,6 +2,7 @@ package program.generation;
 
 import entity.ACCESS;
 import entity.METHOD_TYPE;
+import helper.Helper;
 import helper.Properties;
 import helper.xml.XMLParser;
 import org.apache.commons.lang3.ClassUtils;
@@ -514,7 +515,7 @@ public class TestGenerator {
 
                 return varStmt;
             }
-        } else if (p instanceof ObjVarDetails && !p.getType().getName().startsWith(Properties.getSingleton().getPUT()) && executionTrace.getParentExeStack(p, true) != null) {
+        } else if (p instanceof ObjVarDetails && Helper.isCannotMockType(p.getType()) && executionTrace.getParentExeStack(p, true) != null) {
             prepareConcreteValue(p, testCase);
             return getCreatedOrConstantVar(p, testCase);
         } else {
