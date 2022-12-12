@@ -693,11 +693,14 @@ public class ExecutionTrace {
     }
 
     public static class IntermediateVarContent {
-        private final Class<? extends VarDetail> varDetailClass;
-        private final Class<?> varType;
-        private final Object varValue;
-        private final Object varCheckVal;
-        private final Class<?> valueStoredType;
+        private Class<? extends VarDetail> varDetailClass;
+        private Class<?> varType;
+        private Object varValue;
+        private Object varCheckVal;
+        private Class<?> valueStoredType;
+
+        public IntermediateVarContent() {
+        }
 
         public IntermediateVarContent(Class<? extends VarDetail> varDetailClass, Class<?> varType, Object varValue, Object varCheckVal, Class<?> valueStoredType) {
             this.varDetailClass = varDetailClass;
@@ -725,6 +728,26 @@ public class ExecutionTrace {
 
         public Class<?> getValueStoredType() {
             return valueStoredType;
+        }
+
+        public void setVarDetailClass(Class<? extends VarDetail> varDetailClass) {
+            this.varDetailClass = varDetailClass;
+        }
+
+        public void setVarType(Class<?> varType) {
+            this.varType = varType;
+        }
+
+        public void setVarValue(Object varValue) {
+            this.varValue = varValue;
+        }
+
+        public void setVarCheckVal(Object varCheckVal) {
+            this.varCheckVal = varCheckVal;
+        }
+
+        public void setValueStoredType(Class<?> valueStoredType) {
+            this.valueStoredType = valueStoredType;
         }
     }
 }
