@@ -2,6 +2,7 @@ package program.generation;
 
 import entity.METHOD_TYPE;
 import helper.Helper;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -13,6 +14,7 @@ import program.execution.variable.*;
 import program.generation.test.TestCase;
 
 import java.lang.reflect.*;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
@@ -77,8 +79,25 @@ class ExecutionChecker {
     protected static void constructArr(ArrVarDetails p, TestCase testCase) {
         if (testCase.createdObjForVar(p.getID())) return;
         Stream components = p.getComponents().stream().map(testCase::getObjForVar);
-        if (p.getType().isArray())
-            testCase.addObjForVar(p.getID(), components.toArray(s -> Array.newInstance(p.getComponentType(), s)));
+        if (p.getType().isArray()) {
+            Class<?> componentType = p.getType().getComponentType();
+            if(componentType.isPrimitive()){
+                Class<?> wrapperClass = ClassUtils.primitiveToWrapper(componentType);
+
+                testCase.addObjForVar(p.getID(), ArrayUtils.toPrimitive(components.map(c -> {
+                    try {
+                        return wrapperClass.getConstructor(componentType).newInstance(c);
+                    } catch (InstantiationException | NoSuchMethodException | IllegalAccessException |
+                             InvocationTargetException e) {
+                        throw new RuntimeException(e);
+                    }
+                }).toArray(s -> Array.newInstance(wrapperClass, s))));
+
+            }
+
+            else
+                testCase.addObjForVar(p.getID(), components.toArray(s -> Array.newInstance(componentType, s)));
+        }
         else {
             Collection res = (Collection) constructDefaultInstance(p.getType());
             components.forEach(res::add);
