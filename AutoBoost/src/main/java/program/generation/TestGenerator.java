@@ -105,6 +105,11 @@ public class TestGenerator {
         testCase.keepOnlyTargetCalleeVar(e.getCalleeId());
         List<Stmt> params = prepareAndGetRequiredParams(e, testCase);
         setUpMockedParamsAndCalls(e, testCase);
+        testCase.setRecreated(executionProcessor.checkExceptionResult(testCase, e, testCase.getObjForVar(e.getCalleeId()), params.stream().map(Stmt::getResultVarDetailID).map(testCase::getObjForVar).toArray()));
+        if (!testCase.isRecreated()) {
+            logger.error("Cannot recreate " + e.toSimpleString());
+            return null;
+        }
         testCase.addStmt(new MethodInvStmt(callee, e.getMethodInvoked().getId(), params));
         testCase.setExceptionClass(e.getExceptionClass());
         return testCase;

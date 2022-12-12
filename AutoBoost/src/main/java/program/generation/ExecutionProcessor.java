@@ -540,9 +540,33 @@ public class ExecutionProcessor {
         return expected.equals(actual);
     }
 
-    public boolean checkRecreationException(TestCase testCase, Throwable thrown, MethodExecution target) {
-        if (!testCase.isRecreated() || target.getExceptionClass() == null) return false;
-        return thrown.getClass().equals(target.getExceptionClass());
+    public boolean checkExceptionResult(TestCase testCase, MethodExecution target, Object callee, Object[] params) {
+        if(!testCase.isRecreated() || target.getExceptionClass() == null) return false;
+        MethodDetails toInvoke = target.getMethodInvoked();
+        if (toInvoke.getType() == METHOD_TYPE.CONSTRUCTOR) {
+            try {
+                Constructor constructor = toInvoke.getdClass().getDeclaredConstructor(toInvoke.getParameterTypes().stream().map(Helper::sootTypeToClass).toArray(Class[]::new));
+                constructor.setAccessible(true);
+                constructor.newInstance(params);
+            }catch (InvocationTargetException e) {
+                return e.getCause().getClass().equals(target.getExceptionClass());
+            } catch (NoSuchMethodException | InstantiationException | IllegalAccessException e) {
+                return false;
+            }
+        } else {
+            try {
+                Method method = toInvoke.getdClass().getDeclaredMethod(toInvoke.getName(), toInvoke.getParameterTypes().stream().map(Helper::sootTypeToClass).toArray(Class[]::new));
+                method.setAccessible(true);
+                method.invoke(callee, params);
+            } catch (InvocationTargetException e) {
+                return e.getCause().getClass().equals(target.getExceptionClass());
+            }catch (NoSuchMethodException | IllegalAccessException e) {
+                return false;
+            }
+        }
+        return false;
     }
+
+
 
 }
