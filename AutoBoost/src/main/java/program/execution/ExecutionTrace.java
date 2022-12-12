@@ -109,7 +109,7 @@ public class ExecutionTrace {
     public VarDetail getVarDetail(MethodExecution execution, Class<?> type, Object objValue, LOG_ITEM process, boolean canOnlyBeUse) {
         return getVarDetail(execution, type, objValue, process, canOnlyBeUse, new HashSet<>(), 7, new HashMap<>());
     }
-    
+
     /**
      * If object already stored, return existing VarDetail ID stored
      * If not, create a new VarDetail and return the corresponding ID
@@ -130,6 +130,21 @@ public class ExecutionTrace {
         }
         if (objValue == null) return nullVar;
        return getVarDetail(execution, processVar(execution, type, objValue, hashCode, process, canOnlyBeUse, hashProcessing, depth, processedHashToVarIDMap), hashCode, process, canOnlyBeUse, processedHashToVarIDMap);
+    }
+
+    public Object getContentForXMLStorage(MethodExecution execution, Class<?> type, Object objValue, LOG_ITEM process, boolean canOnlyBeUse, Set<Integer> hashProcessing, int depth, Map<Integer, Integer> processedHashToVarIDMap) {
+        int hashCode = System.identityHashCode(objValue);
+        if (processedHashToVarIDMap.containsKey(hashCode)) {
+            return getVarDetailByID(processedHashToVarIDMap.get(hashCode));
+        }
+        if (objValue == null) return nullVar;
+        IntermediateVarContent content = processVar(execution, type, objValue, hashCode, process, canOnlyBeUse, hashProcessing, depth, processedHashToVarIDMap);
+        if(content.getVarDetailClass().equals(PrimitiveVarDetails.class) ||
+                content.getVarDetailClass().equals(EnumVarDetails.class) ||
+                content.getVarDetailClass().equals(WrapperVarDetails.class) ||
+                (content.getVarDetailClass().equals(StringVarDetails.class) && ((String)content.getVarValue()).length() < 300))
+            return content;
+        else return getVarDetail(execution, content, hashCode, process, canOnlyBeUse, processedHashToVarIDMap);
     }
 
     public IntermediateVarContent processVar(MethodExecution execution, Class<?> type, Object objValue, int hashCode, LOG_ITEM process, boolean canOnlyBeUse, Set<Integer> hashProcessing, int depth, Map<Integer, Integer> processedHashToVarIDMap) {

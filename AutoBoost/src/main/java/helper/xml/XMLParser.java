@@ -1,10 +1,12 @@
 package helper.xml;
 
 import entity.LOG_ITEM;
+import org.apache.commons.lang3.ClassUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import program.execution.ExecutionTrace;
 import program.execution.MethodExecution;
+import program.execution.variable.StringVarDetails;
 import program.execution.variable.VarDetail;
 import program.instrumentation.InstrumentResult;
 
@@ -15,6 +17,7 @@ import javax.xml.stream.events.XMLEvent;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -28,6 +31,8 @@ public class XMLParser {
         String fieldName = "";
         String className = "";
         VarDetail varDetail = null;
+        boolean varDetailIDFound = true;
+        ExecutionTrace.IntermediateVarContent intermediateVarContent = new ExecutionTrace.IntermediateVarContent();
         int processedFieldID = -1;
         try {
             XMLEventReader eventReader =
@@ -61,15 +66,48 @@ public class XMLParser {
                             case PROCESSED_FIELD_ID:
                                 processedFieldID = Integer.parseInt(attribute.getValue());
                                 varDetail = idToVarMap.get(processedFieldID);
+                                break;
+                            case VARDETAIL_CLASS:
+                                varDetailIDFound = false;
+                                intermediateVarContent.setVarDetailClass((Class<? extends VarDetail>) ClassUtils.getClass(attribute.getValue()));
+                                break;
+                            case VARDETAIL_TYPE:
+                                intermediateVarContent.setVarType(ClassUtils.getClass(attribute.getValue()));
+                                break;
+                            case VARDETAIL_VAL:
+                                intermediateVarContent.setVarValue(attribute.getValue());
+                                break;
+                            case VARDETAIL_VALTYPE:
+                                intermediateVarContent.setValueStoredType(ClassUtils.getClass(attribute.getValue()));
+                                break;
                         }
 
+                    }
+                    if(!varDetailIDFound) {
+                        if(ClassUtils.isPrimitiveWrapper(intermediateVarContent.getValueStoredType())) {
+                            try {
+                                if(!intermediateVarContent.getValueStoredType().equals(Character.class))
+                                    intermediateVarContent.setVarValue(intermediateVarContent.getValueStoredType().getConstructor(String.class).newInstance(intermediateVarContent.getVarValue()));
+                                else                             intermediateVarContent.setVarValue(intermediateVarContent.getValueStoredType().getConstructor(char.class).newInstance(((String)intermediateVarContent.getVarValue()).charAt(0)));
+
+                            } catch (InstantiationException | NoSuchMethodException | IllegalAccessException |
+                                     InvocationTargetException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+
+                        intermediateVarContent.setVarValue(intermediateVarContent.getValueStoredType().cast(intermediateVarContent.getVarValue()));
+                        intermediateVarContent.setVarCheckVal(intermediateVarContent.getVarValue());
+                        varDetail = ExecutionTrace.getSingleton().getVarDetail(null, intermediateVarContent, System.identityHashCode(intermediateVarContent.getVarValue()), null, true, null);
+                        intermediateVarContent = new ExecutionTrace.IntermediateVarContent();
+                        varDetailIDFound = true;
                     }
                     idToVarMap.put(fieldID, varDetail);
                     fieldToVarMap.put(new AbstractMap.SimpleEntry<>(className, fieldName), varDetail);
 
                 }
             }
-        } catch (XMLStreamException e) {
+        } catch (XMLStreamException | ClassNotFoundException e) {
             logger.error(e.getMessage() + "\t" + className + "\t" + fieldName);
             throw new RuntimeException(e);
         }
@@ -110,11 +148,26 @@ public class XMLParser {
         if (fieldName.isEmpty())
             writeObjToXML(execution, obj, process, xmlStreamWriter, hashCodeToFieldMap, fieldName, depth, fieldIDGenerator, processedHashToVarIDMap);
         else
-            writeVarIDToXML(execution, obj, process, xmlStreamWriter, depth, processedHashToVarIDMap);
+            writeFieldToXML(execution, obj, process, xmlStreamWriter, depth, processedHashToVarIDMap);
     }
 
-    private void writeVarIDToXML(MethodExecution execution, Object obj, LOG_ITEM process, XMLStreamWriter xmlStreamWriter, int depth, Map<Integer, Integer> processedHashToVarIDMap) throws XMLStreamException {
-        xmlStreamWriter.writeAttribute(XML_ATTRIBUTE.VAR_ID.name(), Integer.toString(ExecutionTrace.getSingleton().getVarDetail(execution, obj == null ? Object.class : obj.getClass(), obj, process, true, new HashSet<>(), depth - 1, processedHashToVarIDMap).getID()));
+    private void writeFieldToXML(MethodExecution execution, Object obj, LOG_ITEM process, XMLStreamWriter xmlStreamWriter, int depth, Map<Integer, Integer> processedHashToVarIDMap) throws XMLStreamException {
+        Object toWrite = ExecutionTrace.getSingleton().getContentForXMLStorage(execution, obj == null ? Object.class : obj.getClass(), obj, process, true, new HashSet<>(), depth - 1, processedHashToVarIDMap);
+        if(toWrite instanceof VarDetail)
+            writeVarIDToXML(((VarDetail) toWrite).getID(), xmlStreamWriter);
+        else if(toWrite instanceof ExecutionTrace.IntermediateVarContent)
+            writeVarContentToXML((ExecutionTrace.IntermediateVarContent) toWrite, xmlStreamWriter);
+
+    }
+
+    private void writeVarContentToXML(ExecutionTrace.IntermediateVarContent varContent, XMLStreamWriter xmlStreamWriter) throws XMLStreamException {
+        xmlStreamWriter.writeAttribute(XML_ATTRIBUTE.VARDETAIL_CLASS.name(), varContent.getVarDetailClass().getName());
+        xmlStreamWriter.writeAttribute(XML_ATTRIBUTE.VARDETAIL_TYPE.name(), varContent.getVarType().getName());
+        xmlStreamWriter.writeAttribute(XML_ATTRIBUTE.VARDETAIL_VAL.name(), varContent.getVarValue().toString());
+        xmlStreamWriter.writeAttribute(XML_ATTRIBUTE.VARDETAIL_VALTYPE.name(), varContent.getValueStoredType().getName());
+    }
+    private void writeVarIDToXML(int objID, XMLStreamWriter xmlStreamWriter) throws XMLStreamException {
+        xmlStreamWriter.writeAttribute(XML_ATTRIBUTE.VAR_ID.name(), Integer.toString(objID));
     }
 
     private void writeObjToXML(MethodExecution execution, Object obj, LOG_ITEM process, XMLStreamWriter xmlStreamWriter, Map<Integer, String> hashCodeToFieldMap, String fieldName, int depth, AtomicInteger fieldIDGenerator, Map<Integer, Integer> processedHashToVarIDMap) throws XMLStreamException {
