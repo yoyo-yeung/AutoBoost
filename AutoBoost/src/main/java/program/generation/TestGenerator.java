@@ -65,14 +65,12 @@ public class TestGenerator {
         ValueTestCase testCase = new ValueTestCase();
         testCase.setPackageName(getPackageForTestCase(e));
         try {
-            logger.debug("Generating test case for execution " + e.toSimpleString());
+            logger.info("Generating test case for execution " + e.toSimpleString());
 
             String callee = prepareAndGetCallee(e, testCase);
             testCase.keepOnlyTargetCalleeVar(e.getCalleeId());
             List<Stmt> params = prepareAndGetRequiredParams(e, testCase);
             setUpMockedParamsAndCalls(e, testCase);
-//                        if(()||(e.getReturnValId()!=executionTrace.getNullVar().getID() && !testCase.getObjForVar(e.getReturnValId()).equals(ExecutionChecker.getStandaloneObj(executionTrace.getVarDetailByID(e.getReturnValId())))))
-//                            logger.error("herer");
             ExecutionChecker.constructObj(testCase, e, null, params.stream().map(Stmt::getResultVarDetailID).map(testCase::getObjForVar).toArray());
             testCase.setRecreated(executionProcessor.checkRecreationResult(testCase, e));
             if (!testCase.isRecreated()) {
@@ -100,7 +98,7 @@ public class TestGenerator {
 
     public TestCase generateExceptionTests(MethodExecution e) {
         ExceptionTestCase testCase = new ExceptionTestCase();
-        logger.debug("Generating exception checking test case for execution " + e.toSimpleString());
+        logger.info("Generating exception checking test case for execution " + e.toSimpleString());
         testCase.setPackageName(getPackageForTestCase(e));
         String callee = prepareAndGetCallee(e, testCase);
         testCase.keepOnlyTargetCalleeVar(e.getCalleeId());
@@ -295,15 +293,12 @@ public class TestGenerator {
                 Stmt fieldVal = prepareConcreteValue(e.getValue(), testCase);
                 FieldSetStmt setStmt = new FieldSetStmt(calleeVarStmt, e.getKey().getKey(), e.getKey().getValue(), fieldVal);
                 testCase.addStmt(setStmt);
-                if (testCase.getObjForVar(target.getID()) == null)
-                    logger.error("callee is null ");
-                if (fieldVal.getResultVarDetailID() != executionTrace.getNullVar().getID() && testCase.getObjForVar(fieldVal.getResultVarDetailID()) == null)
-                    logger.error("field val is null ");
                 ExecutionChecker.setField(testCase.getObjForVar(target.getID()), e.getKey().getKey(), e.getKey().getValue(), testCase.getObjForVar(fieldVal.getResultVarDetailID()));
             });
 
         } catch (Exception e) {
-            Arrays.stream(e.getStackTrace()).map(s -> s.toString()).forEach(logger::error);
+            logger.error(e.getMessage());
+            e.printStackTrace();
         }
 
     }
