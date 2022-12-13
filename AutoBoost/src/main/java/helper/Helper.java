@@ -9,6 +9,7 @@ import soot.Type;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -126,4 +127,9 @@ public class Helper {
         return ClassUtils.isPrimitiveOrWrapper(c) || c.equals(String.class);
     }
 
+    public static String getClassNameToOutput(Set<Class<?>> fullCNameNeeded, Class<?> c) {
+        if(!ClassUtils.isInnerClass(c) || fullCNameNeeded.contains(c)) return fullCNameNeeded.contains(c) ? c.getName().replace("$", ".") : c.getSimpleName().replace("$", ".");
+        Class<?> parent  = c.getEnclosingClass();
+        return getClassNameToOutput(fullCNameNeeded, parent) + "." + c.getSimpleName().replace("$", ".");
+    }
 }

@@ -1,6 +1,7 @@
 package program.execution.stmt;
 
 import entity.METHOD_TYPE;
+import helper.Helper;
 import helper.Properties;
 import program.analysis.MethodDetails;
 import program.execution.ExecutionTrace;
@@ -45,7 +46,7 @@ public class MethodInvStmt extends Stmt {
     @Override
     public String getStmt(Set<Class<?>> fullCNameNeeded) {
         MethodDetails details = InstrumentResult.getSingleton().getMethodDetailByID(methodInvID);
-        return (callee == null ? "" : callee) + (details.getType().equals(METHOD_TYPE.CONSTRUCTOR) ? ("new " + (fullCNameNeeded.contains(details.getdClass()) ? details.getdClass().getName().replace("$", ".") : details.getdClass().getSimpleName().replace("$", "."))) : (callee == null ? "" : ".") + details.getName().replace("$", ".")) + "(" + paramStmts.stream().map(s -> s.getStmt(fullCNameNeeded)).collect(Collectors.joining(Properties.getDELIMITER())) + ")";
+        return (callee == null ? "" : callee) + (details.getType().equals(METHOD_TYPE.CONSTRUCTOR) ? ("new " + Helper.getClassNameToOutput(fullCNameNeeded, details.getdClass())) : (callee == null ? "" : ".") + details.getName().replace("$", ".")) + "(" + paramStmts.stream().map(s -> s.getStmt(fullCNameNeeded)).collect(Collectors.joining(Properties.getDELIMITER())) + ")";
     }
 
     @Override

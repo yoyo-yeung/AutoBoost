@@ -1,5 +1,6 @@
 package program.execution.stmt;
 
+import helper.Helper;
 import org.mockito.Mockito;
 
 import java.util.Collections;
@@ -14,7 +15,7 @@ public class MockInstanceInitStmt extends Stmt {
 
     @Override
     public String getStmt(Set<Class<?>> fullCNameNeeded) {
-        return "Mockito.mock(" + (fullCNameNeeded.contains(mockType) ? mockType.getName().replace("$", ".") : mockType.getSimpleName()) + ".class)";
+        return "Mockito.mock(" + Helper.getClassNameToOutput(fullCNameNeeded, mockType) + ".class)";
     }
 
     @Override

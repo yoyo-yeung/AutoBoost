@@ -1,5 +1,6 @@
 package program.execution.stmt;
 
+import helper.Helper;
 import program.execution.ExecutionTrace;
 import program.execution.variable.PrimitiveVarDetails;
 import program.execution.variable.VarDetail;
@@ -25,7 +26,7 @@ public class CastStmt extends Stmt {
     @Override
     public String getStmt(Set<Class<?>> fullCNameNeeded) {
         VarDetail result = ExecutionTrace.getSingleton().getVarDetailByID(enclosedStmt.getResultVarDetailID());
-        return "(" + (fullCNameNeeded.contains(newType) ? newType.getName().replace("$", ".") : newType.getSimpleName()) + ")" + ((result instanceof PrimitiveVarDetails ? "(" : "") + enclosedStmt.getStmt(fullCNameNeeded) + (result instanceof PrimitiveVarDetails ? ")" : ""));
+        return "(" + Helper.getClassNameToOutput(fullCNameNeeded, newType) + ")" + ((result instanceof PrimitiveVarDetails ? "(" : "") + enclosedStmt.getStmt(fullCNameNeeded) + (result instanceof PrimitiveVarDetails ? ")" : ""));
     }
 
     @Override

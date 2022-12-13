@@ -1,5 +1,7 @@
 package program.execution.stmt;
 
+import helper.Helper;
+
 import java.util.HashSet;
 import java.util.Set;
 
@@ -27,7 +29,7 @@ public class VarStmt extends Stmt {
     }
 
     public String getDeclarationStmt(Set<Class<?>> fullCNameNeeded) {
-        return "final " + (fullCNameNeeded.contains(varType) ? varType.getName().replace("$", ".") : varType.getSimpleName()) + " " + varName;
+        return "final " + Helper.getClassNameToOutput(fullCNameNeeded, varType) + " " + varName;
     }
 
     @Override
