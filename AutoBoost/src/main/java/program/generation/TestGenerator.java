@@ -16,18 +16,20 @@ import program.execution.MethodExecution;
 import program.execution.stmt.*;
 import program.execution.variable.*;
 import program.generation.test.*;
+import program.instrumentation.InstrumentResult;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import static helper.Helper.getAccessibleMockableSuperType;
-import static helper.Helper.getAccessibleSuperType;
+import static helper.Helper.*;
+import static helper.Helper.getRequiredPackage;
 
 public class TestGenerator {
     private static final Logger logger = LogManager.getLogger(TestGenerator.class);
@@ -65,7 +67,7 @@ public class TestGenerator {
     public TestCase generateResultCheckingTests(MethodExecution e) {
 
         ValueTestCase testCase = new ValueTestCase();
-        testCase.setPackageName(getPackageForTestCase(e));
+        testCase.setPackageName(e.getRequiredPackage());
         try {
             logger.info("Generating test case for execution " + e.toSimpleString());
 
@@ -89,6 +91,8 @@ public class TestGenerator {
                 actual = new CastStmt(actual.getResultVarDetailID(), ClassUtils.wrapperToPrimitive(returnType), actual);
             }
             testCase.setAssertion(new AssertStmt(expected, actual));
+            if(testCase.getPackageName() == null) return null;
+            else if (testCase.getPackageName().isEmpty()) testCase.setPackageName(e.getMethodInvoked().getdClass().getPackage().getName());
             return testCase;
         } catch (Exception exception) {
             logger.error(exception.getMessage());
@@ -101,7 +105,7 @@ public class TestGenerator {
     public TestCase generateExceptionTests(MethodExecution e) {
         ExceptionTestCase testCase = new ExceptionTestCase();
         logger.info("Generating exception checking test case for execution " + e.toSimpleString());
-        testCase.setPackageName(getPackageForTestCase(e));
+        testCase.setPackageName(e.getRequiredPackage());
         String callee = prepareAndGetCallee(e, testCase);
         testCase.keepOnlyTargetCalleeVar(e.getCalleeId());
         List<Stmt> params = prepareAndGetRequiredParams(e, testCase);
@@ -113,6 +117,8 @@ public class TestGenerator {
         }
         testCase.addStmt(new MethodInvStmt(callee, e.getMethodInvoked().getId(), params));
         testCase.setExceptionClass(e.getExceptionClass());
+        if(testCase.getPackageName() == null) return null;
+        else if (testCase.getPackageName().isEmpty()) testCase.setPackageName(e.getMethodInvoked().getdClass().getPackage().getName());
         return testCase;
     }
 
@@ -293,12 +299,12 @@ public class TestGenerator {
             List<Stmt> params = prepareAndGetRequiredParams(defExe, testCase);
             setUpMockedParamsAndCalls(defExe, testCase);
             Stmt invStmt = new MethodInvStmt(callee, details.getId(), params);
-            VarStmt calleeVarStmt = new VarStmt(target.getType(), testCase.getNewVarID(), target.getID());
+            VarStmt calleeVarStmt = new VarStmt(getAccessibleSuperType(target.getType(), testCase.getPackageName()), testCase.getNewVarID(), target.getID());
             testCase.addStmt(new AssignStmt(calleeVarStmt, invStmt));
             testCase.addOrUpdateVar(target.getID(), calleeVarStmt);
             ExecutionChecker.constructObj(testCase, defExe, target, params.stream().map(Stmt::getResultVarDetailID).map(testCase::getObjForVar).toArray());
             XMLParser.fromXMLtoContentMap(target, (String) target.getValue()).entrySet().stream().forEach(e -> {
-                if (!canCreateField(e.getValue())) return;
+                if (!canCreateField(e.getValue()) || !canSetField(testCase, e.getValue())) return;
                 Stmt fieldVal = prepareConcreteValue(e.getValue(), testCase);
                 FieldSetStmt setStmt = new FieldSetStmt(calleeVarStmt, e.getKey().getKey(), e.getKey().getValue(), fieldVal);
                 testCase.addStmt(setStmt);
@@ -310,6 +316,42 @@ public class TestGenerator {
             e.printStackTrace();
         }
 
+    }
+
+    private boolean canSetField(TestCase testCase, VarDetail varDetail) {
+        String requiredPackage = "";
+        if(varDetail instanceof EnumVarDetails) {
+            try {
+                if (varDetail.getType().equals(Class.class))
+                    requiredPackage = getRequiredPackage(ClassUtils.getClass(((EnumVarDetails) varDetail).getValue()));
+                else if (varDetail.getType().isEnum())
+                    requiredPackage = getRequiredPackage(varDetail.getType());
+                else {
+                    if (varDetail.getType().getPackage().getName().startsWith(Properties.getSingleton().getPUT())) {
+                        return InstrumentResult.getSingleton().getClassPublicFieldsMap().getOrDefault(varDetail.getType().getName(), new HashSet<>()).contains(((EnumVarDetails) varDetail).getValue());
+                    } else
+                        return Modifier.isPublic(varDetail.getType().getField(((EnumVarDetails) varDetail).getValue()).getModifiers());
+                }
+            } catch (ClassNotFoundException | NoSuchFieldException e) {
+                logger.error(((EnumVarDetails) varDetail).getValue() + "  not found ");
+                throw new RuntimeException(e);
+            }
+        }
+        if(varDetail instanceof ObjVarDetails && !(varDetail == executionTrace.getNullVar())) {
+            MethodExecution defExe = executionProcessor.getExeConstructingClass(varDetail.getType(), true);
+            if(defExe == null) return false;
+            MethodDetails defMeth = defExe.getMethodInvoked();
+            requiredPackage = defMeth.getAccess().equals(ACCESS.PROTECTED)? defMeth.getdClass().getPackage().getName(): "";
+            if(defMeth.getType().equals(METHOD_TYPE.CONSTRUCTOR) && requiredPackage!=null && requiredPackage.isEmpty())
+                requiredPackage = Helper.getRequiredPackage(defMeth.getdClass());
+        }
+        if(requiredPackage == null) return false;
+        if(requiredPackage.isEmpty()) return true;
+        if(testCase.getPackageName().isEmpty()){
+            testCase.setPackageName(requiredPackage);
+            return true;
+        }
+        return testCase.getPackageName().equals(requiredPackage);
     }
 
     private boolean canCreateField(VarDetail p) {
@@ -589,14 +631,6 @@ public class TestGenerator {
             return new ConstructStmt(v.getID(), null, Collections.singletonList(new ConstantStmt(((StringBVarDetails) v).getStringValID())));
         }
         return null;
-    }
-
-    private String getPackageForTestCase(MethodExecution e) {
-        if (!e.getRequiredPackage().isEmpty())
-            return e.getRequiredPackage();
-        if (e.getCalleeId() == -1 || !(e.getCallee() instanceof ObjVarDetails))
-            return e.getMethodInvoked().getDeclaringClass().getPackageName();
-        return executionProcessor.getExeConstructingClass(e.getCallee().getType(), true).getMethodInvoked().getAccess().equals(ACCESS.PROTECTED) ? executionProcessor.getExeConstructingClass(e.getCallee().getType(), true).getMethodInvoked().getDeclaringClass().getPackageName() : e.getMethodInvoked().getDeclaringClass().getPackageName();
     }
 
     private static class MockOccurrence {

@@ -21,7 +21,7 @@ public abstract class TestCase {
     private final List<Stmt> stmtList = new ArrayList<>();
     private final Set<Class<?>> allImports = new HashSet<>();
     private final Map<Integer, Object> varToObjMap = new HashMap<>();
-    private String packageName = null;
+    private String packageName = "";
     private boolean recreated = true;
 
     public TestCase() {
