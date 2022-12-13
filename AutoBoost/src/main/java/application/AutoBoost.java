@@ -133,7 +133,7 @@ public class AutoBoost {
     public void generateTestCases() throws IOException {
         TestGenerator testGenerator = TestGenerator.getSingleton();
         logger.info("Test generation starting");
-        List<MethodExecution> snapshot = new ArrayList<>(ExecutionTrace.getSingleton().getAllMethodExecs().values());
+        List<MethodExecution> snapshot = ExecutionTrace.getSingleton().getAllMethodExecs().values().stream().filter(e -> e.getTest()!=null).collect(Collectors.toList());
         try {
             testGenerator.generateTestCases(snapshot);
 //            testGenerator.generateResultCheckingTests(snapshot);
