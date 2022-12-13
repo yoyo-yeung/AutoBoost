@@ -379,10 +379,15 @@ public class ExecutionProcessor {
         PROGRAM_STATE oldProgramState = AutoBoost.getCurrentProgramState();
         AutoBoost.setCurrentProgramState(PROGRAM_STATE.CONSTRUCTOR_SEARCH);
         if (!this.classToDefExeMap.containsKey(creatingClass)) {
-            Comparator constructionPriority = Comparator.comparingDouble(o -> {
+            Comparator constructionPriority = Comparator.comparingInt(e -> ((MethodExecution) e).getMethodInvoked().getAccess().getPerferenceLv()).thenComparingDouble(o -> {
                 List<VarDetail> params = ((MethodExecution) o).getParams().stream().map(executionTrace::getVarDetailByID).collect(Collectors.toList());
                 return params.size() == 0 ? 1 : params.stream().filter(p -> p instanceof EnumVarDetails || p instanceof PrimitiveVarDetails || p instanceof StringBVarDetails || p instanceof StringVarDetails || p instanceof WrapperVarDetails).count() / params.size();
-            }).thenComparingInt(e -> ((MethodExecution) e).getMethodInvoked().getAccess().getPerferenceLv());
+            });
+
+//                    Comparator.comparingDouble(o -> {
+//                List<VarDetail> params = ((MethodExecution) o).getParams().stream().map(executionTrace::getVarDetailByID).collect(Collectors.toList());
+//                return params.size() == 0 ? 1 : params.stream().filter(p -> p instanceof EnumVarDetails || p instanceof PrimitiveVarDetails || p instanceof StringBVarDetails || p instanceof StringVarDetails || p instanceof WrapperVarDetails).count() / params.size();
+//            }).thenComparingInt(e -> ((MethodExecution) e).getMethodInvoked().getAccess().getPerferenceLv());
             if (processing.contains(creatingClass)) return null;
             processing.add(creatingClass);
             Set<Constructor> tried = new HashSet<>();
