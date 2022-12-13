@@ -264,7 +264,8 @@ public class ExecutionProcessor {
             if (callee instanceof ObjVarDetails && getExeConstructingClass(callee.getType(), true) != null) {
                 MethodExecution defExe = getExeConstructingClass(callee.getType(), true);
                 if (defExe.getMethodInvoked().getAccess().equals(ACCESS.PROTECTED) || !accessibilityCheck(defExe.getMethodInvoked().getdClass(), ""))
-                    requiredPackage = getRequiredPackage(defExe.getMethodInvoked().getdClass());
+                    requiredPackage = defExe.getMethodInvoked().getdClass().getPackage().getName();
+
             }
             if (callee instanceof EnumVarDetails) {
                 if (!callee.getType().isEnum()) {
@@ -276,11 +277,12 @@ public class ExecutionProcessor {
         }
         if (requiredPackage == null) return false;
         if (target.getMethodInvoked().getAccess().equals(ACCESS.PROTECTED)) {
-            if (requiredPackage.isEmpty()) requiredPackage = getRequiredPackage(target.getMethodInvoked().getdClass());
-            else if (!requiredPackage.equals(getRequiredPackage(target.getMethodInvoked().getdClass()))) {
+            if (requiredPackage.isEmpty()) requiredPackage = target.getMethodInvoked().getdClass().getPackage().getName();
+            else if (!requiredPackage.equals(target.getMethodInvoked().getdClass().getPackage().getName())) {
                 return false;
             }
         }
+
         target.setRequiredPackage(requiredPackage);
         return true;
     }
