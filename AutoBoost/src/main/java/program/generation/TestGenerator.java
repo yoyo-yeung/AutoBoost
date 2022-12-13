@@ -49,6 +49,7 @@ public class TestGenerator {
         snapshot.stream()
                 .distinct()
                 .filter(executionProcessor::testSetUp)
+                .sorted(Comparator.comparingInt(MethodExecution::getCalleeId))
                 .map(e -> {
                     if (executionProcessor.normalTestSetUp(e)) {
                         return generateResultCheckingTests(e);
@@ -273,8 +274,10 @@ public class TestGenerator {
     }
 
     private String prepareAndGetCallee(MethodExecution target, TestCase testCase) {
-        if (target.getCalleeId() != -1 && target.getCallee() instanceof ObjVarDetails)
+        if (target.getCalleeId() != -1 && target.getCallee() instanceof ObjVarDetails) {
+            if(!XMLParser.getContentMapCache().containsKey(target.getCalleeId())) XMLParser.clearCache();
             preparePUTObj((ObjVarDetails) target.getCallee(), testCase);
+        }
         else if (target.getCalleeId() != -1)
             prepareAndGetConstantVar(target.getCallee(), testCase.getPackageName(), testCase);
         return getCalleeVarString(target, testCase);

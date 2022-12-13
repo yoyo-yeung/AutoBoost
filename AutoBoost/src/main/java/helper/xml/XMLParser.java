@@ -25,8 +25,12 @@ public class XMLParser {
     private static final Logger logger = LogManager.getLogger(XMLParser.class);
     private final XMLOutputFactory xmlOutputFactory = XMLOutputFactory.newInstance();
     private static final XMLInputFactory factory = XMLInputFactory.newInstance();
+    private static Map<Integer, Map<Map.Entry<String, String>, VarDetail> > contentMapCache = new HashMap<>();
 
     public static Map<Map.Entry<String, String>, VarDetail> fromXMLtoContentMap(VarDetail currentVar, String xml) {
+        if(contentMapCache.containsKey(currentVar.getID()))
+            return contentMapCache.get(currentVar.getID());
+
         Map<Map.Entry<String, String>, VarDetail> fieldToVarMap = new HashMap<>();
         String fieldName = "";
         String className = "";
@@ -111,7 +115,16 @@ public class XMLParser {
             logger.error(e.getMessage() + "\t" + className + "\t" + fieldName);
             throw new RuntimeException(e);
         }
+        contentMapCache.put(currentVar.getID(), fieldToVarMap);
         return fieldToVarMap;
+    }
+
+    public static void clearCache() {
+        contentMapCache.clear();
+    }
+
+    public static Map<Integer, Map<Map.Entry<String, String>, VarDetail>> getContentMapCache() {
+        return contentMapCache;
     }
 
     public String getXML(MethodExecution execution, Object obj, LOG_ITEM process, int depth, Map<Integer, Integer> processedHashToVarIDMap) {
