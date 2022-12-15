@@ -100,7 +100,7 @@ public class XMLParser {
                             try {
                                 if(!intermediateVarContent.getValueStoredType().equals(Character.class))
                                     intermediateVarContent.setVarValue(intermediateVarContent.getValueStoredType().getConstructor(String.class).newInstance(intermediateVarContent.getVarValue()));
-                                else                             intermediateVarContent.setVarValue(intermediateVarContent.getValueStoredType().getConstructor(char.class).newInstance(((String)intermediateVarContent.getVarValue()).charAt(0)));
+                                else                             intermediateVarContent.setVarValue(intermediateVarContent.getValueStoredType().getConstructor(char.class).newInstance(((String)intermediateVarContent.getVarValue()).length() == 0 ? Character.MIN_VALUE : ((String)intermediateVarContent.getVarValue()).charAt(0)));
 
                             } catch (InstantiationException | NoSuchMethodException | IllegalAccessException |
                                      InvocationTargetException e) {
