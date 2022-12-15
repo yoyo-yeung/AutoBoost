@@ -1,8 +1,12 @@
 package program.instrumentation;
 
 import org.apache.commons.lang3.ClassUtils;
+import org.apache.commons.lang3.reflect.FieldUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import program.analysis.ClassDetails;
 import program.analysis.MethodDetails;
+import program.execution.ExecutionTrace;
 import soot.Modifier;
 import soot.SootClass;
 import soot.SootField;
@@ -107,12 +111,7 @@ public class InstrumentResult {
     public List<Field> getClassFields(Class<?> CUC) {
 
         if (classDetailsMap.containsKey(CUC.getName())) return classDetailsMap.get(CUC.getName()).getClassFields();
-        List<Class> classesToGetFields = new ArrayList<>();
-        classesToGetFields.add(CUC);
-        classesToGetFields.addAll(ClassUtils.getAllSuperclasses(CUC));
-        classesToGetFields.removeIf(c -> c.equals(Object.class) || c.equals(Serializable.class) || c.equals(Field.class) || c.equals(Class.class));
-        addClassDetails(new ClassDetails(CUC.getName(), classesToGetFields.stream()
-                .flatMap(c -> Arrays.stream(c.getDeclaredFields()))
+        addClassDetails(new ClassDetails(CUC.getName(),FieldUtils.getAllFieldsList(CUC).stream()
                 .filter(f -> !f.isSynthetic())
                 .filter(f -> !(f.getType().isPrimitive() && Modifier.isStatic(f.getModifiers()) && Modifier.isFinal(f.getModifiers())))
                 .distinct()
