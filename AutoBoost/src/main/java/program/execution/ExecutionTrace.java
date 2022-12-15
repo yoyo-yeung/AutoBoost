@@ -181,7 +181,7 @@ public class ExecutionTrace {
                 type = ((MockingDetails) objValue).getMockCreationSettings().getTypeToMock();
             } else {
                 hashProcessing.add(hashCode);
-                objValue = toStringWithAttr(execution, objValue, process, depth, processedHashToVarIDMap);
+                objValue = objectToStringWithAttr(execution, objValue, process, depth, processedHashToVarIDMap);
                 hashProcessing.remove(hashCode);
             }
         } else if (ClassUtils.isPrimitiveOrWrapper(type)) {
@@ -224,7 +224,7 @@ public class ExecutionTrace {
             checkVal = getVarDetail(execution, String.class, objValue.toString(), process, true, hashProcessing, depth, processedHashToVarIDMap).getID();
         } else if (ArrVarDetails.availableTypeCheck(type) && ArrVarDetails.availableTypeCheck(objValue.getClass())) {
             varDetailClass = ArrVarDetails.class;
-            checkVal = getComponentStream(execution, type, objValue, process, canOnlyBeUse, hashProcessing, depth - 1, processedHashToVarIDMap).collect(Collectors.toList());
+            checkVal = arrToString(execution, objValue, process, depth, processedHashToVarIDMap);
         } else if (MapVarDetails.availableTypeCheck(type) && MapVarDetails.availableTypeCheck(objValue.getClass())) {
             varDetailClass = MapVarDetails.class;
             hashProcessing.add(hashCode);
@@ -258,7 +258,7 @@ public class ExecutionTrace {
             else if (varDetailClass.equals(StringBVarDetails.class))
                 varDetail = new StringBVarDetails(getNewVarID(), type, (Integer) checkVal);
             else if (varDetailClass.equals(ArrVarDetails.class)) {
-                varDetail = new ArrVarDetails(getNewVarID(), (List<Integer>) checkVal, objValue);
+                varDetail = new ArrVarDetails(getNewVarID(), type, null, checkVal);
             } else if (varDetailClass.equals(MapVarDetails.class)) {
                 varDetail = new MapVarDetails(getNewVarID(), (Class<? extends Map>) type, (Set<Map.Entry<Integer, Integer>>) checkVal, objValue);
             } else if (varDetailClass.equals(WrapperVarDetails.class)) {
@@ -383,8 +383,8 @@ public class ExecutionTrace {
         if (varDetailClass.equals(EnumVarDetails.class)) {
             if (type.equals(Class.class))
                 objValue = objValue.toString().replace("$", ".") + ".class";
-        } else if (varDetailClass.equals(ArrVarDetails.class)) {
-            objValue = ((List) objValue).stream().map(String::valueOf).collect(Collectors.joining(Properties.getDELIMITER()));
+//        } else if (varDetailClass.equals(ArrVarDetails.class)) {
+//            objValue = ((List) objValue).stream().map(String::valueOf).collect(Collectors.joining(Properties.getDELIMITER()));
         } else if (varDetailClass.equals(MapVarDetails.class)) {
             objValue = ((Set<Map.Entry>) objValue).stream().map(e -> e.getKey() + "=" + e.getValue()).sorted().collect(Collectors.joining(Properties.getDELIMITER()));
         }
@@ -512,13 +512,17 @@ public class ExecutionTrace {
         return nullVar;
     }
 
-    private Object toStringWithAttr(MethodExecution execution, Object obj, LOG_ITEM process, int depth, Map<Integer, Integer> processedHashToVarIDMap) {
+    private Object objectToStringWithAttr(MethodExecution execution, Object obj, LOG_ITEM process, int depth, Map<Integer, Integer> processedHashToVarIDMap) {
         if (obj == null) return null;
         return
                 parser.getXML(execution, obj, process, depth, processedHashToVarIDMap);
     }
 
-
+    private Object arrToString(MethodExecution execution, Object obj, LOG_ITEM process, int depth, Map<Integer, Integer> processedHashToVarIDMap) {
+        if(obj == null) return null;
+        if(!ArrVarDetails.availableTypeCheck(obj.getClass())) throw new IllegalArgumentException("Illegal arr to string ");
+        return parser.getXML(execution, obj, process, depth, processedHashToVarIDMap);
+    }
     public void clear() {
         allMethodExecs.clear();
         unmockableVarToDefMap.clear();
@@ -763,6 +767,14 @@ public class ExecutionTrace {
 
         public void setValueStoredType(Class<?> valueStoredType) {
             this.valueStoredType = valueStoredType;
+        }
+
+        public void clear() {
+            this.varDetailClass = null;
+            this.varType = null;
+            this.varValue = null;
+            this.varCheckVal = null;
+            this.valueStoredType = null;
         }
     }
 }
