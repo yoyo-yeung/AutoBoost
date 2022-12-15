@@ -207,6 +207,88 @@ public class XMLParser {
         }
         return varDetailIDList;
     }
+    public static Set<Map.Entry<Integer, Integer>> fromXMLtoVarDetailIDMap(MapVarDetails currentVar, String xml) {
+        Stack<AbstractMap.SimpleEntry<Integer, Integer>> relationshipTrack = new Stack<>();
+        String fieldName = "";
+        String className = "";
+        VarDetail varDetail = null;
+        boolean varDetailIDFound = true;
+        ExecutionTrace.IntermediateVarContent intermediateVarContent = new ExecutionTrace.IntermediateVarContent();
+        int processedFieldID = -1;
+        try {
+            XMLEventReader eventReader =
+                    factory.createXMLEventReader(new StringReader(xml));
+            Map<Integer, VarDetail> idToVarMap = new HashMap<>();
+            idToVarMap.put(-1, currentVar);
+            int elementID = 0;
+
+            while (eventReader.hasNext()) {
+                XMLEvent event = eventReader.nextEvent();
+                if (event.getEventType() == XMLStreamConstants.START_ELEMENT) {
+                    StartElement startElement = event.asStartElement();
+                    XML_ELEMENT qName = XML_ELEMENT.valueOf(startElement.getName().getLocalPart());
+                    Iterator<Attribute> attributes = startElement.getAttributes();
+                    if (!qName.equals(XML_ELEMENT.KEY) && !qName.equals(XML_ELEMENT.VAL)) continue;
+                    while (attributes.hasNext()) {
+                        Attribute attribute = attributes.next();
+                        XML_ATTRIBUTE aName = XML_ATTRIBUTE.valueOf(attribute.getName().getLocalPart());
+                        switch (aName) {
+                            case ELEMENT_ID:
+                                elementID = Integer.parseInt(attribute.getValue());
+                                break;
+                            case VAR_ID:
+                                varDetail = ExecutionTrace.getSingleton().getVarDetailByID(Integer.parseInt(attribute.getValue()));
+                                break;
+                            case PROCESSED_FIELD_ID:
+                                processedFieldID = Integer.parseInt(attribute.getValue());
+                                varDetail = idToVarMap.get(processedFieldID);
+                                break;
+                            case VARDETAIL_CLASS:
+                                varDetailIDFound = false;
+                                intermediateVarContent.setVarDetailClass((Class<? extends VarDetail>) ClassUtils.getClass(attribute.getValue()));
+                                break;
+                            case VARDETAIL_TYPE:
+                                intermediateVarContent.setVarType(ClassUtils.getClass(attribute.getValue()));
+                                break;
+                            case VARDETAIL_VAL:
+                                intermediateVarContent.setVarValue(StringEscapeUtils.unescapeXml(attribute.getValue()));
+                                break;
+                            case VARDETAIL_VALTYPE:
+                                intermediateVarContent.setValueStoredType(ClassUtils.getClass(attribute.getValue()));
+                                break;
+                        }
+
+                    }
+                    if(!varDetailIDFound) {
+                        if(ClassUtils.isPrimitiveWrapper(intermediateVarContent.getValueStoredType())) {
+                            try {
+                                if(!intermediateVarContent.getValueStoredType().equals(Character.class))
+                                    intermediateVarContent.setVarValue(intermediateVarContent.getValueStoredType().getConstructor(String.class).newInstance(intermediateVarContent.getVarValue()));
+                                else                             intermediateVarContent.setVarValue(intermediateVarContent.getValueStoredType().getConstructor(char.class).newInstance(((String)intermediateVarContent.getVarValue()).length() == 0 ? Character.MIN_VALUE : ((String)intermediateVarContent.getVarValue()).charAt(0)));
+
+                            } catch (InstantiationException | NoSuchMethodException | IllegalAccessException |
+                                     InvocationTargetException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+
+                        intermediateVarContent.setVarValue(intermediateVarContent.getValueStoredType().cast(intermediateVarContent.getVarValue()));
+                        intermediateVarContent.setVarCheckVal(intermediateVarContent.getVarValue());
+                        varDetail = ExecutionTrace.getSingleton().getVarDetail(null, intermediateVarContent, System.identityHashCode(intermediateVarContent.getVarValue()), null, true, null);
+                        intermediateVarContent.clear();
+                        varDetailIDFound = true;
+                    }
+                    idToVarMap.put(elementID, varDetail);
+                    if(qName.equals(XML_ELEMENT.KEY)) relationshipTrack.add(new AbstractMap.SimpleEntry<>(varDetail.getID(), null));
+                    else relationshipTrack.peek().setValue(varDetail.getID());
+                }
+            }
+        } catch (XMLStreamException | ClassNotFoundException e) {
+            logger.error(e.getMessage() + "\t" + className + "\t" + fieldName);
+            throw new RuntimeException(e);
+        }
+        return relationshipTrack.stream().collect(Collectors.toSet());
+    }
 
     public static void clearCache() {
         contentMapCache.clear();
@@ -226,11 +308,16 @@ public class XMLParser {
             PROCESSING_OBJ_TYPE processingObjType;
             if(ArrVarDetails.availableTypeCheck(obj.getClass()))
                 processingObjType = PROCESSING_OBJ_TYPE.ARR;
+            else if (MapVarDetails.availableTypeCheck(obj.getClass()))
+                processingObjType = PROCESSING_OBJ_TYPE.MAP;
             else
                 processingObjType = PROCESSING_OBJ_TYPE.OBJ;
             switch(processingObjType) {
                 case ARR:
                     xmlStreamWriter.writeStartElement(XML_ELEMENT.ARR.name());
+                    break;
+                case MAP:
+                    xmlStreamWriter.writeStartElement(XML_ELEMENT.MAP.name());
                     break;
                 default:
                     xmlStreamWriter.writeStartElement(XML_ELEMENT.OBJECT.name());
@@ -268,6 +355,8 @@ public class XMLParser {
                 case ARR:
                     writeArrToXML(execution, obj, process, xmlStreamWriter, hashCodeToFieldMap, fieldName, depth, fieldIDGenerator, processedHashToVarIDMap);
                     break;
+                case MAP:
+                    writeMapToXML(execution, obj, process, xmlStreamWriter, hashCodeToFieldMap, fieldName, depth, fieldIDGenerator, processedHashToVarIDMap);
             }
         else
             writeFieldToXML(execution, obj, process, xmlStreamWriter, depth, processedHashToVarIDMap);
@@ -332,6 +421,31 @@ public class XMLParser {
 
         });
     }
+    private void writeMapToXML(MethodExecution execution, Object obj, LOG_ITEM process, XMLStreamWriter xmlStreamWriter, Map<Integer, Integer> hashCodeToFieldMap, String fieldName, int depth, AtomicInteger arrIDGenerator, Map<Integer, Integer> processedHashToVarIDMap) {
+        if(depth == 1) return ;
+        ((Map<?,?>)obj).entrySet().stream().forEach(c -> {
+            try {
+                String arrID;
+                xmlStreamWriter.writeStartElement(XML_ELEMENT.ELEMENT.name());
+                xmlStreamWriter.writeStartElement(XML_ELEMENT.KEY.name());
+                arrID = Integer.toString(arrIDGenerator.incrementAndGet());
+                xmlStreamWriter.writeAttribute(XML_ATTRIBUTE.ELEMENT_ID.name(), arrID);
+                write(execution, c.getKey(), process, xmlStreamWriter, hashCodeToFieldMap, arrID, depth - 1, arrIDGenerator, processedHashToVarIDMap, PROCESSING_OBJ_TYPE.MAP);
+                xmlStreamWriter.writeEndElement();
+                xmlStreamWriter.writeStartElement(XML_ELEMENT.VAL.name());
+                arrID = Integer.toString(arrIDGenerator.incrementAndGet());                xmlStreamWriter.writeAttribute(XML_ATTRIBUTE.ELEMENT_ID.name(), arrID);
+                write(execution, c.getValue(), process, xmlStreamWriter, hashCodeToFieldMap, arrID, depth - 1, arrIDGenerator, processedHashToVarIDMap, PROCESSING_OBJ_TYPE.MAP);
+                xmlStreamWriter.writeEndElement();
+                xmlStreamWriter.writeEndElement();
+
+            } catch (XMLStreamException e) {
+                throw new RuntimeException(e);
+            }
+
+        });
+    }
+
+
     public void writeProcessedFieldToXML(Integer fieldId, XMLStreamWriter xmlStreamWriter) throws XMLStreamException {
         xmlStreamWriter.writeAttribute(XML_ATTRIBUTE.PROCESSED_FIELD_ID.name(), String.valueOf(fieldId));
     }

@@ -2,6 +2,7 @@ package program.execution.variable;
 
 import entity.CREATION_TYPE;
 import helper.Properties;
+import helper.xml.XMLParser;
 import program.execution.ExecutionTrace;
 import soot.Modifier;
 
@@ -12,26 +13,27 @@ import java.util.stream.Collectors;
 public class MapVarDetails extends VarDetail {
     private static final CREATION_TYPE createdBy = CREATION_TYPE.CONSTRUCTOR;
     private final Class<? extends Map> type;
-    private final Set<Map.Entry<Integer, Integer>> keyValuePairs;
-    private final String keyValuePairValue;
+    private Set<Map.Entry<Integer, Integer>> keyValuePairs;
     private final Object value;
 
     public MapVarDetails(int ID, Class<? extends Map> type, Set<Map.Entry<Integer, Integer>> keyValuePairs, Object value) {
         super(ID);
         this.type = type;
         this.keyValuePairs = keyValuePairs;
-        this.keyValuePairValue = keyValuePairs == null ? null : keyValuePairs.stream().map(e -> e.getKey() + "=" + e.getValue()).sorted().collect(Collectors.joining(Properties.getDELIMITER()));
         this.value = value;
     }
 
 
     public Set<Map.Entry<Integer, Integer>> getKeyValuePairs() {
+        if(keyValuePairs == null) {
+            keyValuePairs = XMLParser.fromXMLtoVarDetailIDMap(this, String.valueOf(value));
+        }
         return keyValuePairs;
     }
 
     @Override
     public Object getGenValue() {
-        return this.keyValuePairValue;
+        return this.value;
     }
 
     @Override

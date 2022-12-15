@@ -225,13 +225,11 @@ public class ExecutionTrace {
         } else if (ArrVarDetails.availableTypeCheck(type) && ArrVarDetails.availableTypeCheck(objValue.getClass())) {
             varDetailClass = ArrVarDetails.class;
             checkVal = arrToString(execution, objValue, process, depth, processedHashToVarIDMap);
+//            checkVal = getComponentStream(execution, type, objValue, process, canOnlyBeUse, hashProcessing, depth - 1, processedHashToVarIDMap).collect(Collectors.toList());
         } else if (MapVarDetails.availableTypeCheck(type) && MapVarDetails.availableTypeCheck(objValue.getClass())) {
             varDetailClass = MapVarDetails.class;
             hashProcessing.add(hashCode);
-            checkVal = ((Map<?, ?>) objValue).entrySet().stream()
-                    .filter(e -> (Helper.isSimpleType(e.getKey()) || !hashProcessing.contains(System.identityHashCode(e.getKey()))) && (Helper.isSimpleType(e.getValue()) || !hashProcessing.contains(System.identityHashCode(e.getValue()))))
-                    .map(e -> new AbstractMap.SimpleEntry<>(getVarDetail(execution, getClassOfObj(e.getKey()), e.getKey(), process, true, hashProcessing, depth - 1, processedHashToVarIDMap).getID(), getVarDetail(execution, getClassOfObj(e.getValue()), e.getValue(), process, true, hashProcessing, depth - 1, processedHashToVarIDMap).getID()))
-                    .collect(Collectors.<Map.Entry<Integer, Integer>>toSet());
+            checkVal = mapToString(execution, objValue, process, depth, processedHashToVarIDMap);
             hashProcessing.remove(hashCode);
         } else if (ClassUtils.isPrimitiveWrapper(type)) {
             varDetailClass = WrapperVarDetails.class;
@@ -260,7 +258,7 @@ public class ExecutionTrace {
             else if (varDetailClass.equals(ArrVarDetails.class)) {
                 varDetail = new ArrVarDetails(getNewVarID(), type, null, checkVal);
             } else if (varDetailClass.equals(MapVarDetails.class)) {
-                varDetail = new MapVarDetails(getNewVarID(), (Class<? extends Map>) type, (Set<Map.Entry<Integer, Integer>>) checkVal, objValue);
+                varDetail = new MapVarDetails(getNewVarID(), (Class<? extends Map>) type, null, checkVal);
             } else if (varDetailClass.equals(WrapperVarDetails.class)) {
                 varDetail = new WrapperVarDetails(getNewVarID(), type, objValue);
             } else if (varDetailClass.equals(MockVarDetails.class))
@@ -381,12 +379,12 @@ public class ExecutionTrace {
      */
     private VarDetail findExistingVarDetail(int hashCode, Class<?> type, Class<?> varDetailClass, Object objValue, String className) {
         if (varDetailClass.equals(EnumVarDetails.class)) {
-            if (type.equals(Class.class))
-                objValue = objValue.toString().replace("$", ".") + ".class";
+//            if (type.equals(Class.class))
+//                objValue = objValue.toString().replace("$", ".") + ".class";
 //        } else if (varDetailClass.equals(ArrVarDetails.class)) {
 //            objValue = ((List) objValue).stream().map(String::valueOf).collect(Collectors.joining(Properties.getDELIMITER()));
-        } else if (varDetailClass.equals(MapVarDetails.class)) {
-            objValue = ((Set<Map.Entry>) objValue).stream().map(e -> e.getKey() + "=" + e.getValue()).sorted().collect(Collectors.joining(Properties.getDELIMITER()));
+//        } else if (varDetailClass.equals(MapVarDetails.class)) {
+//            objValue = ((Set<Map.Entry>) objValue).stream().map(e -> e.getKey() + "=" + e.getValue()).sorted().collect(Collectors.joining(Properties.getDELIMITER()));
         }
         Object finalObjValue1 = objValue;
         Optional<VarDetail> result;
@@ -521,6 +519,11 @@ public class ExecutionTrace {
     private Object arrToString(MethodExecution execution, Object obj, LOG_ITEM process, int depth, Map<Integer, Integer> processedHashToVarIDMap) {
         if(obj == null) return null;
         if(!ArrVarDetails.availableTypeCheck(obj.getClass())) throw new IllegalArgumentException("Illegal arr to string ");
+        return parser.getXML(execution, obj, process, depth, processedHashToVarIDMap);
+    }
+    private Object mapToString(MethodExecution execution, Object obj, LOG_ITEM process, int depth, Map<Integer, Integer> processedHashToVarIDMap) {
+        if(obj == null) return null;
+        if(!MapVarDetails.availableTypeCheck(obj.getClass())) throw new IllegalArgumentException("Illegal arr to string ");
         return parser.getXML(execution, obj, process, depth, processedHashToVarIDMap);
     }
     public void clear() {
