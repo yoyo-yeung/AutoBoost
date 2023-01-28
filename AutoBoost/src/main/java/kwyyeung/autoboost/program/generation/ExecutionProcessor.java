@@ -66,7 +66,7 @@ public class ExecutionProcessor {
                 .allMatch(pID -> {
                     VarDetail p = executionTrace.getVarDetailByID(target.getParams().get(pID));
                     Class<?> paramType = Helper.sootTypeToClass(target.getMethodInvoked().getParameterTypes().get(pID));
-                    return canRecreateParam(target, paramType, p);
+                    return canRecreateParam(target, paramType, p, new HashSet<>());
                 }) &&
                 !hasUnmockableUsages(target, toMock, cannotMock, new HashSet<>());
     }
@@ -106,6 +106,10 @@ public class ExecutionProcessor {
     }
 
     private boolean canProvideReturnVal(MethodExecution execution, VarDetail returnVal) {
+        return canProvideReturnVal(execution, returnVal, new HashSet<>());
+    }
+    private boolean canProvideReturnVal(MethodExecution execution, VarDetail returnVal, Set<VarDetail> checking) {
+        if(checking.contains(returnVal)) return false;
         if (returnVal instanceof EnumVarDetails && returnVal.getType().equals(Class.class)) {
             String neededPackage = null;
             try {
@@ -118,16 +122,20 @@ public class ExecutionProcessor {
             if (!neededPackage.isEmpty()) execution.setRequiredPackage(neededPackage);
         }
         Class<?> declaredReturnType = execution.getReturnValId() == -1 ? null : execution.getMethodInvoked().getReturnType();
+        checking.add(returnVal);
+        boolean res = true;
         if (returnVal instanceof ObjVarDetails && !returnVal.equals(executionTrace.getNullVar()) && ((declaredReturnType == null && Helper.getRequiredPackage(returnVal.getType()) == null) || (declaredReturnType != null && !declaredReturnType.isAssignableFrom(Helper.getAccessibleSuperType(returnVal.getType(), execution.getRequiredPackage())))))
-            return false;
+            res = false;
         if (returnVal instanceof ArrVarDetails)
-            return ((ArrVarDetails) returnVal).getComponents().stream().map(executionTrace::getVarDetailByID).allMatch(c -> canProvideReturnVal(execution, c));
+            res = ((ArrVarDetails) returnVal).getComponents().stream().map(executionTrace::getVarDetailByID).allMatch(c -> canProvideReturnVal(execution, c, checking));
         if (returnVal instanceof MapVarDetails)
-            return ((MapVarDetails) returnVal).getKeyValuePairs().stream().flatMap(c -> Stream.of(c.getKey(), c.getValue())).map(executionTrace::getVarDetailByID).allMatch(c -> canProvideReturnVal(execution, c));
-        return true;
+            res = ((MapVarDetails) returnVal).getKeyValuePairs().stream().flatMap(c -> Stream.of(c.getKey(), c.getValue())).map(executionTrace::getVarDetailByID).allMatch(c -> canProvideReturnVal(execution, c, checking));
+        checking.remove(returnVal);
+        return res;
     }
 
-    private boolean canRecreateParam(MethodExecution target, Class<?> paramType, VarDetail p) {
+    private boolean canRecreateParam(MethodExecution target, Class<?> paramType, VarDetail p, Set<VarDetail> processing) {
+        if(processing.contains(p)) return false;
         if (p instanceof ObjVarDetails) {
             if (p.equals(executionTrace.getNullVar())) return true;
             if (paramType != null && !paramType.isAssignableFrom(Helper.getAccessibleMockableSuperType(p.getType(), target.getRequiredPackage())))
@@ -144,14 +152,20 @@ public class ExecutionProcessor {
 
             return true;
         }
-        if (p instanceof ArrVarDetails)
-            return ((ArrVarDetails) p).getComponents().stream()
-                    .map(executionTrace::getVarDetailByID)
-                    .allMatch(pc -> canRecreateParam(target, paramType.getComponentType(), pc));
-        if (p instanceof MapVarDetails)
-            return ((MapVarDetails) p).getKeyValuePairs().stream().flatMap(c -> Stream.of(c.getKey(), c.getValue()))
-                    .map(executionTrace::getVarDetailByID)
-                    .allMatch(pc -> canRecreateParam(target, null, pc));
+        if (p instanceof ArrVarDetails || p instanceof MapVarDetails) {
+            processing.add(p);
+            boolean res = false;
+            if (p instanceof ArrVarDetails)
+                res = ((ArrVarDetails) p).getComponents().stream()
+                        .map(executionTrace::getVarDetailByID)
+                        .allMatch(pc -> canRecreateParam(target, paramType == null || paramType.getComponentType() == null ? pc.getType() : paramType.getComponentType(), pc, processing));
+            if (p instanceof MapVarDetails)
+                res = ((MapVarDetails) p).getKeyValuePairs().stream().flatMap(c -> Stream.of(c.getKey(), c.getValue()))
+                        .map(executionTrace::getVarDetailByID)
+                        .allMatch(pc -> canRecreateParam(target, null, pc, processing));
+            processing.remove(p);
+            return res;
+        }
         if (p instanceof EnumVarDetails) {
             String requiredPackage = "";
             try {
