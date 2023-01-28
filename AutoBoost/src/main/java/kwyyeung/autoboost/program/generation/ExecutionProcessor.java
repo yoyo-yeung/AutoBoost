@@ -6,6 +6,7 @@ import kwyyeung.autoboost.entity.ACCESS;
 import kwyyeung.autoboost.entity.METHOD_TYPE;
 import kwyyeung.autoboost.entity.UnrecognizableException;
 import kwyyeung.autoboost.helper.Helper;
+import kwyyeung.autoboost.helper.PUTExecutor;
 import kwyyeung.autoboost.helper.Properties;
 import kwyyeung.autoboost.program.analysis.MethodDetails;
 import kwyyeung.autoboost.program.execution.ExecutionTrace;
@@ -33,6 +34,7 @@ public class ExecutionProcessor {
     private final Map<Class, MethodExecution> classToDefExeMap = new HashMap<>();
     private final InstrumentResult instrumentResult = InstrumentResult.getSingleton();
 
+    private final PUTExecutor putExecutor = PUTExecutor.getSingleton();
     protected boolean testSetUp(MethodExecution target) {
         return isPossibleTarget(target) && targetIsBestMatch(target) && canConstructCallee(target) && checkAndSetRequiredPackage(target) && canRecreateParams(target) && (target.getRequiredPackage().isEmpty() || target.getRequiredPackage().startsWith(kwyyeung.autoboost.helper.Properties.getSingleton().getPUT()));
     }
@@ -393,8 +395,9 @@ public class ExecutionProcessor {
                         tried.add(toCall);
                         if (md.getAccess().equals(ACCESS.PRIVATE)) return;
                         toCall.setAccessible(true);
-                        toCall.newInstance(e.getParams().stream().map(executionTrace::getVarDetailByID).map(this::getRecreatedParam).toArray(Object[]::new)).getClass();
-                    } catch (NoSuchMethodException | InstantiationException | IllegalAccessException |
+                        putExecutor.callMethodWithTimeout(() -> toCall.newInstance(e.getParams().stream().map(executionTrace::getVarDetailByID).map(this::getRecreatedParam).toArray(Object[]::new)));
+
+                    } catch (NoSuchMethodException |
                              InvocationTargetException | SecurityException ignored) {
                     }
                 }
@@ -403,8 +406,8 @@ public class ExecutionProcessor {
                         Method method = md.getdClass().getDeclaredMethod(md.getName());
                         if (soot.Modifier.isPrivate(method.getModifiers())) return;
                         method.setAccessible(true);
-                        method.invoke(null);
-                    } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException ignored) {
+                        putExecutor.callMethodWithTimeout(() -> method.invoke(null));
+                    } catch (NoSuchMethodException | InvocationTargetException ignored) {
 
                     }
                 }
@@ -415,8 +418,8 @@ public class ExecutionProcessor {
                 Arrays.stream(creatingClass.getConstructors()).forEach(c -> {
                     try {
                         c.setAccessible(true);
-                        c.newInstance(Arrays.stream(c.getParameterTypes()).map(ty -> this.getDefaultParams(ty, processing)).toArray());
-                    } catch (InstantiationException | IllegalAccessException | InvocationTargetException ignored) {
+                        putExecutor.callMethodWithTimeout(() -> c.newInstance(Arrays.stream(c.getParameterTypes()).map(ty -> this.getDefaultParams(ty, processing)).toArray()));
+                    } catch (InvocationTargetException ignored) {
                     }
                 });
                 defExe = (MethodExecution) executionTrace.getConstructingMethodExes().getOrDefault(creatingClass, new HashSet<>()).stream().filter(c -> canUseForConstructing(creatingClass, c)).sorted(constructionPriority).findFirst().orElse(null);
@@ -424,8 +427,8 @@ public class ExecutionProcessor {
             if (defExe == null) {
                 Arrays.stream(creatingClass.getDeclaredMethods()).filter(m -> Modifier.isStatic(m.getModifiers()) && m.getParameterCount() == 0 && m.getReturnType().equals(creatingClass) && Modifier.isPublic(m.getModifiers())).forEach(m -> {
                     try {
-                        m.invoke(null);
-                    } catch (IllegalAccessException | InvocationTargetException ignored) {
+                        putExecutor.callMethodWithTimeout(()->m.invoke(null));
+                    } catch (InvocationTargetException ignored) {
                     }
                 });
                 defExe = (MethodExecution) executionTrace.getConstructingMethodExes().getOrDefault(creatingClass, new HashSet<>()).stream().filter(c -> canUseForConstructing(creatingClass, c)).sorted(constructionPriority).findFirst().orElse(null);
@@ -495,11 +498,11 @@ public class ExecutionProcessor {
         if (defExe != null) {
             try {
                 if (defExe.getMethodInvoked().getType().equals(METHOD_TYPE.CONSTRUCTOR))
-                    return defExe.getMethodInvoked().getdClass().getDeclaredConstructor(defExe.getMethodInvoked().getParameterTypes().stream().map(Helper::sootTypeToClass).toArray(Class[]::new)).newInstance(defExe.getParams().stream().map(executionTrace::getVarDetailByID).map(this::getRecreatedParam).toArray(Object[]::new));
+                    return putExecutor.callMethodWithTimeout(() -> defExe.getMethodInvoked().getdClass().getDeclaredConstructor(defExe.getMethodInvoked().getParameterTypes().stream().map(Helper::sootTypeToClass).toArray(Class[]::new)).newInstance(defExe.getParams().stream().map(executionTrace::getVarDetailByID).map(this::getRecreatedParam).toArray(Object[]::new)));
                 else
-                    return defExe.getMethodInvoked().getdClass().getDeclaredMethod(defExe.getMethodInvoked().getName()).invoke(null);
-            } catch (InstantiationException | NoSuchMethodException | IllegalAccessException |
-                     InvocationTargetException ignored) {
+                    return putExecutor.callMethodWithTimeout(() ->defExe.getMethodInvoked().getdClass().getDeclaredMethod(defExe.getMethodInvoked().getName()).invoke(null));
+            } catch (
+                    InvocationTargetException ignored) {
                 if (soot.Modifier.isFinal(paramType.getModifiers())) return null;
             }
         }
@@ -553,20 +556,20 @@ public class ExecutionProcessor {
             try {
                 Constructor constructor = toInvoke.getdClass().getDeclaredConstructor(toInvoke.getParameterTypes().stream().map(Helper::sootTypeToClass).toArray(Class[]::new));
                 constructor.setAccessible(true);
-                constructor.newInstance(params);
+                putExecutor.callMethodWithTimeout(()-> constructor.newInstance(params));
             }catch (InvocationTargetException e) {
                 return e.getCause().getClass().equals(target.getExceptionClass());
-            } catch (NoSuchMethodException | InstantiationException | IllegalAccessException e) {
+            } catch (NoSuchMethodException e) {
                 return false;
             }
         } else {
             try {
                 Method method = toInvoke.getdClass().getDeclaredMethod(toInvoke.getName(), toInvoke.getParameterTypes().stream().map(Helper::sootTypeToClass).toArray(Class[]::new));
                 method.setAccessible(true);
-                method.invoke(callee, params);
+                putExecutor.callMethodWithTimeout(()-> method.invoke(callee, params));
             } catch (InvocationTargetException e) {
                 return e.getCause().getClass().equals(target.getExceptionClass());
-            }catch (NoSuchMethodException | IllegalAccessException e) {
+            }catch (NoSuchMethodException e) {
                 return false;
             }
         }

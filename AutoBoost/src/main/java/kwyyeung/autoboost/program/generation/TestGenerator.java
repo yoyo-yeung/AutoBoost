@@ -3,6 +3,7 @@ package kwyyeung.autoboost.program.generation;
 import kwyyeung.autoboost.entity.ACCESS;
 import kwyyeung.autoboost.entity.METHOD_TYPE;
 import kwyyeung.autoboost.helper.Helper;
+import kwyyeung.autoboost.helper.PUTExecutor;
 import kwyyeung.autoboost.helper.Properties;
 import kwyyeung.autoboost.helper.xml.XMLParser;
 import kwyyeung.autoboost.program.analysis.MethodDetails;
@@ -59,6 +60,7 @@ public class TestGenerator {
                 })
                 .filter(Objects::nonNull)
                 .forEach(testSuite::assignTestCase);
+        PUTExecutor.getSingleton().shutdown();
     }
 
     public TestCase generateResultCheckingTests(MethodExecution e) {

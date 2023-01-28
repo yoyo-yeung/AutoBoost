@@ -2,6 +2,7 @@ package kwyyeung.autoboost.program.generation;
 
 import kwyyeung.autoboost.entity.METHOD_TYPE;
 import kwyyeung.autoboost.helper.Helper;
+import kwyyeung.autoboost.helper.PUTExecutor;
 import kwyyeung.autoboost.program.execution.variable.*;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.ClassUtils;
@@ -16,18 +17,18 @@ import kwyyeung.autoboost.program.generation.test.TestCase;
 import java.lang.reflect.*;
 import java.util.Collection;
 import java.util.Map;
+import java.util.concurrent.*;
 import java.util.stream.Stream;
 
 class ExecutionChecker {
     private static final Logger logger = LogManager.getLogger(ExecutionChecker.class);
     private static final ExecutionTrace executionTrace = ExecutionTrace.getSingleton();
-
-
+    private static final PUTExecutor putExecutor = PUTExecutor.getSingleton();
     protected static Object constructDefaultInstance(Class<?> type) {
         try {
-            return type.newInstance();
-        } catch (InstantiationException | IllegalAccessException e) {
-            logger.error(e.getMessage());
+            Object res = putExecutor.callMethodWithTimeout(()-> type.newInstance());
+            return res;
+        } catch (InvocationTargetException e) {
 //            logger.error(e.getMessage());
             return null;
         }
@@ -118,8 +119,8 @@ class ExecutionChecker {
             try {
                 Constructor constructor = toInvoke.getdClass().getDeclaredConstructor(toInvoke.getParameterTypes().stream().map(Helper::sootTypeToClass).toArray(Class[]::new));
                 constructor.setAccessible(true);
-                testCase.addObjForVar(resultID.getID(), constructor.newInstance(params));
-            } catch (NoSuchMethodException | InstantiationException | IllegalAccessException |
+                testCase.addObjForVar(resultID.getID(),putExecutor.callMethodWithTimeout(() -> constructor.newInstance(params)) );
+            } catch (NoSuchMethodException |
                      InvocationTargetException e) {
                 testCase.setRecreated(false);
             }
@@ -128,10 +129,11 @@ class ExecutionChecker {
             try {
                 Method method = toInvoke.getdClass().getDeclaredMethod(toInvoke.getName(), toInvoke.getParameterTypes().stream().map(Helper::sootTypeToClass).toArray(Class[]::new));
                 method.setAccessible(true);
-                returnVal = method.invoke(callee, params);
+                returnVal = putExecutor.callMethodWithTimeout(() -> method.invoke(callee, params));
+//                returnVal = method.invoke(callee, params);
                 if (callee != null)
                     testCase.addObjForVar(execution.getResultThisId(), callee);
-            } catch (IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
+            } catch (NoSuchMethodException | InvocationTargetException e) {
                 testCase.setRecreated(false);
 //                logger.error(e.getClass() + "\t" + e.getMessage() + "\t" + toInvoke.getSignature());
 //                e.printStackTrace();
