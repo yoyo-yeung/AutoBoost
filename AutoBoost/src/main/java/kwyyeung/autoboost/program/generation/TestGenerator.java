@@ -297,7 +297,11 @@ public class TestGenerator {
             List<Stmt> params = prepareAndGetRequiredParams(defExe, testCase);
             setUpMockedParamsAndCalls(defExe, testCase);
             Stmt invStmt = new MethodInvStmt(callee, details.getId(), params);
-            VarStmt calleeVarStmt = new VarStmt(Helper.getAccessibleSuperType(target.getType(), testCase.getPackageName()), testCase.getNewVarID(), target.getID());
+            Class<?> valType = Helper.getAccessibleSuperType(target.getType(), testCase.getPackageName());
+            VarStmt calleeVarStmt = new VarStmt(valType, testCase.getNewVarID(), target.getID());
+            if (!details.getType().equals(METHOD_TYPE.CONSTRUCTOR) && !details.getReturnType().equals(valType)) {
+                invStmt = new CastStmt(target.getID(), valType, invStmt);
+            }
             testCase.addStmt(new AssignStmt(calleeVarStmt, invStmt));
             testCase.addOrUpdateVar(target.getID(), calleeVarStmt);
             ExecutionChecker.constructObj(testCase, defExe, target, params.stream().map(Stmt::getResultVarDetailID).map(testCase::getObjForVar).toArray());
@@ -618,7 +622,7 @@ public class TestGenerator {
                         executionTrace.addNewVarDetail(v);
                     }
                 } catch (ClassNotFoundException ignored) {
-                    logger.error(ignored.getMessage());
+//                    logger.error(ignored.getMessage());
                 }
             }
 
