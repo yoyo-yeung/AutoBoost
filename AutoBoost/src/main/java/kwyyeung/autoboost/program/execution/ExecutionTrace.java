@@ -43,8 +43,8 @@ public class ExecutionTrace {
     private final Map<MethodExecution, Boolean> exeToFaultyExeContainedCache = new HashMap<>(); // cache to save execution time
     private final VarDetail nullVar = new ObjVarDetails(0, Object.class, null);
     private final XMLParser parser = new XMLParser();
-    private final Map<Integer, Set<VarDetail>> processedHashcodeToVarMap = new HashMap<>();
-    private final Map<String, Set<VarDetail>> classNameToVarMap = new HashMap<>();
+    private final Map<Integer, Set<VarDetail>> processedHashcodeToVarMap = new ConcurrentHashMap<>();
+    private final Map<String, Set<VarDetail>> classNameToVarMap = new ConcurrentHashMap<>();
 
     /**
      * Constructor of ExecutionTrace, set up all vars.
@@ -144,7 +144,8 @@ public class ExecutionTrace {
                 content.getVarDetailClass().equals(WrapperVarDetails.class) ||
                 (content.getVarDetailClass().equals(StringVarDetails.class) && ((String)content.getVarValue()).length() < 300))
             return content;
-        else return getVarDetail(execution, content, hashCode, process, canOnlyBeUse, processedHashToVarIDMap);
+
+        return getVarDetail(execution, content, hashCode, process, canOnlyBeUse, processedHashToVarIDMap);
     }
 
     public IntermediateVarContent processVar(MethodExecution execution, Class<?> type, Object objValue, int hashCode, LOG_ITEM process, boolean canOnlyBeUse, Set<Integer> hashProcessing, int depth, Map<Integer, Integer> processedHashToVarIDMap) {
@@ -659,24 +660,31 @@ public class ExecutionTrace {
         if (varDetailID == -1) return new HashSet<>();
         return getRelatedObjVarIDs(getVarDetailByID(varDetailID));
     }
+    public Set<Integer> getRelatedObjVarIDs(int varDetailID, Set<Integer> relatedVarIDs) {
+        if (varDetailID == -1) return relatedVarIDs;
+        return getRelatedObjVarIDs(getVarDetailByID(varDetailID), relatedVarIDs);
+    }
 
+    public Set<Integer> getRelatedObjVarIDs(VarDetail varDetail) {
+        return getRelatedObjVarIDs(varDetail, new HashSet<>());
+    }
     /**
      * Get Object Vardetail IDs relating to input
      *
      * @param varDetail varDetail to investigate
      * @return Set of ids matching criteria
      */
-    public Set<Integer> getRelatedObjVarIDs(VarDetail varDetail) {
-        Set<Integer> relatedVarIDs = new HashSet<>();
+    public Set<Integer> getRelatedObjVarIDs(VarDetail varDetail, Set<Integer> relatedVarIDs) {
+        if(relatedVarIDs.contains(varDetail.getID())) return relatedVarIDs; // loop
         if (varDetail instanceof StringVarDetails || varDetail instanceof StringBVarDetails || varDetail instanceof PrimitiveVarDetails || varDetail instanceof EnumVarDetails)
             return relatedVarIDs;
         relatedVarIDs.add(varDetail.getID());
         if (varDetail instanceof ArrVarDetails)
-            relatedVarIDs.addAll(((ArrVarDetails) varDetail).getComponents().stream().map(this::getRelatedObjVarIDs).flatMap(Collection::stream).collect(Collectors.toSet()));
+            relatedVarIDs.addAll(((ArrVarDetails) varDetail).getComponents().stream().map(c -> this.getRelatedObjVarIDs(c, relatedVarIDs)).flatMap(Collection::stream).collect(Collectors.toSet()));
         if (varDetail instanceof MapVarDetails)
             relatedVarIDs.addAll(((MapVarDetails) varDetail).getKeyValuePairs().stream()
                     .flatMap(pair -> Stream.of(pair.getKey(), pair.getValue()))
-                    .map(this::getRelatedObjVarIDs)
+                    .map(c-> this.getRelatedObjVarIDs(c, relatedVarIDs))
                     .flatMap(Collection::stream)
                     .collect(Collectors.toSet()));
         return relatedVarIDs;
