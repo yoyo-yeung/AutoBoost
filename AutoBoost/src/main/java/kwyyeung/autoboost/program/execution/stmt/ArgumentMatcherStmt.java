@@ -1,5 +1,7 @@
 package kwyyeung.autoboost.program.execution.stmt;
 
+import kwyyeung.autoboost.helper.Helper;
+import kwyyeung.autoboost.program.execution.ExecutionTrace;
 import org.mockito.ArgumentMatchers;
 
 import java.util.Collections;
@@ -13,7 +15,7 @@ public class ArgumentMatcherStmt extends Stmt {
 
     @Override
     public String getStmt(Set<Class<?>> fullCNameNeeded) {
-        return "ArgumentMatchers.any()";
+        return "ArgumentMatchers.any(" + Helper.getClassNameToOutput(fullCNameNeeded, ExecutionTrace.getSingleton().getVarDetailByID(resultVarDetailID).getType()) + ".class)";
     }
 
     @Override

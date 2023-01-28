@@ -35,7 +35,6 @@ public class TestGenerator {
     private static final ExecutionTrace executionTrace = ExecutionTrace.getSingleton();
     private final ExecutionProcessor executionProcessor = new ExecutionProcessor();
     private final TestSuite testSuite = new TestSuite();
-    private final ArgumentMatcherStmt argumentMatcherStmt = new ArgumentMatcherStmt(-1);
 
     public TestGenerator() {
     }
@@ -230,7 +229,7 @@ public class TestGenerator {
     private void createMockedParamCalls(TestCase testCase, Set<MockOccurrence> mockOccurrences) {
         mockOccurrences.forEach(m -> {
             List<Stmt> paramStmts = m.getParamVarID().stream().map(executionTrace::getVarDetailByID)
-                    .map(p -> isVarToMock(p) ? argumentMatcherStmt : getCreatedOrConstantVar(p, testCase)
+                    .map(p -> isVarToMock(p) ? new ArgumentMatcherStmt(p.getID()) : getCreatedOrConstantVar(p, testCase)
                     )
                     .collect(Collectors.toList());
             if (m.getInovkedMethod().getType().equals(METHOD_TYPE.STATIC)) {
