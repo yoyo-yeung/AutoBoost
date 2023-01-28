@@ -163,14 +163,16 @@ public class TestGenerator {
         executionTrace.getChildren(execution.getID()).stream().map(executionTrace::getMethodExecutionByID)
                 .filter(e -> !e.getMethodInvoked().isFieldAccess())
                 .forEach(e -> {
-                    if (e.getCalleeId() == -1 && e.getReturnValId() != -1) {
-                        MockOccurrence occurrence = mockOccurrences.stream().filter(o -> o.sameCallInfo(null, e)).findAny().orElse(new MockOccurrence(null, e.getMethodInvoked(), e.getParams()));
-                        mockOccurrences.add(occurrence);
-                        VarDetail returnVal = executionTrace.getVarDetailByID(e.getReturnValId());
-                        if (isVarToMock(returnVal))
-                            createMockVars(returnVal, testCase);
-                        occurrence.addReturnVar(e.getReturnValId());
-                    } else if (e.getCalleeId() != -1 && e.getCallee() instanceof ObjVarDetails && testCase.getExistingMockedVar(e.getCallee()) != null) {
+//                    if (e.getCalleeId() == -1 && e.getReturnValId() != -1) {
+//                        MockOccurrence occurrence = mockOccurrences.stream().filter(o -> o.sameCallInfo(null, e)).findAny().orElse(new MockOccurrence(null, e.getMethodInvoked(), e.getParams()));
+//                        mockOccurrences.add(occurrence);
+//                        VarDetail returnVal = executionTrace.getVarDetailByID(e.getReturnValId());
+//                        if (isVarToMock(returnVal))
+//                            createMockVars(returnVal, testCase);
+//                        occurrence.addReturnVar(e.getReturnValId());
+//                    } else
+//
+                        if (e.getCalleeId() != -1 && e.getCallee() instanceof ObjVarDetails && testCase.getExistingMockedVar(e.getCallee()) != null) {
                         VarStmt mockedVar = testCase.getExistingMockedVar(e.getCallee());
                         if (e.getReturnValId() != -1) {
                             MockOccurrence occurrence = mockOccurrences.stream().filter(o -> o.sameCallInfo(mockedVar, e)).findAny().orElse(new MockOccurrence(mockedVar, e.getMethodInvoked(), e.getParams()));
@@ -232,14 +234,14 @@ public class TestGenerator {
                     .map(p -> isVarToMock(p) ? new ArgumentMatcherStmt(p.getID()) : getCreatedOrConstantVar(p, testCase)
                     )
                     .collect(Collectors.toList());
-            if (m.getInovkedMethod().getType().equals(METHOD_TYPE.STATIC)) {
-                VarStmt varStmt = new VarStmt(MockedStatic.class, testCase.getNewVarID(), -1);
-                AssignStmt assignStmt = new AssignStmt(varStmt, new MockStaticInitStmt(m.getInovkedMethod().getdClass()));
-                boolean skipChecking = m.getReturnVars().stream().map(executionTrace::getVarDetailByID).allMatch(p -> p instanceof EnumVarDetails && p.getType().equals(Class.class));
-                MethodInvStmt methodInvStmt = new MethodInvStmt(m.getInovkedMethod().getDeclaringClass().getName().replace("$", "."), m.getInovkedMethod().getId(), paramStmts);
-                testCase.addStmt(new MockStaticCallStmts(varStmt, assignStmt, new MockCallRetStmt(methodInvStmt, m.getReturnVars().stream().map(executionTrace::getVarDetailByID).map(p -> getCreatedOrConstantVar(p, testCase)).collect(Collectors.toList()), skipChecking)));
-                return;
-            }
+//            if (m.getInovkedMethod().getType().equals(METHOD_TYPE.STATIC)) {
+//                VarStmt varStmt = new VarStmt(MockedStatic.class, testCase.getNewVarID(), -1);
+//                AssignStmt assignStmt = new AssignStmt(varStmt, new MockStaticInitStmt(m.getInovkedMethod().getdClass()));
+//                boolean skipChecking = m.getReturnVars().stream().map(executionTrace::getVarDetailByID).allMatch(p -> p instanceof EnumVarDetails && p.getType().equals(Class.class));
+//                MethodInvStmt methodInvStmt = new MethodInvStmt(m.getInovkedMethod().getDeclaringClass().getName().replace("$", "."), m.getInovkedMethod().getId(), paramStmts);
+//                testCase.addStmt(new MockStaticCallStmts(varStmt, assignStmt, new MockCallRetStmt(methodInvStmt, m.getReturnVars().stream().map(executionTrace::getVarDetailByID).map(p -> getCreatedOrConstantVar(p, testCase)).collect(Collectors.toList()), skipChecking)));
+//                return;
+//            }
             MethodInvStmt methodInvStmt = new MethodInvStmt(m.getMockedVar().getStmt(new HashSet<>()), m.getInovkedMethod().getId(), paramStmts);
             boolean skipChecking = m.getReturnVars().stream().map(executionTrace::getVarDetailByID).allMatch(p -> p instanceof EnumVarDetails && p.getType().equals(Class.class));
             testCase.addStmt(new MockCallRetStmt(methodInvStmt, m.getReturnVars().stream().map(executionTrace::getVarDetailByID).map(p -> getCreatedOrConstantVar(p, testCase)).collect(Collectors.toList()), skipChecking));
