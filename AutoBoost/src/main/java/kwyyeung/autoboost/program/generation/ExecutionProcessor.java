@@ -109,7 +109,7 @@ public class ExecutionProcessor {
             try {
                 neededPackage = Helper.getRequiredPackage(ClassUtils.getClass(((EnumVarDetails) returnVal).getValue()));
             } catch (ClassNotFoundException ignored) {
-                logger.error(((EnumVarDetails) returnVal).getValue() + " class not found ");
+//                logger.error(((EnumVarDetails) returnVal).getValue() + " class not found ");
             }
             if (neededPackage == null || (!neededPackage.isEmpty() && !execution.getRequiredPackage().isEmpty() && !execution.getRequiredPackage().equals(neededPackage)))
                 return false;
@@ -168,7 +168,7 @@ public class ExecutionProcessor {
                 if (!requiredPackage.isEmpty())
                     target.setRequiredPackage(requiredPackage);
             } catch (ClassNotFoundException | NoSuchFieldException e) {
-                logger.error(((EnumVarDetails) p).getValue() + "  not found ");
+//                logger.error(((EnumVarDetails) p).getValue() + "  not found ");
                 throw new RuntimeException(e);
             }
         }
@@ -339,7 +339,7 @@ public class ExecutionProcessor {
                     return true;
                 }
         } catch (NoSuchMethodException noSuchMethodException) {
-            logger.error(noSuchMethodException.getMessage());
+//            logger.error(noSuchMethodException.getMessage());
         }
         return true;
     }
@@ -471,7 +471,7 @@ public class ExecutionProcessor {
                 try {
                     return ClassUtils.getClass(((EnumVarDetails) varDetail).getValue());
                 } catch (ClassNotFoundException ignored) {
-                    logger.error(((EnumVarDetails) varDetail).getValue() + " class not found ");
+//                    logger.error(((EnumVarDetails) varDetail).getValue() + " class not found ");
                 }
             } else {
                 try {
@@ -480,7 +480,7 @@ public class ExecutionProcessor {
                     if (!soot.Modifier.isStatic(field.getModifiers())) return null;
                     return field.get(null);
                 } catch (Exception ignored) {
-                    logger.error(((EnumVarDetails) varDetail).getValue() + " field not found ");
+//                    logger.error(((EnumVarDetails) varDetail).getValue() + " field not found ");
                 }
             }
         }

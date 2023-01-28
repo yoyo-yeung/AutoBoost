@@ -304,7 +304,7 @@ public class Instrumenter extends BodyTransformer {
                             if (safeJavaLibMethodMap.entrySet().stream().anyMatch(e -> e.getKey().isAssignableFrom(declaringClass) && e.getValue().contains(c.getName())))
                                 return false; // declared as can mock (statement specific) if the method called is excluded manually
                         } catch (ClassNotFoundException e) {
-                            logger.error(e.getMessage());
+//                            logger.error(e.getMessage());
                         }
                         return true;
                     })

@@ -66,7 +66,7 @@ public class TestGenerator {
         ValueTestCase testCase = new ValueTestCase();
         testCase.setPackageName(e.getRequiredPackage());
         try {
-            logger.info("Generating test case for execution " + e.toSimpleString());
+//            logger.info("Generating test case for execution " + e.toSimpleString());
 
             String callee = prepareAndGetCallee(e, testCase);
             testCase.keepOnlyTargetCalleeVar(e.getCalleeId());
@@ -75,7 +75,7 @@ public class TestGenerator {
             ExecutionChecker.constructObj(testCase, e, null, params.stream().map(Stmt::getResultVarDetailID).map(testCase::getObjForVar).toArray());
             testCase.setRecreated(executionProcessor.checkRecreationResult(testCase, e));
             if (!testCase.isRecreated()) {
-                logger.error("Cannot recreate " + e.toSimpleString());
+//                logger.error("Cannot recreate " + e.toSimpleString());
                 return null;
             }
             Stmt expected = prepareAndGetAssertVal(executionTrace.getVarDetailByID(e.getReturnValId()), testCase);
@@ -92,8 +92,6 @@ public class TestGenerator {
             else if (testCase.getPackageName().isEmpty()) testCase.setPackageName(e.getMethodInvoked().getdClass().getPackage().getName());
             return testCase;
         } catch (Exception exception) {
-            logger.error(exception.getMessage());
-            exception.printStackTrace();
             return null;
         }
 
@@ -101,7 +99,7 @@ public class TestGenerator {
 
     public TestCase generateExceptionTests(MethodExecution e) {
         ExceptionTestCase testCase = new ExceptionTestCase();
-        logger.info("Generating exception checking test case for execution " + e.toSimpleString());
+//        logger.info("Generating exception checking test case for execution " + e.toSimpleString());
         testCase.setPackageName(e.getRequiredPackage());
         String callee = prepareAndGetCallee(e, testCase);
         testCase.keepOnlyTargetCalleeVar(e.getCalleeId());
@@ -109,7 +107,7 @@ public class TestGenerator {
         setUpMockedParamsAndCalls(e, testCase);
         testCase.setRecreated(executionProcessor.checkExceptionResult(testCase, e, testCase.getObjForVar(e.getCalleeId()), params.stream().map(Stmt::getResultVarDetailID).map(testCase::getObjForVar).toArray()));
         if (!testCase.isRecreated()) {
-            logger.error("Cannot recreate " + e.toSimpleString());
+//            logger.error("Cannot recreate " + e.toSimpleString());
             return null;
         }
         testCase.addStmt(new MethodInvStmt(callee, e.getMethodInvoked().getId(), params));
@@ -309,8 +307,8 @@ public class TestGenerator {
             });
 
         } catch (Exception e) {
-            logger.error(e.getMessage());
-            e.printStackTrace();
+//            logger.error(e.getMessage());
+//            e.printStackTrace();
         }
 
     }
@@ -330,7 +328,7 @@ public class TestGenerator {
                         return Modifier.isPublic(varDetail.getType().getField(((EnumVarDetails) varDetail).getValue()).getModifiers());
                 }
             } catch (ClassNotFoundException | NoSuchFieldException e) {
-                logger.error(((EnumVarDetails) varDetail).getValue() + "  not found ");
+//                logger.error(((EnumVarDetails) varDetail).getValue() + "  not found ");
                 throw new RuntimeException(e);
             }
         }
@@ -512,7 +510,7 @@ public class TestGenerator {
             case MEMBER:
                 if (execution.getCallee() instanceof ObjVarDetails) {
                     if (testCase.getExistingVar(execution.getCallee()) == null) {
-                        logger.error(execution.getCallee().toDetailedString());
+//                        logger.error(execution.getCallee().toDetailedString());
                         throw new RuntimeException("Illegal callee creation flow");
                     }
                     VarStmt originalCallee = testCase.getExistingVar(execution.getCallee());

@@ -28,6 +28,7 @@ class ExecutionChecker {
             return type.newInstance();
         } catch (InstantiationException | IllegalAccessException e) {
             logger.error(e.getMessage());
+//            logger.error(e.getMessage());
             return null;
         }
     }
@@ -49,8 +50,8 @@ class ExecutionChecker {
             try {
                 testCase.addObjForVar(p.getID(), ClassUtils.getClass(p.getValue()));
             } catch (ClassNotFoundException e) {
-                logger.error(e.getMessage());
-                e.printStackTrace();
+//                logger.error(e.getMessage());
+//                e.printStackTrace();
             }
         } else if (p.getType().isEnum())
             testCase.addObjForVar(p.getID(), Enum.valueOf((Class) p.getType(), p.getValue()));
@@ -58,8 +59,8 @@ class ExecutionChecker {
             try {
                 testCase.addObjForVar(p.getID(), p.getType().getField(p.getValue()).get(null));
             } catch (NoSuchFieldException | IllegalAccessException e) {
-                logger.error(e.getMessage());
-                e.printStackTrace();
+//                logger.error(e.getMessage());
+//                e.printStackTrace();
             }
         }
     }
@@ -132,8 +133,8 @@ class ExecutionChecker {
                     testCase.addObjForVar(execution.getResultThisId(), callee);
             } catch (IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
                 testCase.setRecreated(false);
-                logger.error(e.getClass() + "\t" + e.getMessage() + "\t" + toInvoke.getSignature());
-                e.printStackTrace();
+//                logger.error(e.getClass() + "\t" + e.getMessage() + "\t" + toInvoke.getSignature());
+//                e.printStackTrace();
             }
             if (execution.getReturnValId() != -1)
                 testCase.addObjForVar(execution.getReturnValId(), returnVal);
@@ -146,14 +147,14 @@ class ExecutionChecker {
             field.setAccessible(true);
             field.set(toSet, fieldVal);
         } catch (NoSuchFieldException | ClassNotFoundException | IllegalAccessException e) {
-            logger.error(e.getMessage());
-            e.printStackTrace();
+//            logger.error(e.getMessage());
+//            e.printStackTrace();
         }
     }
 
     protected static void setMock(Object obj, MethodExecution execution, Object[] params, Object returnVal, TestCase testCase) {
         if (obj == null || !Mockito.mockingDetails(obj).isMock()) {
-            logger.error(obj == null ? "null " : obj.getClass() + "\t" + testCase.getID());
+//            logger.error(obj == null ? "null " : obj.getClass() + "\t" + testCase.getID());
             throw new RuntimeException("Object is not mock var");
 //            return;
         }
@@ -165,8 +166,8 @@ class ExecutionChecker {
             if (obj != null)
                 testCase.addObjForVar(execution.getResultThisId(), obj);
         } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-            logger.error(e.getMessage());
-            e.printStackTrace();
+//            logger.error(e.getMessage());
+//            e.printStackTrace();
         }
 
     }
@@ -222,7 +223,7 @@ class ExecutionChecker {
             ((MapVarDetails) p).getKeyValuePairs().stream().forEach(e -> res.put(getStandaloneObj(executionTrace.getVarDetailByID(e.getKey())), getStandaloneObj(executionTrace.getVarDetailByID(e.getValue()))));
             return res;
         }
-        logger.error("cannot gen");
+//        logger.error("cannot gen");
         return null;
     }
 }

@@ -92,8 +92,6 @@ public class AutoBoost {
 
             @Override
             public void testRunFinished(Result result) {
-                logger.info(result.getRunCount() + " tests executed");
-                logger.info(result.getFailureCount() + " tests failed");
             }
 
             @Override
@@ -139,7 +137,7 @@ public class AutoBoost {
 //            testGenerator.generateResultCheckingTests(snapshot);
 //            testGenerator.generateExceptionTests(snapshot);
         } catch (Exception | Error e) {
-            logger.error(e.getMessage());
+            logger.error(e.getClass()  + "\t" + e.getMessage());
             logger.error(Arrays.stream(e.getStackTrace()).map(StackTraceElement::toString).collect(Collectors.joining("\n")));
         } finally {
             ExecutionTrace.getSingleton().clear();

@@ -92,7 +92,6 @@ public class ExecutionLogger {
         MethodDetails details = instrumentResult.getMethodDetailByID(methodId);
         MethodExecution newExecution = new MethodExecution(getNewExeID(), details);
         Stack<MethodExecution> currentExecuting = getCurrentExecuting(threadID);
-//        logger.debug(details.getSignature());
         if (details.getType().equals(METHOD_TYPE.STATIC_INITIALIZER) || (currentExecuting.size() > 0 && currentExecuting.peek().getTest() == null))
             newExecution.setTest(null);
         updateExecutionRelationships(threadID, newExecution);
@@ -138,11 +137,11 @@ public class ExecutionLogger {
                 while (execution.getID() != executionID) {
                     execution.setExceptionClass(exceptionClass);
                     endLogMethod(threadID, execution);
-                    if (exceptionClass.equals(UnrecognizableException.class)) {
-                        logger.error("ending " + "\t" + execution.toDetailedString());
+//                    if (exceptionClass.equals(UnrecognizableException.class)) {
+//                        logger.error("ending " + "\t" + execution.toSimpleString());
 //                        logger.error(getCurrentExecuting(threadID).stream().map(MethodExecution::toDetailedString).collect(Collectors.joining(",")));
 //                        logger.error(getCurrentExecuting(threadID).stream().filter(e -> e.getID()==executionID).findFirst().map(MethodExecution::toDetailedString).orElse("null"));
-                    }
+//                    }
 //                    logger.debug("force end "+ execution.toSimpleString());
                     execution = getLatestExecution(threadID);
                 }
