@@ -116,14 +116,12 @@ public class TestClass {
     private String getFieldSetUpMethod() {
 
 
-        return "    private void setField(Object obj, String fieldClass, String fieldName, Object fieldValue) throws ClassNotFoundException {\n" +
+        return "    private void setField(Object obj, String fieldClass, String fieldName, Object fieldValue) {\n" +
                 "        try {\n" +
                 "            Field field = Class.forName(fieldClass).getDeclaredField(fieldName);\n" +
                 "            field.setAccessible(true);\n" +
                 "            field.set(obj, fieldValue);\n" +
-                "        } catch (NoSuchFieldException | IllegalAccessException ignored) {\n" +
-                "        }\n" +
-                "    }\n\n";
+                "        } catch (Exception ignored) {}\n    }\n";
     }
 
 }
