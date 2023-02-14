@@ -135,9 +135,9 @@ public class Instrumenter extends BodyTransformer {
                 if (((JIdentityStmt) stmt).getRightOp() instanceof ParameterRef && needTrackVar(((JIdentityStmt) stmt).getLeftOp().getType()))
                     inputUnits.add((DefinitionStmt) stmt);
 
-                if (((JIdentityStmt) stmt).getRightOp() instanceof ThisRef) {
-                    addTagForDangerousCallsToLog(localUses, getFieldRefsOfUnit(localUses, stmt, new PriorityQueue<>(unitComparator)));
-                }
+//                if (((JIdentityStmt) stmt).getRightOp() instanceof ThisRef) {
+//                    addTagForDangerousCallsToLog(localUses, getFieldRefsOfUnit(localUses, stmt, new PriorityQueue<>(unitComparator)));
+//                }
                 continue;
             }
             // set thread id
