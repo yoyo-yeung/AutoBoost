@@ -33,6 +33,7 @@ public class Helper {
      * @return if accessing is allowed
      */
     public static boolean accessibilityCheck(Class<?> c, String packageName) {
+        if(c == null) return  false;
         int modifier = c.getModifiers();
         if (c.getName().contains("$"))
             try {

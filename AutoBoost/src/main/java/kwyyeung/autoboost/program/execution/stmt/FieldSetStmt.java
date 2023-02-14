@@ -22,7 +22,11 @@ public class FieldSetStmt extends Stmt {
 
     @Override
     public String getStmt(Set<Class<?>> fullCNameNeeded) {
-        return String.format("setField(%s,\"%s\",\"%s\",%s)", toSet.getStmt(fullCNameNeeded), StringEscapeUtils.escapeJava(fieldClass), StringEscapeUtils.escapeJava(fieldName), value.getStmt(fullCNameNeeded));
+        return String.format("setField(%s,\"%s\",\"%s\",%s)",
+                toSet.getStmt(fullCNameNeeded),
+                StringEscapeUtils.escapeJava(fieldClass),
+                StringEscapeUtils.escapeJava(fieldName),
+                value.getStmt(fullCNameNeeded));
     }
 
     @Override
