@@ -273,12 +273,13 @@ public class ExecutionProcessor {
 
     private boolean checkAndSetRequiredPackage(MethodExecution target) {
         String requiredPackage = "";
+        MethodDetails targetMethod = target.getMethodInvoked();
         if (target.getCalleeId() != -1) {
             VarDetail callee = target.getCallee();
             if (callee instanceof ObjVarDetails && getExeConstructingClass(callee.getType(), true) != null) {
                 MethodExecution defExe = getExeConstructingClass(callee.getType(), true);
                 if (defExe.getMethodInvoked().getAccess().equals(ACCESS.PROTECTED) || !Helper.accessibilityCheck(defExe.getMethodInvoked().getdClass(), ""))
-                    requiredPackage = defExe.getMethodInvoked().getdClass().getPackage().getName();
+                    requiredPackage = defExe.getMethodInvoked().getDeclaringClass().getPackageName();
 
             }
             if (callee instanceof EnumVarDetails) {
@@ -286,13 +287,13 @@ public class ExecutionProcessor {
                     requiredPackage = Helper.getRequiredPackage(callee.getType());
                 }
             }
-        } else if (target.getMethodInvoked().getType().equals(METHOD_TYPE.STATIC)) {
-            requiredPackage = Helper.getRequiredPackage(target.getMethodInvoked().getdClass());
+        } else if (targetMethod.getType().equals(METHOD_TYPE.STATIC)) {
+            requiredPackage = Helper.getRequiredPackage(targetMethod.getdClass());
         }
         if (requiredPackage == null) return false;
-        if (target.getMethodInvoked().getAccess().equals(ACCESS.PROTECTED)) {
-            if (requiredPackage.isEmpty()) requiredPackage = target.getMethodInvoked().getdClass().getPackage().getName();
-            else if (!requiredPackage.equals(target.getMethodInvoked().getdClass().getPackage().getName())) {
+        if (targetMethod.getAccess().equals(ACCESS.PROTECTED)) {
+            if (requiredPackage.isEmpty()) requiredPackage = targetMethod.getDeclaringClass().getPackageName();
+            else if (!requiredPackage.equals(targetMethod.getDeclaringClass().getPackageName())) {
                 return false;
             }
         }
@@ -528,7 +529,7 @@ public class ExecutionProcessor {
 
     private boolean canUseForConstructing(Class<?> creatingClass, MethodExecution methodExecution) {
         MethodDetails methodDetails = methodExecution.getMethodInvoked();
-        return !soot.Modifier.isPrivate(methodDetails.getdClass().getModifiers())
+        return !soot.Modifier.isPrivate(methodDetails.getDeclaringClass().getModifiers())
                 && (methodDetails.getType().equals(METHOD_TYPE.CONSTRUCTOR) && methodExecution.getResultThisId() != -1 && executionTrace.getVarDetailByID(methodExecution.getResultThisId()).getType().equals(creatingClass) || (methodDetails.getType().equals(METHOD_TYPE.STATIC) && methodExecution.getReturnValId() != -1 && executionTrace.getVarDetailByID(methodExecution.getReturnValId()).getType().equals(creatingClass) && methodDetails.getParameterCount() == 0))
                  && !methodDetails.getAccess().equals(ACCESS.PRIVATE)
                 && !executionTrace.containsFaultyDef(methodExecution, true);

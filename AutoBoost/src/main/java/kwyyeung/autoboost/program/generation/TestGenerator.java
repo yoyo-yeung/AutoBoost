@@ -90,7 +90,7 @@ public class TestGenerator {
             }
             testCase.setAssertion(new AssertStmt(expected, actual));
             if(testCase.getPackageName() == null) return null;
-            else if (testCase.getPackageName().isEmpty()) testCase.setPackageName(e.getMethodInvoked().getdClass().getPackage().getName());
+            else if (testCase.getPackageName().isEmpty()) testCase.setPackageName(e.getMethodInvoked().getDeclaringClass().getPackageName());
             return testCase;
         } catch (Exception exception) {
             return null;
@@ -114,7 +114,7 @@ public class TestGenerator {
         testCase.addStmt(new MethodInvStmt(callee, e.getMethodInvoked().getId(), params));
         testCase.setExceptionClass(e.getExceptionClass());
         if(testCase.getPackageName() == null) return null;
-        else if (testCase.getPackageName().isEmpty()) testCase.setPackageName(e.getMethodInvoked().getdClass().getPackage().getName());
+        else if (testCase.getPackageName().isEmpty()) testCase.setPackageName(e.getMethodInvoked().getDeclaringClass().getPackageName());
         return testCase;
     }
 
@@ -343,7 +343,7 @@ public class TestGenerator {
             MethodExecution defExe = executionProcessor.getExeConstructingClass(varDetail.getType(), true);
             if(defExe == null) return false;
             MethodDetails defMeth = defExe.getMethodInvoked();
-            requiredPackage = defMeth.getAccess().equals(ACCESS.PROTECTED)? defMeth.getdClass().getPackage().getName(): "";
+            requiredPackage = defMeth.getAccess().equals(ACCESS.PROTECTED)? defMeth.getDeclaringClass().getPackageName(): "";
             if(defMeth.getType().equals(METHOD_TYPE.CONSTRUCTOR) && requiredPackage!=null && requiredPackage.isEmpty())
                 requiredPackage = Helper.getRequiredPackage(defMeth.getdClass());
         }
