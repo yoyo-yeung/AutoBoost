@@ -1,0 +1,91 @@
+package kwyyeung.autoboost.program.execution.variable;
+
+import kwyyeung.autoboost.entity.CREATION_TYPE;
+import org.apache.commons.lang3.ClassUtils;
+import org.apache.commons.text.StringEscapeUtils;
+
+import java.util.Objects;
+
+// store it separately from other object var as they can be directly assigned
+public class WrapperVarDetails extends VarDetail {
+    private static final CREATION_TYPE createdBy = CREATION_TYPE.DIRECT_ASSIGN;
+    private final Class<?> type;
+    private final Object value;
+
+    public WrapperVarDetails(int ID, Class<?> type, Object value) {
+        super(ID);
+        this.type = type;
+        this.value = value;
+    }
+
+    public CREATION_TYPE getCreatedBy() {
+        return createdBy;
+    }
+
+    @Override
+    public Class<?> getType() {
+        return type;
+    }
+
+    @Override
+    public String getTypeSimpleName() {
+        return this.type.getSimpleName();
+    }
+
+    @Override
+    public Object getGenValue() {
+        switch (type.getSimpleName()) {
+            case "Long":
+                return this.value + "L";
+            case "Character":
+                return "'" + StringEscapeUtils.escapeJava(this.value.toString()) + "'";
+            case "Float":
+                return this.value + "f";
+            case "Integer":
+                return this.value;
+            default:
+                return "(" + ClassUtils.wrapperToPrimitive(this.type).getName() + ")" + this.value;
+        }
+    }
+
+    public Object getValue() {
+        return value;
+    }
+
+    @Override
+    public boolean sameTypeNValue(Class<?> type, Object v) {
+        return this.type.equals(type) && this.value.equals(v);
+    }
+
+    @Override
+    public boolean sameValue(Object v) {
+        return this.value.equals(v);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        WrapperVarDetails that = (WrapperVarDetails) o;
+        return Objects.equals(type, that.type) && Objects.equals(value, that.value);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(type, value);
+    }
+
+    @Override
+    public String toString() {
+        return "WrapperVarDetails{" +
+                "ID=" + getID() +
+                ", type=" + (type == null ? "null" : type.getSimpleName()) +
+                ", value=" + (value == null ? "null" : value) +
+                '}';
+    }
+
+    @Override
+    public String toDetailedString() {
+        return this.toString();
+    }
+}
